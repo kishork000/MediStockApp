@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -171,7 +172,7 @@ const Sidebar = React.forwardRef<
     },
     ref
   ) => {
-    const { isMobile, openMobile, setOpenMobile } = useSidebar()
+    const { state, isMobile, openMobile, setOpenMobile } = useSidebar()
 
     if (isMobile) {
       return (
@@ -194,19 +195,20 @@ const Sidebar = React.forwardRef<
     }
 
     return (
-      <div
+      <aside
         ref={ref}
         data-sidebar="sidebar"
+        data-state={state}
         className={cn(
-          "fixed top-0 left-0 z-40 h-screen w-14 flex-col border-r bg-background sm:flex",
+          "fixed inset-y-0 z-40 hidden h-svh w-[var(--sidebar-width-icon)] flex-col border-r bg-sidebar text-sidebar-foreground transition-[width] ease-in-out",
+          "data-[state=expanded]:w-[var(--sidebar-width)]",
+          "sm:flex",
           className
         )}
         {...props}
       >
-        <nav className="flex flex-col items-center gap-4 px-2 sm:py-5">
-           {children}
-        </nav>
-      </div>
+        {children}
+      </aside>
     )
   }
 )
@@ -490,7 +492,7 @@ const SidebarMenuButton = React.forwardRef<
   React.ComponentProps<"button"> & {
     asChild?: boolean
     isActive?: boolean
-    tooltip?: string | React.ComponentProps<typeof TooltipContent>
+    tooltip?: string | React.ReactNode
   } & VariantProps<typeof sidebarMenuButtonVariants>
 >(
   (
@@ -501,12 +503,14 @@ const SidebarMenuButton = React.forwardRef<
       size = "default",
       tooltip,
       className,
+      children,
       ...props
     },
     ref
   ) => {
     const Comp = asChild ? Slot : "button"
-    const { isMobile } = useSidebar()
+    const { isMobile, state } = useSidebar()
+    const isCollapsed = state === "collapsed"
 
     const button = (
       <Comp
@@ -516,24 +520,23 @@ const SidebarMenuButton = React.forwardRef<
         data-active={isActive}
         className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
         {...props}
-      />
+      >
+        {children}
+      </Comp>
     )
 
-    if (!tooltip && !props.children) {
+    if (!tooltip || isMobile || !isCollapsed) {
       return button
     }
-
-    const tooltipContent = typeof tooltip === 'string' ? tooltip : props.children;
-
+    
     return (
       <Tooltip>
         <TooltipTrigger asChild>{button}</TooltipTrigger>
         <TooltipContent
           side="right"
           align="center"
-          hidden={isMobile}
         >
-          {tooltipContent}
+          {tooltip}
         </TooltipContent>
       </Tooltip>
     )

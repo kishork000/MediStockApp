@@ -5,24 +5,24 @@ import {
   Sidebar,
   SidebarContent,
   SidebarHeader,
-  SidebarInset,
   SidebarMenu,
-  SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuButton,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { DollarSign, Home as HomeIcon, LayoutGrid, Package, Users, CreditCard, ShoppingCart, FileText, BarChart, MoreHorizontal, Pill, Download } from "lucide-react";
+import { DollarSign, Home as HomeIcon, LayoutGrid, Package, Users, CreditCard, ShoppingCart, BarChart, Pill, Download } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { DashboardData } from "./dashboard/types";
 import StatCard from "@/components/dashboard/StatCard";
 import OverviewChart from "@/components/dashboard/OverviewChart";
 import AiSummary from "@/components/dashboard/AiSummary";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { MoreHorizontal } from "lucide-react";
 
 const generateData = () => [
   { name: "Jan", total: Math.floor(Math.random() * 5000) + 1000 },
@@ -81,46 +81,46 @@ export default function Home() {
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <Sidebar>
-        <SidebarHeader>
-          <div className="flex items-center gap-2">
-            <LayoutGrid className="size-6" />
-            <h1 className="text-lg font-semibold">MediStock</h1>
-          </div>
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton onClick={() => setActiveTab("dashboard")} isActive={activeTab === "dashboard"}>
-                <HomeIcon />
-                Dashboard
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton onClick={() => setActiveTab("sales")} isActive={activeTab === "sales"}>
-                <ShoppingCart />
-                Sales
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton onClick={() => setActiveTab("inventory")} isActive={activeTab === "inventory"}>
-                <Package />
-                Inventory
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton onClick={() => setActiveTab("reports")} isActive={activeTab === "reports"}>
-                <BarChart />
-                Reports
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-             <SidebarMenuItem>
-              <SidebarMenuButton href="#">
-                <Users />
-                Admin
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarContent>
+          <SidebarHeader>
+            <SidebarMenuButton className="pointer-events-none">
+              <LayoutGrid className="size-6" />
+              <span className="text-lg font-semibold">MediStock</span>
+            </SidebarMenuButton>
+          </SidebarHeader>
+          <SidebarContent>
+            <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => setActiveTab("dashboard")} isActive={activeTab === "dashboard"} tooltip="Dashboard">
+                    <HomeIcon />
+                    <span>Dashboard</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => setActiveTab("sales")} isActive={activeTab === "sales"} tooltip="Sales">
+                    <ShoppingCart />
+                    <span>Sales</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => setActiveTab("inventory")} isActive={activeTab === "inventory"} tooltip="Inventory">
+                    <Package />
+                    <span>Inventory</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => setActiveTab("reports")} isActive={activeTab === "reports"} tooltip="Reports">
+                    <BarChart />
+                    <span>Reports</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                 <SidebarMenuItem>
+                  <SidebarMenuButton href="#" tooltip="Admin">
+                    <Users />
+                    <span>Admin</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarContent>
       </Sidebar>
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
