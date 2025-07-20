@@ -114,7 +114,7 @@ export default function Home() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                  <SidebarMenuItem>
-                  <SidebarMenuButton href="#" tooltip="Admin">
+                  <SidebarMenuButton href="/admin" tooltip="Admin">
                     <Users />
                     <span>Admin</span>
                   </SidebarMenuButton>
