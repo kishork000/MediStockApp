@@ -1,5 +1,5 @@
 
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
 
 interface OverviewChartProps {
@@ -10,7 +10,8 @@ export default function OverviewChart({ data }: OverviewChartProps) {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Overview</CardTitle>
+                <CardTitle>Sales Overview</CardTitle>
+                <CardDescription>A summary of sales over the last year.</CardDescription>
             </CardHeader>
             <CardContent className="pl-2">
                 <ResponsiveContainer width="100%" height={350}>
@@ -29,7 +30,7 @@ export default function OverviewChart({ data }: OverviewChartProps) {
                             axisLine={false}
                             tickFormatter={(value) => `$${value}`}
                         />
-                        <Bar dataKey="total" fill="currentColor" radius={[4, 4, 0, 0]} className="fill-primary" />
+                        <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                     </BarChart>
                 </ResponsiveContainer>
             </CardContent>
