@@ -11,7 +11,7 @@ import {
   SidebarMenuItem,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { DollarSign, Home as HomeIcon, LayoutGrid, Package, Settings, Users, CreditCard, ShoppingCart, FileText, BarChart, MoreHorizontal } from "lucide-react";
+import { DollarSign, Home as HomeIcon, LayoutGrid, Package, Users, CreditCard, ShoppingCart, FileText, BarChart, MoreHorizontal, Pill } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { DashboardData } from "./dashboard/types";
 import StatCard from "@/components/dashboard/StatCard";
@@ -147,10 +147,10 @@ export default function Home() {
                         icon={Package}
                       />
                       <StatCard 
-                        title="Subscriptions"
+                        title="New Prescriptions"
                         value={dashboardData.subscriptions}
                         change={dashboardData.subscriptionsChange}
-                        icon={Users}
+                        icon={Pill}
                       />
                   </div>
                   <div className="grid gap-4 md:gap-8 grid-cols-1">
