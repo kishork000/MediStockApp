@@ -2,6 +2,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import { Slot } from "@radix-ui/react-slot"
 import { VariantProps, cva } from "class-variance-authority"
 import { PanelLeft } from "lucide-react"
@@ -493,6 +494,7 @@ const SidebarMenuButton = React.forwardRef<
     asChild?: boolean
     isActive?: boolean
     tooltip?: string | React.ReactNode
+    href?: string
   } & VariantProps<typeof sidebarMenuButtonVariants>
 >(
   (
@@ -504,6 +506,7 @@ const SidebarMenuButton = React.forwardRef<
       tooltip,
       className,
       children,
+      href,
       ...props
     },
     ref
@@ -512,7 +515,7 @@ const SidebarMenuButton = React.forwardRef<
     const { isMobile, state } = useSidebar()
     const isCollapsed = state === "collapsed"
 
-    const button = (
+    const buttonContent = (
       <Comp
         ref={ref}
         data-sidebar="menu-button"
@@ -524,6 +527,8 @@ const SidebarMenuButton = React.forwardRef<
         {children}
       </Comp>
     )
+
+    const button = href ? <Link href={href} className="w-full">{buttonContent}</Link> : buttonContent;
 
     if (!tooltip || isMobile || !isCollapsed) {
       return button
@@ -713,3 +718,5 @@ export {
   SidebarTrigger,
   useSidebar,
 }
+
+    
