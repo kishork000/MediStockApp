@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -10,15 +11,74 @@ import {
   SidebarMenuButton,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2 } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Trash2, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
+interface SaleItem {
+    id: number;
+    medicine: string;
+    quantity: number;
+    price: number;
+    gst: number;
+    total: number;
+}
+
+const medicineOptions = [
+    { value: "aspirin", label: "Aspirin", price: 10.00, gst: 5 },
+    { value: "ibuprofen", label: "Ibuprofen", price: 15.50, gst: 5 },
+    { value: "paracetamol", label: "Paracetamol", price: 5.75, gst: 5 },
+    { value: "amoxicillin", label: "Amoxicillin", price: 55.20, gst: 12 },
+    { value: "metformin", label: "Metformin", price: 25.00, gst: 12 },
+    { value: "atorvastatin", label: "Atorvastatin", price: 45.00, gst: 12 },
+];
 
 export default function SalesPage() {
+  const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
+  const [currentItem, setCurrentItem] = useState({ medicine: "", quantity: 1 });
+  const [customerName, setCustomerName] = useState("");
+
+  const handleAddItem = () => {
+      const selectedMedicine = medicineOptions.find(m => m.value === currentItem.medicine);
+      if (!selectedMedicine || currentItem.quantity <= 0) return;
+
+      const newItem: SaleItem = {
+          id: Date.now(),
+          medicine: selectedMedicine.label,
+          quantity: currentItem.quantity,
+          price: selectedMedicine.price,
+          gst: selectedMedicine.gst,
+          total: selectedMedicine.price * currentItem.quantity,
+      };
+
+      setSaleItems([...saleItems, newItem]);
+      setCurrentItem({ medicine: "", quantity: 1 }); // Reset for next item
+  };
+  
+  const handleRemoveItem = (id: number) => {
+      setSaleItems(saleItems.filter(item => item.id !== id));
+  };
+
+  const calculateSubtotal = () => {
+    return saleItems.reduce((acc, item) => acc + item.total, 0);
+  };
+
+  const calculateTotalGst = () => {
+      return saleItems.reduce((acc, item) => {
+          const itemGst = item.total * (item.gst / 100);
+          return acc + itemGst;
+      }, 0);
+  };
+
+  const subtotal = calculateSubtotal();
+  const totalGst = calculateTotalGst();
+  const grandTotal = subtotal + totalGst;
+
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <Sidebar>
@@ -84,43 +144,87 @@ export default function SalesPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>New Sale</CardTitle>
-                    <CardDescription>Fill in the details to record a new medicine sale.</CardDescription>
+                    <CardDescription>Add medicines and customer details to record a new sale.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <form className="space-y-4">
+                    <form className="space-y-6">
                         <div className="space-y-2">
                             <Label htmlFor="customer-name">Customer Name</Label>
-                            <Input id="customer-name" placeholder="John Doe" />
+                            <Input id="customer-name" placeholder="John Doe" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="medicine">Medicine</Label>
-                             <Select>
-                                <SelectTrigger id="medicine">
-                                    <SelectValue placeholder="Select a medicine" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="aspirin">Aspirin</SelectItem>
-                                    <SelectItem value="ibuprofen">Ibuprofen</SelectItem>
-                                    <SelectItem value="paracetamol">Paracetamol</SelectItem>
-                                    <SelectItem value="amoxicillin">Amoxicillin</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="quantity">Quantity</Label>
-                                <Input id="quantity" type="number" placeholder="1" />
+                        
+                        <div className="p-4 border rounded-lg space-y-4">
+                            <h3 className="font-semibold">Add Medicine to Sale</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="medicine">Medicine</Label>
+                                    <Select value={currentItem.medicine} onValueChange={(value) => setCurrentItem({...currentItem, medicine: value})}>
+                                        <SelectTrigger id="medicine">
+                                            <SelectValue placeholder="Select a medicine" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {medicineOptions.map(med => (
+                                                <SelectItem key={med.value} value={med.value}>{med.label}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="quantity">Quantity</Label>
+                                    <Input id="quantity" type="number" placeholder="1" value={currentItem.quantity} onChange={(e) => setCurrentItem({...currentItem, quantity: parseInt(e.target.value, 10) || 1})} min="1"/>
+                                </div>
+                                <div className="flex items-end">
+                                    <Button type="button" onClick={handleAddItem} className="w-full">
+                                        <PlusCircle className="mr-2" /> Add Item
+                                    </Button>
+                                </div>
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="price">Price ($)</Label>
-                                <Input id="price" type="number" placeholder="10.50" />
-                            </div>
                         </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="notes">Notes</Label>
-                            <Textarea id="notes" placeholder="Any additional notes about the sale." />
-                        </div>
-                        <Button type="submit">Record Sale</Button>
+
+                        {saleItems.length > 0 && (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Current Sale Items</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Medicine</TableHead>
+                                                <TableHead>Quantity</TableHead>
+                                                <TableHead>Price (₹)</TableHead>
+                                                <TableHead>GST (%)</TableHead>
+                                                <TableHead>Total (₹)</TableHead>
+                                                <TableHead>Action</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {saleItems.map(item => (
+                                                <TableRow key={item.id}>
+                                                    <TableCell>{item.medicine}</TableCell>
+                                                    <TableCell>{item.quantity}</TableCell>
+                                                    <TableCell>{item.price.toFixed(2)}</TableCell>
+                                                    <TableCell>{item.gst}%</TableCell>
+                                                    <TableCell>{item.total.toFixed(2)}</TableCell>
+                                                    <TableCell>
+                                                        <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}>
+                                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                                        </Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                    <div className="mt-4 pt-4 border-t space-y-2 text-right">
+                                        <p className="font-semibold">Subtotal: <span className="font-normal">₹{subtotal.toFixed(2)}</span></p>
+                                        <p className="font-semibold">Total GST: <span className="font-normal">₹{totalGst.toFixed(2)}</span></p>
+                                        <p className="text-lg font-bold">Grand Total: <span className="font-bold">₹{grandTotal.toFixed(2)}</span></p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
+                        
+                        <Button type="submit" disabled={saleItems.length === 0}>Record Sale</Button>
                     </form>
                 </CardContent>
             </Card>
