@@ -188,11 +188,11 @@ export default function PatientsPage() {
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); handleViewDetails(patient); }}>View Details</DropdownMenuItem>
-                                                <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); handleEdit(patient); }}>
+                                                <DropdownMenuItem onSelect={() => handleViewDetails(patient)}>View Details</DropdownMenuItem>
+                                                <DropdownMenuItem onSelect={() => handleEdit(patient)}>
                                                     <FilePenLine className="mr-2 h-4 w-4" /> Edit
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem onSelect={(e) => { e.stopPropagation(); handleDelete(patient.id); }} className="text-destructive">
+                                                <DropdownMenuItem onSelect={() => handleDelete(patient.id)} className="text-destructive">
                                                     <Trash2 className="mr-2 h-4 w-4" /> Delete
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>

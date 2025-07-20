@@ -102,7 +102,7 @@ export default function AddMedicinePage() {
                             <Label htmlFor="manufacturer">Manufacturer</Label>
                             <Input id="manufacturer" placeholder="e.g., Pharma Inc." />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="stock">Initial Stock</Label>
                                 <Input id="stock" type="number" placeholder="100" />
@@ -112,9 +112,26 @@ export default function AddMedicinePage() {
                                 <Input id="price-per-unit" type="number" placeholder="10.50" />
                             </div>
                         </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="expiry-date">Expiry Date</Label>
-                            <Input id="expiry-date" type="date" />
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="expiry-date">Expiry Date</Label>
+                                <Input id="expiry-date" type="date" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="gst-slab">GST Slab</Label>
+                                <Select>
+                                    <SelectTrigger id="gst-slab">
+                                        <SelectValue placeholder="Select GST %" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="0">0%</SelectItem>
+                                        <SelectItem value="5">5%</SelectItem>
+                                        <SelectItem value="12">12%</SelectItem>
+                                        <SelectItem value="18">18%</SelectItem>
+                                        <SelectItem value="28">28%</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                          <div className="space-y-2">
                             <Label htmlFor="notes">Description / Notes</Label>
@@ -129,5 +146,3 @@ export default function AddMedicinePage() {
     </div>
   );
 }
-
-    

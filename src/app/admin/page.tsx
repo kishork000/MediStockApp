@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -32,6 +33,21 @@ const usersData = [
 
 
 export default function AdminPage() {
+    const [companyName, setCompanyName] = useState("MediStock Pharmacy");
+    const [companyAddress, setCompanyAddress] = useState("123 Health St, Wellness City, State 12345");
+    const [gstin, setGstin] = useState("22AAAAA0000A1Z5");
+
+    const handleSaveSettings = (e: React.FormEvent) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget as HTMLFormElement);
+        setCompanyName(formData.get("company-name") as string);
+        setCompanyAddress(formData.get("company-address") as string);
+        setGstin(formData.get("gstin") as string);
+        // In a real app, you would persist this to a database
+        alert("Settings Saved!");
+    };
+
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <Sidebar>
@@ -199,18 +215,18 @@ export default function AdminPage() {
                             <CardDescription>Manage your company information and tax details.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <form className="space-y-4">
+                            <form className="space-y-4" onSubmit={handleSaveSettings}>
                                 <div className="space-y-2">
                                     <Label htmlFor="company-name">Company Name</Label>
-                                    <Input id="company-name" placeholder="Your Pharmacy Name" />
+                                    <Input id="company-name" name="company-name" defaultValue={companyName} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="company-address">Company Address</Label>
-                                    <Textarea id="company-address" placeholder="123 Health St, Wellness City, State 12345" />
+                                    <Textarea id="company-address" name="company-address" defaultValue={companyAddress} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="gstin">GSTIN</Label>
-                                    <Input id="gstin" placeholder="22AAAAA0000A1Z5" />
+                                    <Input id="gstin" name="gstin" defaultValue={gstin} />
                                 </div>
                                 <Button type="submit">Save Settings</Button>
                             </form>

@@ -52,7 +52,7 @@ const diseaseOptions = [
     { id: "d6", label: "Allergy" },
 ];
 
-// Mock company data - in a real app, this would come from a database or state management
+// In a real app, this would come from a database or a global state management library like Zustand or Redux
 const companyInfo = {
     name: "MediStock Pharmacy",
     address: "123 Health St, Wellness City, State 12345",
@@ -279,22 +279,24 @@ export default function SalesPage() {
                         <div className="p-4 border rounded-lg space-y-4 print:hidden">
                             <h3 className="font-semibold">Add Medicine to Sale</h3>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="medicine">Medicine</Label>
-                                    <Select value={currentItem.medicine} onValueChange={(value) => setCurrentItem({...currentItem, medicine: value})}>
-                                        <SelectTrigger id="medicine">
-                                            <SelectValue placeholder="Select a medicine" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {medicineOptions.map(med => (
-                                                <SelectItem key={med.value} value={med.value}>{med.label}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="quantity">Quantity</Label>
-                                    <Input id="quantity" type="number" placeholder="1" value={currentItem.quantity} onChange={(e) => setCurrentItem({...currentItem, quantity: parseInt(e.target.value, 10) || 1})} min="1"/>
+                                <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="medicine">Medicine</Label>
+                                        <Select value={currentItem.medicine} onValueChange={(value) => setCurrentItem({...currentItem, medicine: value})}>
+                                            <SelectTrigger id="medicine">
+                                                <SelectValue placeholder="Select a medicine" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {medicineOptions.map(med => (
+                                                    <SelectItem key={med.value} value={med.value}>{med.label}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="quantity">Quantity</Label>
+                                        <Input id="quantity" type="number" placeholder="1" value={currentItem.quantity} onChange={(e) => setCurrentItem({...currentItem, quantity: parseInt(e.target.value, 10) || 1})} min="1"/>
+                                    </div>
                                 </div>
                                 <div className="flex items-end">
                                     <Button type="button" onClick={handleAddItem} className="w-full">
@@ -321,9 +323,9 @@ export default function SalesPage() {
                                         <TableHeader>
                                             <TableRow>
                                                 <TableHead>Medicine</TableHead>
-                                                <TableHead>Quantity</TableHead>
-                                                <TableHead>Price (₹)</TableHead>
-                                                <TableHead>GST (%)</TableHead>
+                                                <TableHead className="text-center">Quantity</TableHead>
+                                                <TableHead className="text-right">Price (₹)</TableHead>
+                                                <TableHead className="text-center">GST (%)</TableHead>
                                                 <TableHead className="text-right">Total (₹)</TableHead>
                                                 <TableHead className="print:hidden">Action</TableHead>
                                             </TableRow>
@@ -332,9 +334,9 @@ export default function SalesPage() {
                                             {saleItems.map(item => (
                                                 <TableRow key={item.id}>
                                                     <TableCell>{item.medicine}</TableCell>
-                                                    <TableCell>{item.quantity}</TableCell>
-                                                    <TableCell>{item.price.toFixed(2)}</TableCell>
-                                                    <TableCell>{item.gst}%</TableCell>
+                                                    <TableCell className="text-center">{item.quantity}</TableCell>
+                                                    <TableCell className="text-right">{item.price.toFixed(2)}</TableCell>
+                                                    <TableCell className="text-center">{item.gst}%</TableCell>
                                                     <TableCell className="text-right">{item.total.toFixed(2)}</TableCell>
                                                     <TableCell className="print:hidden">
                                                         <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}>
