@@ -163,7 +163,7 @@ export default function PatientsPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Name</TableHead>
-                                <TableHead>Mobile No.</TableHead>
+                                <TableHead className="hidden sm:table-cell">Mobile No.</TableHead>
                                 <TableHead className="hidden sm:table-cell">Age</TableHead>
                                 <TableHead className="hidden md:table-cell">Last Visit</TableHead>
                                 <TableHead>
@@ -175,7 +175,7 @@ export default function PatientsPage() {
                             {patients.map((patient) => (
                                 <TableRow key={patient.id}>
                                     <TableCell className="font-medium">{patient.name}</TableCell>
-                                    <TableCell>{patient.mobile}</TableCell>
+                                    <TableCell className="hidden sm:table-cell">{patient.mobile}</TableCell>
                                     <TableCell className="hidden sm:table-cell">{patient.age}</TableCell>
                                     <TableCell className="hidden md:table-cell">{patient.lastVisit}</TableCell>
                                     <TableCell>
