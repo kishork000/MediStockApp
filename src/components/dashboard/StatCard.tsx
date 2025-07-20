@@ -27,3 +27,5 @@ export default function StatCard({ title, value, change, icon: Icon }: StatCardP
         </Card>
     )
 }
+
+    

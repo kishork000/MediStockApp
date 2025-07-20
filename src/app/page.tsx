@@ -10,7 +10,7 @@ import {
   SidebarMenuButton,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { DollarSign, Home as HomeIcon, LayoutGrid, Package, Users, CreditCard, ShoppingCart, BarChart, Pill, Download, PlusSquare, Users2 } from "lucide-react";
+import { DollarSign, Home as HomeIcon, LayoutGrid, Package, Users, CreditCard, ShoppingCart, BarChart, Pill, Download, PlusSquare, Users2, Activity } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { DashboardData } from "./dashboard/types";
 import StatCard from "@/components/dashboard/StatCard";
@@ -50,11 +50,11 @@ const inventoryData = [
 ];
 
 const salesData = [
-    { id: "SALE001", customer: "John Doe", date: "2024-07-20", amount: "$15.50", status: "Paid" },
-    { id: "SALE002", customer: "Jane Smith", date: "2024-07-20", amount: "$42.00", status: "Paid" },
-    { id: "SALE003", customer: "Robert Brown", date: "2024-07-19", amount: "$25.00", status: "Paid" },
-    { id: "SALE004", customer: "Emily White", date: "2024-07-19", amount: "$8.75", status: "Pending" },
-    { id: "SALE005", customer: "Michael Green", date: "2024-07-18", amount: "$112.30", status: "Paid" },
+    { id: "SALE001", customer: "John Doe", date: "2024-07-20", amount: "₹1245.50", status: "Paid" },
+    { id: "SALE002", customer: "Jane Smith", date: "2024-07-20", amount: "₹3360.00", status: "Paid" },
+    { id: "SALE003", customer: "Robert Brown", date: "2024-07-19", amount: "₹2000.00", status: "Paid" },
+    { id: "SALE004", customer: "Emily White", date: "2024-07-19", amount: "₹700.75", status: "Pending" },
+    { id: "SALE005", customer: "Michael Green", date: "2024-07-18", amount: "₹8984.30", status: "Paid" },
 ];
 
 
@@ -63,7 +63,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState("dashboard");
 
   const dashboardData: DashboardData = {
-    totalRevenue: "$45,231.89",
+    totalRevenue: "₹3,45,231.89",
     revenueChange: "+20.1% from last month",
     subscriptions: "+2350",
     subscriptionsChange: "+180.1% from last month",
@@ -119,6 +119,12 @@ export default function Home() {
                     <span>Add Medicine</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                 <SidebarMenuItem>
+                  <SidebarMenuButton href="/diseases" tooltip="Diseases">
+                    <Activity />
+                    <span>Diseases</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton onClick={() => setActiveTab("reports")} isActive={activeTab === "reports"} tooltip="Reports">
                     <BarChart />
@@ -144,8 +150,8 @@ export default function Home() {
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsContent value="dashboard">
-                <div className="grid auto-rows-max items-start gap-4 md:gap-8 lg:col-span-2">
-                  <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+                <div className="grid auto-rows-max items-start gap-4 md:gap-8 lg:grid-cols-2">
+                  <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 lg:col-span-2">
                       <StatCard 
                         title="Total Revenue"
                         value={dashboardData.totalRevenue}
@@ -171,94 +177,102 @@ export default function Home() {
                         icon={Pill}
                       />
                   </div>
-                  <div className="grid gap-4 md:gap-8 grid-cols-1">
-                      <div className="col-span-1">
+                  <div className="grid gap-4 md:gap-8 lg:grid-cols-2 lg:col-span-2">
+                      <div className="lg:col-span-1">
                           <OverviewChart data={data} />
                       </div>
-                      <div className="col-span-1">
+                      <div className="lg:col-span-1">
                           <AiSummary dashboardData={dashboardData} />
                       </div>
                   </div>
+                   <div className="lg:col-span-2">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Recent Sales</CardTitle>
+                            <CardDescription>A list of the most recent transactions.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>ID</TableHead>
+                                        <TableHead>Customer</TableHead>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Amount</TableHead>
+                                        <TableHead>Status</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {salesData.map((sale) => (
+                                        <TableRow key={sale.id}>
+                                            <TableCell className="font-medium">{sale.id}</TableCell>
+                                            <TableCell>{sale.customer}</TableCell>
+                                            <TableCell>{sale.date}</TableCell>
+                                            <TableCell>{sale.amount}</TableCell>
+                                            <TableCell>
+                                                <Badge variant={sale.status === 'Paid' ? 'default' : 'secondary'}>
+                                                    {sale.status}
+                                                </Badge>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                  </div>
                 </div>
               </TabsContent>
-              <TabsContent value="sales">
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>Recent Sales</CardTitle>
-                        <CardDescription>A list of the most recent transactions.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>ID</TableHead>
-                                    <TableHead>Customer</TableHead>
-                                    <TableHead>Date</TableHead>
-                                    <TableHead>Amount</TableHead>
-                                    <TableHead>Status</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {salesData.map((sale) => (
-                                    <TableRow key={sale.id}>
-                                        <TableCell className="font-medium">{sale.id}</TableCell>
-                                        <TableCell>{sale.customer}</TableCell>
-                                        <TableCell>{sale.date}</TableCell>
-                                        <TableCell>{sale.amount}</TableCell>
-                                        <TableCell>
-                                            <Badge variant={sale.status === 'Paid' ? 'default' : 'secondary'}>
-                                                {sale.status}
-                                            </Badge>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
-              </TabsContent>
               <TabsContent value="inventory">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Medicine</TableHead>
-                            <TableHead>Stock</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>
-                                <span className="sr-only">Actions</span>
-                            </TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {inventoryData.map((item) => (
-                            <TableRow key={item.name}>
-                                <TableCell className="font-medium">{item.name}</TableCell>
-                                <TableCell>{item.quantity}</TableCell>
-                                <TableCell>
-                                    <Badge variant={item.status === 'In Stock' ? 'default' : item.status === 'Low Stock' ? 'secondary' : 'destructive'}>
-                                        {item.status}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button aria-haspopup="true" size="icon" variant="ghost">
-                                                <MoreHorizontal className="h-4 w-4" />
-                                                <span className="sr-only">Toggle menu</span>
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                            <DropdownMenuItem>Edit</DropdownMenuItem>
-                                            <DropdownMenuItem>Restock</DropdownMenuItem>
-                                            <DropdownMenuItem>Delete</DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </TableCell>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Inventory</CardTitle>
+                    <CardDescription>Manage your medicine inventory.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Medicine</TableHead>
+                                <TableHead>Stock</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>
+                                    <span className="sr-only">Actions</span>
+                                </TableHead>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
+                        </TableHeader>
+                        <TableBody>
+                            {inventoryData.map((item) => (
+                                <TableRow key={item.name}>
+                                    <TableCell className="font-medium">{item.name}</TableCell>
+                                    <TableCell>{item.quantity}</TableCell>
+                                    <TableCell>
+                                        <Badge variant={item.status === 'In Stock' ? 'default' : item.status === 'Low Stock' ? 'secondary' : 'destructive'}>
+                                            {item.status}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                    <span className="sr-only">Toggle menu</span>
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                <DropdownMenuItem>Edit</DropdownMenuItem>
+                                                <DropdownMenuItem>Restock</DropdownMenuItem>
+                                                <DropdownMenuItem>Delete</DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
               </TabsContent>
                <TabsContent value="reports">
                 <Card>
@@ -288,3 +302,5 @@ export default function Home() {
     </div>
   );
 }
+
+    

@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -10,27 +11,31 @@ import {
   SidebarMenuButton,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Activity } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Activity, MoreHorizontal, Trash2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { MoreHorizontal } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
-const usersData = [
-    { name: "Admin User", email: "admin@medistock.com", role: "Admin" },
-    { name: "Pharmacist One", email: "pharmacist1@medistock.com", role: "Pharmacist" },
-    { name: "Pharmacist Two", email: "pharmacist2@medistock.com", role: "Pharmacist" },
-    { name: "Technician One", email: "tech1@medistock.com", role: "Technician" },
+const initialDiseases = [
+    { id: "DIS001", name: "Fever", description: "Characterized by a body temperature higher than normal." },
+    { id: "DIS002", name: "Headache", description: "Pain in any part of the head, ranging from sharp to dull." },
+    { id: "DIS003", name: "Diabetes", description: "A chronic disease related to high blood sugar levels." },
+    { id: "DIS004", name: "Hypertension", description: "Also known as high blood pressure." },
+    { id: "DIS005", name: "Common Cold", description: "A viral infectious disease of the upper respiratory tract." },
 ];
 
+export default function DiseasesPage() {
+    const [diseases, setDiseases] = useState(initialDiseases);
 
-export default function AdminPage() {
+    const handleDelete = (id: string) => {
+        setDiseases(diseases.filter(d => d.id !== id));
+    };
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <Sidebar>
@@ -73,7 +78,7 @@ export default function AdminPage() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                  <SidebarMenuItem>
-                  <SidebarMenuButton href="/diseases" tooltip="Diseases">
+                  <SidebarMenuButton href="/diseases" isActive={true} tooltip="Diseases">
                     <Activity />
                     <span>Diseases</span>
                   </SidebarMenuButton>
@@ -85,7 +90,7 @@ export default function AdminPage() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                  <SidebarMenuItem>
-                  <SidebarMenuButton href="/admin" isActive={true} tooltip="Admin">
+                  <SidebarMenuButton href="/admin" tooltip="Admin">
                     <Users />
                     <span>Admin</span>
                   </SidebarMenuButton>
@@ -96,44 +101,40 @@ export default function AdminPage() {
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
            <SidebarTrigger className="sm:hidden" />
-           <h1 className="text-xl font-semibold">Admin</h1>
+           <h1 className="text-xl font-semibold">Disease Management</h1>
         </header>
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
-            <Tabs defaultValue="users">
+            <Tabs defaultValue="all-diseases">
                 <div className="flex items-center">
                     <TabsList>
-                        <TabsTrigger value="users">User Management</TabsTrigger>
-                        <TabsTrigger value="add-user">Add User</TabsTrigger>
+                        <TabsTrigger value="all-diseases">All Diseases</TabsTrigger>
+                        <TabsTrigger value="add-disease">Add Disease</TabsTrigger>
                     </TabsList>
                 </div>
-                <TabsContent value="users">
+                <TabsContent value="all-diseases">
                     <Card>
                         <CardHeader>
-                            <CardTitle>User Management</CardTitle>
-                            <CardDescription>Manage your pharmacy staff and their roles.</CardDescription>
+                            <CardTitle>Disease Master List</CardTitle>
+                            <CardDescription>View, manage, and track all diseases.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <Table>
                                 <TableHeader>
                                     <TableRow>
+                                        <TableHead>ID</TableHead>
                                         <TableHead>Name</TableHead>
-                                        <TableHead>Email</TableHead>
-                                        <TableHead>Role</TableHead>
+                                        <TableHead>Description</TableHead>
                                         <TableHead>
                                             <span className="sr-only">Actions</span>
                                         </TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {usersData.map((user) => (
-                                        <TableRow key={user.email}>
-                                            <TableCell className="font-medium">{user.name}</TableCell>
-                                            <TableCell>{user.email}</TableCell>
-                                            <TableCell>
-                                                <Badge variant={user.role === 'Admin' ? 'destructive' : 'default'}>
-                                                    {user.role}
-                                                </Badge>
-                                            </TableCell>
+                                    {diseases.map((disease) => (
+                                        <TableRow key={disease.id}>
+                                            <TableCell className="font-medium">{disease.id}</TableCell>
+                                            <TableCell>{disease.name}</TableCell>
+                                            <TableCell>{disease.description}</TableCell>
                                             <TableCell>
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
@@ -145,7 +146,9 @@ export default function AdminPage() {
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                         <DropdownMenuItem>Edit</DropdownMenuItem>
-                                                        <DropdownMenuItem>Delete</DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => handleDelete(disease.id)} className="text-destructive">
+                                                           <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                                        </DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </TableCell>
@@ -156,36 +159,23 @@ export default function AdminPage() {
                         </CardContent>
                     </Card>
                 </TabsContent>
-                <TabsContent value="add-user">
+                <TabsContent value="add-disease">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Add New User</CardTitle>
-                            <CardDescription>Fill in the details to add a new staff member.</CardDescription>
+                            <CardTitle>Add New Disease</CardTitle>
+                            <CardDescription>Fill in the details to add a new disease to the master list.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <form className="space-y-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="name">Name</Label>
-                                    <Input id="name" placeholder="Full Name" />
+                                    <Label htmlFor="disease-name">Disease Name</Label>
+                                    <Input id="disease-name" placeholder="e.g., Influenza" />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="email">Email</Label>
-                                    <Input id="email" type="email" placeholder="user@medistock.com" />
+                                    <Label htmlFor="disease-description">Description</Label>
+                                    <Textarea id="disease-description" placeholder="Describe the disease, its symptoms, etc." />
                                 </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="role">Role</Label>
-                                    <Select>
-                                        <SelectTrigger id="role">
-                                            <SelectValue placeholder="Select a role" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="pharmacist">Pharmacist</SelectItem>
-                                            <SelectItem value="technician">Technician</SelectItem>
-                                            <SelectItem value="admin">Admin</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <Button type="submit">Create User</Button>
+                                <Button type="submit">Add Disease</Button>
                             </form>
                         </CardContent>
                     </Card>

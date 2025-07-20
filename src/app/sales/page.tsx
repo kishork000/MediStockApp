@@ -11,13 +11,16 @@ import {
   SidebarMenuButton,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Trash2, PlusCircle } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Trash2, PlusCircle, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
 
 interface SaleItem {
     id: number;
@@ -37,10 +40,20 @@ const medicineOptions = [
     { value: "atorvastatin", label: "Atorvastatin", price: 45.00, gst: 12 },
 ];
 
+const diseaseOptions = [
+    { id: "d1", label: "Fever" },
+    { id: "d2", label: "Headache" },
+    { id: "d3", label: "Diabetes" },
+    { id: "d4", label: "Hypertension" },
+    { id: "d5", label: "Common Cold" },
+    { id: "d6", label: "Allergy" },
+];
+
 export default function SalesPage() {
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
   const [currentItem, setCurrentItem] = useState({ medicine: "", quantity: 1 });
   const [customerName, setCustomerName] = useState("");
+  const [selectedDiseases, setSelectedDiseases] = useState<string[]>([]);
 
   const handleAddItem = () => {
       const selectedMedicine = medicineOptions.find(m => m.value === currentItem.medicine);
@@ -73,6 +86,15 @@ export default function SalesPage() {
           return acc + itemGst;
       }, 0);
   };
+  
+  const handleDiseaseSelection = (diseaseId: string) => {
+      setSelectedDiseases(prev => 
+          prev.includes(diseaseId) 
+              ? prev.filter(id => id !== diseaseId) 
+              : [...prev, diseaseId]
+      );
+  };
+
 
   const subtotal = calculateSubtotal();
   const totalGst = calculateTotalGst();
@@ -121,6 +143,12 @@ export default function SalesPage() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
+                  <SidebarMenuButton href="/diseases" tooltip="Diseases">
+                    <Activity />
+                    <span>Diseases</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
                   <SidebarMenuButton href="/" tooltip="Reports">
                     <BarChart />
                     <span>Reports</span>
@@ -148,9 +176,35 @@ export default function SalesPage() {
                 </CardHeader>
                 <CardContent>
                     <form className="space-y-6">
-                        <div className="space-y-2">
-                            <Label htmlFor="customer-name">Customer Name</Label>
-                            <Input id="customer-name" placeholder="John Doe" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="customer-name">Customer Name</Label>
+                                <Input id="customer-name" placeholder="John Doe" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Disease(s)</Label>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" className="w-full justify-start font-normal">
+                                            {selectedDiseases.length > 0 ? selectedDiseases.map(id => diseaseOptions.find(d => d.id === id)?.label).join(', ') : "Select diseases"}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-56 p-0">
+                                        <div className="space-y-2 p-2">
+                                            {diseaseOptions.map(disease => (
+                                                <div key={disease.id} className="flex items-center space-x-2">
+                                                    <Checkbox
+                                                        id={disease.id}
+                                                        checked={selectedDiseases.includes(disease.id)}
+                                                        onCheckedChange={() => handleDiseaseSelection(disease.id)}
+                                                    />
+                                                    <Label htmlFor={disease.id} className="font-normal">{disease.label}</Label>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
+                            </div>
                         </div>
                         
                         <div className="p-4 border rounded-lg space-y-4">
@@ -233,3 +287,5 @@ export default function SalesPage() {
     </div>
   );
 }
+
+    

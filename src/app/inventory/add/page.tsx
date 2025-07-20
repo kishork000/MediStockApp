@@ -10,7 +10,7 @@ import {
   SidebarMenuButton,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2 } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -60,6 +60,12 @@ export default function AddMedicinePage() {
                     <span>Add Medicine</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                 <SidebarMenuItem>
+                  <SidebarMenuButton href="/diseases" tooltip="Diseases">
+                    <Activity />
+                    <span>Diseases</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton href="/" tooltip="Reports">
                     <BarChart />
@@ -102,8 +108,8 @@ export default function AddMedicinePage() {
                                 <Input id="stock" type="number" placeholder="100" />
                             </div>
                              <div className="space-y-2">
-                                <Label htmlFor="price-per-unit">Price per Unit ($)</Label>
-                                <Input id="price-per-unit" type="number" placeholder="0.50" />
+                                <Label htmlFor="price-per-unit">Price per Unit (₹)</Label>
+                                <Input id="price-per-unit" type="number" placeholder="10.50" />
                             </div>
                         </div>
                          <div className="space-y-2">
@@ -123,3 +129,5 @@ export default function AddMedicinePage() {
     </div>
   );
 }
+
+    
