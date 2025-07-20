@@ -17,6 +17,8 @@ import type { DashboardData } from "./dashboard/types";
 import StatCard from "@/components/dashboard/StatCard";
 import OverviewChart from "@/components/dashboard/OverviewChart";
 import AiSummary from "@/components/dashboard/AiSummary";
+import { DateRangePicker } from "@/components/dashboard/DateRangePicker";
+import { Button } from "@/components/ui/button";
 
 const generateData = () => [
   { name: "Jan", total: Math.floor(Math.random() * 5000) + 1000 },
@@ -82,7 +84,13 @@ export default function Home() {
       <SidebarInset>
         <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-6">
            <SidebarTrigger className="md:hidden" />
-           <h1 className="text-lg font-semibold md:text-2xl">Dashboard</h1>
+            <div className="flex-1">
+                <h1 className="text-lg font-semibold md:text-2xl">Dashboard</h1>
+            </div>
+            <div className="flex flex-1 items-center justify-end gap-2">
+                <DateRangePicker />
+                <Button>Download</Button>
+            </div>
         </header>
         <main className="flex-1 p-4 sm:px-6 sm:py-0">
           <div className="grid auto-rows-max items-start gap-4 md:gap-8 lg:col-span-2">
