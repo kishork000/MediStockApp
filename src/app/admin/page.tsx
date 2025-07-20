@@ -10,7 +10,7 @@ import {
   SidebarMenuButton,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -48,8 +48,14 @@ export default function AdminPage() {
                     <span>Dashboard</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                 <SidebarMenuItem>
+                  <SidebarMenuButton href="/patients" tooltip="Patients">
+                    <Users2 />
+                    <span>Patients</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton href="/" tooltip="Sales">
+                  <SidebarMenuButton href="/sales" tooltip="Sales">
                     <ShoppingCart />
                     <span>Sales</span>
                   </SidebarMenuButton>
@@ -58,6 +64,12 @@ export default function AdminPage() {
                   <SidebarMenuButton href="/" tooltip="Inventory">
                     <Package />
                     <span>Inventory</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                 <SidebarMenuItem>
+                  <SidebarMenuButton href="/inventory/add" tooltip="Add Medicine">
+                    <PlusSquare />
+                    <span>Add Medicine</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
