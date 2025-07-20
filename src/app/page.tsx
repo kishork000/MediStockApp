@@ -11,7 +11,7 @@ import {
   SidebarMenuItem,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { DollarSign, Home as HomeIcon, LayoutGrid, Package, Users, CreditCard, ShoppingCart, FileText, BarChart, MoreHorizontal, Pill } from "lucide-react";
+import { DollarSign, Home as HomeIcon, LayoutGrid, Package, Users, CreditCard, ShoppingCart, FileText, BarChart, MoreHorizontal, Pill, Download } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { DashboardData } from "./dashboard/types";
 import StatCard from "@/components/dashboard/StatCard";
@@ -22,6 +22,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const generateData = () => [
   { name: "Jan", total: Math.floor(Math.random() * 5000) + 1000 },
@@ -46,6 +47,14 @@ const inventoryData = [
     { name: "Lisinopril", quantity: 120, status: "In Stock" },
     { name: "Metformin", quantity: 0, status: "Out of Stock" },
     { name: "Atorvastatin", quantity: 90, status: "In Stock" },
+];
+
+const salesData = [
+    { id: "SALE001", customer: "John Doe", date: "2024-07-20", amount: "$15.50", status: "Paid" },
+    { id: "SALE002", customer: "Jane Smith", date: "2024-07-20", amount: "$42.00", status: "Paid" },
+    { id: "SALE003", customer: "Robert Brown", date: "2024-07-19", amount: "$25.00", status: "Paid" },
+    { id: "SALE004", customer: "Emily White", date: "2024-07-19", amount: "$8.75", status: "Pending" },
+    { id: "SALE005", customer: "Michael Green", date: "2024-07-18", amount: "$112.30", status: "Paid" },
 ];
 
 
@@ -161,7 +170,40 @@ export default function Home() {
                 </div>
               </TabsContent>
               <TabsContent value="sales">
-                <p>Sales management will go here.</p>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Recent Sales</CardTitle>
+                        <CardDescription>A list of the most recent transactions.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>ID</TableHead>
+                                    <TableHead>Customer</TableHead>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Amount</TableHead>
+                                    <TableHead>Status</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {salesData.map((sale) => (
+                                    <TableRow key={sale.id}>
+                                        <TableCell className="font-medium">{sale.id}</TableCell>
+                                        <TableCell>{sale.customer}</TableCell>
+                                        <TableCell>{sale.date}</TableCell>
+                                        <TableCell>{sale.amount}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={sale.status === 'Paid' ? 'default' : 'secondary'}>
+                                                {sale.status}
+                                            </Badge>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
               </TabsContent>
               <TabsContent value="inventory">
                 <Table>
@@ -207,7 +249,26 @@ export default function Home() {
                 </Table>
               </TabsContent>
                <TabsContent value="reports">
-                <p>Reports will go here.</p>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Generate Reports</CardTitle>
+                        <CardDescription>Download detailed reports for sales, inventory, and finances.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                       <Button variant="outline">
+                           <Download className="mr-2 h-4 w-4" />
+                           Download Sales Report
+                       </Button>
+                       <Button variant="outline">
+                           <Download className="mr-2 h-4 w-4" />
+                           Download Inventory Report
+                       </Button>
+                       <Button variant="outline">
+                           <Download className="mr-2 h-4 w-4" />
+                           Download Financial Summary
+                       </Button>
+                    </CardContent>
+                </Card>
               </TabsContent>
             </Tabs>
         </main>
