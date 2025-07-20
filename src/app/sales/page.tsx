@@ -52,6 +52,14 @@ const diseaseOptions = [
     { id: "d6", label: "Allergy" },
 ];
 
+// Mock company data - in a real app, this would come from a database or state management
+const companyInfo = {
+    name: "MediStock Pharmacy",
+    address: "123 Health St, Wellness City, State 12345",
+    gstin: "22AAAAA0000A1Z5"
+};
+
+
 export default function SalesPage() {
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
   const [currentItem, setCurrentItem] = useState({ medicine: "", quantity: 1 });
@@ -180,20 +188,20 @@ export default function SalesPage() {
           </SidebarContent>
       </Sidebar>
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 print:hidden">
            <SidebarTrigger className="sm:hidden" />
            <h1 className="text-xl font-semibold">Record a Sale</h1>
         </header>
-        <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
-            <Card>
-                <CardHeader>
+        <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 print:p-0">
+            <Card className="print:shadow-none print:border-none">
+                <CardHeader className="print:hidden">
                     <CardTitle>New Sale</CardTitle>
                     <CardDescription>Add patient and medicine details to record a new sale.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleRecordSale} className="space-y-6">
                         
-                        <Card>
+                        <Card className="print:hidden">
                             <CardHeader>
                                 <CardTitle>Patient Information</CardTitle>
                             </CardHeader>
@@ -268,7 +276,7 @@ export default function SalesPage() {
                             </CardContent>
                         </Card>
                         
-                        <div className="p-4 border rounded-lg space-y-4">
+                        <div className="p-4 border rounded-lg space-y-4 print:hidden">
                             <h3 className="font-semibold">Add Medicine to Sale</h3>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="space-y-2">
@@ -299,7 +307,14 @@ export default function SalesPage() {
                         {saleItems.length > 0 && (
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>Current Sale Items</CardTitle>
+                                    <div className="hidden print:block text-center mb-4">
+                                        <h2 className="text-xl font-bold">{companyInfo.name}</h2>
+                                        <p className="text-sm">{companyInfo.address}</p>
+                                        <p className="text-sm font-semibold">GSTIN: {companyInfo.gstin}</p>
+                                        <hr className="my-2" />
+                                        <h3 className="text-lg font-semibold">Tax Invoice</h3>
+                                    </div>
+                                    <CardTitle className="print:hidden">Current Sale Items</CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <Table>
@@ -310,7 +325,7 @@ export default function SalesPage() {
                                                 <TableHead>Price (₹)</TableHead>
                                                 <TableHead>GST (%)</TableHead>
                                                 <TableHead className="text-right">Total (₹)</TableHead>
-                                                <TableHead>Action</TableHead>
+                                                <TableHead className="print:hidden">Action</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -321,7 +336,7 @@ export default function SalesPage() {
                                                     <TableCell>{item.price.toFixed(2)}</TableCell>
                                                     <TableCell>{item.gst}%</TableCell>
                                                     <TableCell className="text-right">{item.total.toFixed(2)}</TableCell>
-                                                    <TableCell>
+                                                    <TableCell className="print:hidden">
                                                         <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}>
                                                             <Trash2 className="h-4 w-4 text-destructive" />
                                                         </Button>
@@ -339,7 +354,7 @@ export default function SalesPage() {
                             </Card>
                         )}
                         
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-2 print:hidden">
                              <Button type="submit" disabled={saleItems.length === 0}>
                                 Record Sale & Proceed to Payment
                             </Button>
@@ -394,5 +409,3 @@ export default function SalesPage() {
     </div>
   );
 }
-
-    

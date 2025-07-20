@@ -10,7 +10,7 @@ import {
   SidebarMenuButton,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Activity } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Activity, Settings } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -21,6 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 const usersData = [
     { name: "Admin User", email: "admin@medistock.com", role: "Admin" },
@@ -104,6 +105,7 @@ export default function AdminPage() {
                     <TabsList>
                         <TabsTrigger value="users">User Management</TabsTrigger>
                         <TabsTrigger value="add-user">Add User</TabsTrigger>
+                        <TabsTrigger value="settings">Settings</TabsTrigger>
                     </TabsList>
                 </div>
                 <TabsContent value="users">
@@ -186,6 +188,31 @@ export default function AdminPage() {
                                     </Select>
                                 </div>
                                 <Button type="submit">Create User</Button>
+                            </form>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                <TabsContent value="settings">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Company & GST Settings</CardTitle>
+                            <CardDescription>Manage your company information and tax details.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <form className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="company-name">Company Name</Label>
+                                    <Input id="company-name" placeholder="Your Pharmacy Name" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="company-address">Company Address</Label>
+                                    <Textarea id="company-address" placeholder="123 Health St, Wellness City, State 12345" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="gstin">GSTIN</Label>
+                                    <Input id="gstin" placeholder="22AAAAA0000A1Z5" />
+                                </div>
+                                <Button type="submit">Save Settings</Button>
                             </form>
                         </CardContent>
                     </Card>
