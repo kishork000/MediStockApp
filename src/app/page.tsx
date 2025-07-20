@@ -11,13 +11,17 @@ import {
   SidebarMenuItem,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { DollarSign, Home as HomeIcon, LayoutGrid, Package, Settings, Users, CreditCard, ShoppingCart, FileText, BarChart } from "lucide-react";
+import { DollarSign, Home as HomeIcon, LayoutGrid, Package, Settings, Users, CreditCard, ShoppingCart, FileText, BarChart, MoreHorizontal } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { DashboardData } from "./dashboard/types";
 import StatCard from "@/components/dashboard/StatCard";
 import OverviewChart from "@/components/dashboard/OverviewChart";
 import AiSummary from "@/components/dashboard/AiSummary";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 
 const generateData = () => [
   { name: "Jan", total: Math.floor(Math.random() * 5000) + 1000 },
@@ -32,6 +36,16 @@ const generateData = () => [
   { name: "Oct", total: Math.floor(Math.random() * 5000) + 1000 },
   { name: "Nov", total: Math.floor(Math.random() * 5000) + 1000 },
   { name: "Dec", total: Math.floor(Math.random() * 5000) + 1000 },
+];
+
+const inventoryData = [
+    { name: "Aspirin", quantity: 150, status: "In Stock" },
+    { name: "Ibuprofen", quantity: 200, status: "In Stock" },
+    { name: "Paracetamol", quantity: 45, status: "Low Stock" },
+    { name: "Amoxicillin", quantity: 80, status: "In Stock" },
+    { name: "Lisinopril", quantity: 120, status: "In Stock" },
+    { name: "Metformin", quantity: 0, status: "Out of Stock" },
+    { name: "Atorvastatin", quantity: 90, status: "In Stock" },
 ];
 
 
@@ -153,7 +167,47 @@ export default function Home() {
                 <p>Sales management will go here.</p>
               </TabsContent>
               <TabsContent value="inventory">
-                <p>Inventory management will go here.</p>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Medicine</TableHead>
+                            <TableHead>Stock</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>
+                                <span className="sr-only">Actions</span>
+                            </TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {inventoryData.map((item) => (
+                            <TableRow key={item.name}>
+                                <TableCell className="font-medium">{item.name}</TableCell>
+                                <TableCell>{item.quantity}</TableCell>
+                                <TableCell>
+                                    <Badge variant={item.status === 'In Stock' ? 'default' : item.status === 'Low Stock' ? 'secondary' : 'destructive'}>
+                                        {item.status}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                <MoreHorizontal className="h-4 w-4" />
+                                                <span className="sr-only">Toggle menu</span>
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                            <DropdownMenuItem>Edit</DropdownMenuItem>
+                                            <DropdownMenuItem>Restock</DropdownMenuItem>
+                                            <DropdownMenuItem>Delete</DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
               </TabsContent>
                <TabsContent value="reports">
                 <p>Reports will go here.</p>
