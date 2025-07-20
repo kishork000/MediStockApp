@@ -11,7 +11,7 @@ import {
   SidebarMenuItem,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Home as HomeIcon, Settings, LayoutGrid, DollarSign, Users, CreditCard, Package, Sparkles } from "lucide-react";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
 import { useEffect, useState, useTransition } from "react";
@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { summarizeDashboard } from "@/ai/flows/dashboard-summary-flow";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { DashboardData } from "./dashboard/types";
 
 const generateData = () => [
   { name: "Jan", total: Math.floor(Math.random() * 5000) + 1000 },
@@ -42,7 +43,7 @@ export default function Home() {
   const [isPending, startTransition] = useTransition();
   const [summary, setSummary] = useState('');
 
-  const dashboardData = {
+  const dashboardData: DashboardData = {
     totalRevenue: "$45,231.89",
     revenueChange: "+20.1% from last month",
     subscriptions: "+2350",
