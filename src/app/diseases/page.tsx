@@ -121,9 +121,9 @@ export default function DiseasesPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>ID</TableHead>
+                                        <TableHead className="hidden sm:table-cell">ID</TableHead>
                                         <TableHead>Name</TableHead>
-                                        <TableHead>Description</TableHead>
+                                        <TableHead className="hidden md:table-cell">Description</TableHead>
                                         <TableHead>
                                             <span className="sr-only">Actions</span>
                                         </TableHead>
@@ -132,9 +132,9 @@ export default function DiseasesPage() {
                                 <TableBody>
                                     {diseases.map((disease) => (
                                         <TableRow key={disease.id}>
-                                            <TableCell className="font-medium">{disease.id}</TableCell>
+                                            <TableCell className="hidden sm:table-cell font-medium">{disease.id}</TableCell>
                                             <TableCell>{disease.name}</TableCell>
-                                            <TableCell>{disease.description}</TableCell>
+                                            <TableCell className="hidden md:table-cell">{disease.description}</TableCell>
                                             <TableCell>
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
@@ -186,5 +186,3 @@ export default function DiseasesPage() {
     </div>
   );
 }
-
-    

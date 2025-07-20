@@ -195,9 +195,9 @@ export default function Home() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>ID</TableHead>
+                                        <TableHead className="hidden sm:table-cell">ID</TableHead>
                                         <TableHead>Customer</TableHead>
-                                        <TableHead>Date</TableHead>
+                                        <TableHead className="hidden md:table-cell">Date</TableHead>
                                         <TableHead>Amount</TableHead>
                                         <TableHead>Status</TableHead>
                                     </TableRow>
@@ -205,9 +205,9 @@ export default function Home() {
                                 <TableBody>
                                     {salesData.map((sale) => (
                                         <TableRow key={sale.id}>
-                                            <TableCell className="font-medium">{sale.id}</TableCell>
+                                            <TableCell className="hidden sm:table-cell font-medium">{sale.id}</TableCell>
                                             <TableCell>{sale.customer}</TableCell>
-                                            <TableCell>{sale.date}</TableCell>
+                                            <TableCell className="hidden md:table-cell">{sale.date}</TableCell>
                                             <TableCell>{sale.amount}</TableCell>
                                             <TableCell>
                                                 <Badge variant={sale.status === 'Paid' ? 'default' : 'secondary'}>
@@ -302,5 +302,3 @@ export default function Home() {
     </div>
   );
 }
-
-    

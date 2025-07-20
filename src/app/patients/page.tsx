@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -10,23 +11,80 @@ import {
   SidebarMenuButton,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Activity } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Activity, MoreHorizontal, FilePenLine, Trash2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { MoreHorizontal } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
-const patientsData = [
-    { id: "PAT001", name: "Alice Johnson", age: 58, gender: "Female", mobile: "9876543210", lastVisit: "2024-07-15" },
-    { id: "PAT002", name: "Bob Williams", age: 45, gender: "Male", mobile: "9876543211", lastVisit: "2024-07-12" },
-    { id: "PAT003", name: "Charlie Brown", age: 62, gender: "Male", mobile: "9876543212", lastVisit: "2024-07-20" },
-    { id: "PAT004", name: "Diana Miller", age: 34, gender: "Female", mobile: "9876543213", lastVisit: "2024-06-30" },
-    { id: "PAT005", name: "Ethan Davis", age: 71, gender: "Male", mobile: "9876543214", lastVisit: "2024-07-18" },
+interface Patient {
+    id: string;
+    name: string;
+    age: number;
+    gender: "Female" | "Male" | "Other";
+    mobile: string;
+    lastVisit: string;
+    bp?: string;
+    sugar?: string;
+    address?: string;
+}
+
+const initialPatients: Patient[] = [
+    { id: "PAT001", name: "Alice Johnson", age: 58, gender: "Female", mobile: "9876543210", lastVisit: "2024-07-15", bp: "120/80", sugar: "98 mg/dL", address: "123 Maple St, Springfield" },
+    { id: "PAT002", name: "Bob Williams", age: 45, gender: "Male", mobile: "9876543211", lastVisit: "2024-07-12", bp: "130/85", sugar: "110 mg/dL", address: "456 Oak Ave, Springfield" },
+    { id: "PAT003", name: "Charlie Brown", age: 62, gender: "Male", mobile: "9876543212", lastVisit: "2024-07-20", bp: "140/90", sugar: "150 mg/dL", address: "789 Pine Ln, Springfield" },
+    { id: "PAT004", name: "Diana Miller", age: 34, gender: "Female", mobile: "9876543213", lastVisit: "2024-06-30", bp: "110/70", sugar: "85 mg/dL", address: "101 Elm Ct, Springfield" },
+    { id: "PAT005", name: "Ethan Davis", age: 71, gender: "Male", mobile: "9876543214", lastVisit: "2024-07-18", bp: "135/88", sugar: "125 mg/dL", address: "212 Birch Rd, Springfield" },
 ];
 
 
 export default function PatientsPage() {
+  const [patients, setPatients] = useState<Patient[]>(initialPatients);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  const handleDelete = (id: string) => {
+    setPatients(patients.filter(p => p.id !== id));
+  };
+  
+  const handleViewDetails = (patient: Patient) => {
+    setSelectedPatient(patient);
+    setIsViewModalOpen(true);
+  }
+
+  const handleEdit = (patient: Patient) => {
+    setSelectedPatient(patient);
+    setIsEditModalOpen(true);
+  }
+
+  const handleUpdatePatient = (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      if (!selectedPatient) return;
+
+      const formData = new FormData(e.currentTarget);
+      const updatedPatient: Patient = {
+          ...selectedPatient,
+          name: formData.get('name') as string,
+          mobile: formData.get('mobile') as string,
+          age: parseInt(formData.get('age') as string, 10),
+          gender: formData.get('gender') as Patient['gender'],
+          bp: formData.get('bp') as string,
+          sugar: formData.get('sugar') as string,
+          address: formData.get('address') as string,
+      };
+
+      setPatients(patients.map(p => p.id === updatedPatient.id ? updatedPatient : p));
+      setIsEditModalOpen(false);
+      setSelectedPatient(null);
+  }
+
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <Sidebar>
@@ -104,11 +162,9 @@ export default function PatientsPage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>ID</TableHead>
                                 <TableHead>Name</TableHead>
-                                <TableHead className="hidden sm:table-cell">Age</TableHead>
-                                <TableHead className="hidden sm:table-cell">Gender</TableHead>
                                 <TableHead>Mobile No.</TableHead>
+                                <TableHead className="hidden sm:table-cell">Age</TableHead>
                                 <TableHead className="hidden md:table-cell">Last Visit</TableHead>
                                 <TableHead>
                                     <span className="sr-only">Actions</span>
@@ -116,13 +172,11 @@ export default function PatientsPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {patientsData.map((patient) => (
+                            {patients.map((patient) => (
                                 <TableRow key={patient.id}>
-                                    <TableCell className="font-medium">{patient.id}</TableCell>
-                                    <TableCell>{patient.name}</TableCell>
+                                    <TableCell className="font-medium">{patient.name}</TableCell>
+                                    <TableCell>{patient.mobile}</TableCell>
                                     <TableCell className="hidden sm:table-cell">{patient.age}</TableCell>
-                                    <TableCell className="hidden sm:table-cell">{patient.gender}</TableCell>
-                                     <TableCell>{patient.mobile}</TableCell>
                                     <TableCell className="hidden md:table-cell">{patient.lastVisit}</TableCell>
                                     <TableCell>
                                         <DropdownMenu>
@@ -134,9 +188,13 @@ export default function PatientsPage() {
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                <DropdownMenuItem>View Details</DropdownMenuItem>
-                                                <DropdownMenuItem>Edit</DropdownMenuItem>
-                                                <DropdownMenuItem>Delete</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handleViewDetails(patient)}>View Details</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handleEdit(patient)}>
+                                                    <FilePenLine className="mr-2 h-4 w-4" /> Edit
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handleDelete(patient.id)} className="text-destructive">
+                                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                                </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </TableCell>
@@ -148,6 +206,104 @@ export default function PatientsPage() {
             </Card>
         </main>
       </div>
+      
+        {selectedPatient && (
+            <>
+                <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Patient Details: {selectedPatient.name}</DialogTitle>
+                            <DialogDescription>
+                                Full record for {selectedPatient.name}.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <p><strong className="font-medium">ID:</strong> {selectedPatient.id}</p>
+                                <p><strong className="font-medium">Age:</strong> {selectedPatient.age}</p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <p><strong className="font-medium">Gender:</strong> {selectedPatient.gender}</p>
+                                <p><strong className="font-medium">Mobile:</strong> {selectedPatient.mobile}</p>
+                            </div>
+                             <div className="grid grid-cols-2 gap-4">
+                                <p><strong className="font-medium">BP:</strong> {selectedPatient.bp || 'N/A'}</p>
+                                <p><strong className="font-medium">Sugar:</strong> {selectedPatient.sugar || 'N/A'}</p>
+                            </div>
+                             <p><strong className="font-medium">Address:</strong> {selectedPatient.address || 'N/A'}</p>
+                            <p><strong className="font-medium">Last Visit:</strong> {selectedPatient.lastVisit}</p>
+                        </div>
+                        <DialogFooter>
+                            <DialogClose asChild>
+                                <Button type="button" variant="secondary">Close</Button>
+                            </DialogClose>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+                    <DialogContent className="sm:max-w-lg">
+                        <DialogHeader>
+                            <DialogTitle>Edit Patient: {selectedPatient.name}</DialogTitle>
+                            <DialogDescription>
+                                Update the patient's information below.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleUpdatePatient} className="grid gap-4 py-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-name">Name</Label>
+                                    <Input id="edit-name" name="name" defaultValue={selectedPatient.name} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-mobile">Mobile Number</Label>
+                                    <Input id="edit-mobile" name="mobile" defaultValue={selectedPatient.mobile} />
+                                </div>
+                            </div>
+                             <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-age">Age</Label>
+                                    <Input id="edit-age" name="age" type="number" defaultValue={selectedPatient.age} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-gender">Gender</Label>
+                                    <Select name="gender" defaultValue={selectedPatient.gender}>
+                                        <SelectTrigger id="edit-gender">
+                                            <SelectValue placeholder="Select gender" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Male">Male</SelectItem>
+                                            <SelectItem value="Female">Female</SelectItem>
+                                            <SelectItem value="Other">Other</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-bp">Blood Pressure</Label>
+                                    <Input id="edit-bp" name="bp" defaultValue={selectedPatient.bp} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-sugar">Blood Sugar</Label>
+                                    <Input id="edit-sugar" name="sugar" defaultValue={selectedPatient.sugar} />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-address">Address</Label>
+                                <Textarea id="edit-address" name="address" defaultValue={selectedPatient.address} />
+                            </div>
+                            <DialogFooter>
+                                <DialogClose asChild>
+                                    <Button type="button" variant="secondary">Cancel</Button>
+                                </DialogClose>
+                                <Button type="submit">Save Changes</Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+            </>
+        )}
     </div>
   );
 }

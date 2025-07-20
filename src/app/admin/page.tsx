@@ -117,7 +117,7 @@ export default function AdminPage() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Name</TableHead>
-                                        <TableHead>Email</TableHead>
+                                        <TableHead className="hidden sm:table-cell">Email</TableHead>
                                         <TableHead>Role</TableHead>
                                         <TableHead>
                                             <span className="sr-only">Actions</span>
@@ -128,7 +128,7 @@ export default function AdminPage() {
                                     {usersData.map((user) => (
                                         <TableRow key={user.email}>
                                             <TableCell className="font-medium">{user.name}</TableCell>
-                                            <TableCell>{user.email}</TableCell>
+                                            <TableCell className="hidden sm:table-cell">{user.email}</TableCell>
                                             <TableCell>
                                                 <Badge variant={user.role === 'Admin' ? 'destructive' : 'default'}>
                                                     {user.role}
@@ -196,5 +196,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
-    
