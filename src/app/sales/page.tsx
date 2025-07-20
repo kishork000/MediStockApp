@@ -11,7 +11,7 @@ import {
   SidebarMenuButton,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Trash2, PlusCircle, Activity } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Trash2, PlusCircle, Activity, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -20,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 
 interface SaleItem {
     id: number;
@@ -52,8 +52,9 @@ const diseaseOptions = [
 export default function SalesPage() {
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
   const [currentItem, setCurrentItem] = useState({ medicine: "", quantity: 1 });
-  const [customerName, setCustomerName] = useState("");
   const [selectedDiseases, setSelectedDiseases] = useState<string[]>([]);
+  const [saleCompleted, setSaleCompleted] = useState(false);
+
 
   const handleAddItem = () => {
       const selectedMedicine = medicineOptions.find(m => m.value === currentItem.medicine);
@@ -94,6 +95,14 @@ export default function SalesPage() {
               : [...prev, diseaseId]
       );
   };
+
+  const handleRecordSale = (e: React.FormEvent) => {
+      e.preventDefault();
+      // In a real app, you would save this data to a database.
+      if (saleItems.length > 0) {
+        setSaleCompleted(true);
+      }
+  }
 
 
   const subtotal = calculateSubtotal();
@@ -172,40 +181,85 @@ export default function SalesPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>New Sale</CardTitle>
-                    <CardDescription>Add medicines and customer details to record a new sale.</CardDescription>
+                    <CardDescription>Add patient and medicine details to record a new sale.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <form className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="customer-name">Customer Name</Label>
-                                <Input id="customer-name" placeholder="John Doe" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Disease(s)</Label>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="outline" className="w-full justify-start font-normal">
-                                            {selectedDiseases.length > 0 ? selectedDiseases.map(id => diseaseOptions.find(d => d.id === id)?.label).join(', ') : "Select diseases"}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-56 p-0">
-                                        <div className="space-y-2 p-2">
-                                            {diseaseOptions.map(disease => (
-                                                <div key={disease.id} className="flex items-center space-x-2">
-                                                    <Checkbox
-                                                        id={disease.id}
-                                                        checked={selectedDiseases.includes(disease.id)}
-                                                        onCheckedChange={() => handleDiseaseSelection(disease.id)}
-                                                    />
-                                                    <Label htmlFor={disease.id} className="font-normal">{disease.label}</Label>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </PopoverContent>
-                                </Popover>
-                            </div>
-                        </div>
+                    <form onSubmit={handleRecordSale} className="space-y-6">
+                        
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Patient Information</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="patient-name">Patient Name</Label>
+                                        <Input id="patient-name" placeholder="John Doe" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="mobile-number">Mobile Number</Label>
+                                        <Input id="mobile-number" type="tel" placeholder="9876543210" />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                     <div className="space-y-2">
+                                        <Label htmlFor="age">Age</Label>
+                                        <Input id="age" type="number" placeholder="42" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="gender">Gender</Label>
+                                        <Select>
+                                            <SelectTrigger id="gender">
+                                                <SelectValue placeholder="Select gender" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="male">Male</SelectItem>
+                                                <SelectItem value="female">Female</SelectItem>
+                                                <SelectItem value="other">Other</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="bp">Blood Pressure (BP)</Label>
+                                        <Input id="bp" placeholder="e.g., 120/80" />
+                                    </div>
+                                     <div className="space-y-2">
+                                        <Label htmlFor="sugar">Blood Sugar</Label>
+                                        <Input id="sugar" placeholder="e.g., 98 mg/dL" />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="address">Address</Label>
+                                    <Textarea id="address" placeholder="123 Main St, Anytown..." />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Disease(s)</Label>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant="outline" className="w-full justify-start font-normal">
+                                                {selectedDiseases.length > 0 ? selectedDiseases.map(id => diseaseOptions.find(d => d.id === id)?.label).join(', ') : "Select diseases"}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-56 p-0">
+                                            <div className="space-y-2 p-2">
+                                                {diseaseOptions.map(disease => (
+                                                    <div key={disease.id} className="flex items-center space-x-2">
+                                                        <Checkbox
+                                                            id={disease.id}
+                                                            checked={selectedDiseases.includes(disease.id)}
+                                                            onCheckedChange={() => handleDiseaseSelection(disease.id)}
+                                                        />
+                                                        <Label htmlFor={disease.id} className="font-normal">{disease.label}</Label>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
+                                </div>
+                            </CardContent>
+                        </Card>
                         
                         <div className="p-4 border rounded-lg space-y-4">
                             <h3 className="font-semibold">Add Medicine to Sale</h3>
@@ -248,7 +302,7 @@ export default function SalesPage() {
                                                 <TableHead>Quantity</TableHead>
                                                 <TableHead>Price (₹)</TableHead>
                                                 <TableHead>GST (%)</TableHead>
-                                                <TableHead>Total (₹)</TableHead>
+                                                <TableHead className="text-right">Total (₹)</TableHead>
                                                 <TableHead>Action</TableHead>
                                             </TableRow>
                                         </TableHeader>
@@ -259,7 +313,7 @@ export default function SalesPage() {
                                                     <TableCell>{item.quantity}</TableCell>
                                                     <TableCell>{item.price.toFixed(2)}</TableCell>
                                                     <TableCell>{item.gst}%</TableCell>
-                                                    <TableCell>{item.total.toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right">{item.total.toFixed(2)}</TableCell>
                                                     <TableCell>
                                                         <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}>
                                                             <Trash2 className="h-4 w-4 text-destructive" />
@@ -278,7 +332,17 @@ export default function SalesPage() {
                             </Card>
                         )}
                         
-                        <Button type="submit" disabled={saleItems.length === 0}>Record Sale</Button>
+                        <div className="flex justify-end gap-2">
+                             <Button type="submit" disabled={saleItems.length === 0 || saleCompleted}>
+                                {saleCompleted ? 'Sale Recorded' : 'Record Sale'}
+                            </Button>
+                            {saleCompleted && (
+                                <Button variant="outline" onClick={() => window.print()}>
+                                    <Printer className="mr-2 h-4 w-4" />
+                                    Print Invoice
+                                </Button>
+                            )}
+                        </div>
                     </form>
                 </CardContent>
             </Card>
@@ -287,5 +351,3 @@ export default function SalesPage() {
     </div>
   );
 }
-
-    

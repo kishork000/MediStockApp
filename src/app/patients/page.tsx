@@ -18,11 +18,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { MoreHorizontal } from "lucide-react";
 
 const patientsData = [
-    { id: "PAT001", name: "Alice Johnson", age: 58, gender: "Female", lastVisit: "2024-07-15" },
-    { id: "PAT002", name: "Bob Williams", age: 45, gender: "Male", lastVisit: "2024-07-12" },
-    { id: "PAT003", name: "Charlie Brown", age: 62, gender: "Male", lastVisit: "2024-07-20" },
-    { id: "PAT004", name: "Diana Miller", age: 34, gender: "Female", lastVisit: "2024-06-30" },
-    { id: "PAT005", name: "Ethan Davis", age: 71, gender: "Male", lastVisit: "2024-07-18" },
+    { id: "PAT001", name: "Alice Johnson", age: 58, gender: "Female", mobile: "9876543210", lastVisit: "2024-07-15" },
+    { id: "PAT002", name: "Bob Williams", age: 45, gender: "Male", mobile: "9876543211", lastVisit: "2024-07-12" },
+    { id: "PAT003", name: "Charlie Brown", age: 62, gender: "Male", mobile: "9876543212", lastVisit: "2024-07-20" },
+    { id: "PAT004", name: "Diana Miller", age: 34, gender: "Female", mobile: "9876543213", lastVisit: "2024-06-30" },
+    { id: "PAT005", name: "Ethan Davis", age: 71, gender: "Male", mobile: "9876543214", lastVisit: "2024-07-18" },
 ];
 
 
@@ -97,8 +97,8 @@ export default function PatientsPage() {
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
             <Card>
                 <CardHeader>
-                    <CardTitle>Patient Management</CardTitle>
-                    <CardDescription>View and manage patient records.</CardDescription>
+                    <CardTitle>Patient Directory</CardTitle>
+                    <CardDescription>View and manage patient records. New patients are added via the sales form.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Table>
@@ -106,9 +106,10 @@ export default function PatientsPage() {
                             <TableRow>
                                 <TableHead>ID</TableHead>
                                 <TableHead>Name</TableHead>
-                                <TableHead>Age</TableHead>
-                                <TableHead>Gender</TableHead>
-                                <TableHead>Last Visit</TableHead>
+                                <TableHead className="hidden sm:table-cell">Age</TableHead>
+                                <TableHead className="hidden sm:table-cell">Gender</TableHead>
+                                <TableHead>Mobile No.</TableHead>
+                                <TableHead className="hidden md:table-cell">Last Visit</TableHead>
                                 <TableHead>
                                     <span className="sr-only">Actions</span>
                                 </TableHead>
@@ -119,9 +120,10 @@ export default function PatientsPage() {
                                 <TableRow key={patient.id}>
                                     <TableCell className="font-medium">{patient.id}</TableCell>
                                     <TableCell>{patient.name}</TableCell>
-                                    <TableCell>{patient.age}</TableCell>
-                                    <TableCell>{patient.gender}</TableCell>
-                                    <TableCell>{patient.lastVisit}</TableCell>
+                                    <TableCell className="hidden sm:table-cell">{patient.age}</TableCell>
+                                    <TableCell className="hidden sm:table-cell">{patient.gender}</TableCell>
+                                     <TableCell>{patient.mobile}</TableCell>
+                                    <TableCell className="hidden md:table-cell">{patient.lastVisit}</TableCell>
                                     <TableCell>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
@@ -149,5 +151,3 @@ export default function PatientsPage() {
     </div>
   );
 }
-
-    
