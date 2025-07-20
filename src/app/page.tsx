@@ -51,6 +51,7 @@ const inventoryData = [
 
 export default function Home() {
   const [data, setData] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState("dashboard");
 
   const dashboardData: DashboardData = {
     totalRevenue: "$45,231.89",
@@ -80,25 +81,25 @@ export default function Home() {
         <SidebarContent>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton href="#" isActive>
+              <SidebarMenuButton onClick={() => setActiveTab("dashboard")} isActive={activeTab === "dashboard"}>
                 <HomeIcon />
                 Dashboard
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton href="#">
+              <SidebarMenuButton onClick={() => setActiveTab("sales")} isActive={activeTab === "sales"}>
                 <ShoppingCart />
                 Sales
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton href="#">
+              <SidebarMenuButton onClick={() => setActiveTab("inventory")} isActive={activeTab === "inventory"}>
                 <Package />
                 Inventory
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton href="#">
+              <SidebarMenuButton onClick={() => setActiveTab("reports")} isActive={activeTab === "reports"}>
                 <BarChart />
                 Reports
               </SidebarMenuButton>
@@ -118,7 +119,7 @@ export default function Home() {
            <h1 className="text-xl font-semibold">MediStock Manager</h1>
         </header>
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
-            <Tabs defaultValue="dashboard">
+            <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="dashboard">
               <TabsList>
                 <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
                 <TabsTrigger value="sales">Sales</TabsTrigger>
