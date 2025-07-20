@@ -21,6 +21,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Image from "next/image";
 
 interface SaleItem {
     id: number;
@@ -53,7 +56,7 @@ export default function SalesPage() {
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
   const [currentItem, setCurrentItem] = useState({ medicine: "", quantity: 1 });
   const [selectedDiseases, setSelectedDiseases] = useState<string[]>([]);
-  const [saleCompleted, setSaleCompleted] = useState(false);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
 
 
   const handleAddItem = () => {
@@ -100,8 +103,12 @@ export default function SalesPage() {
       e.preventDefault();
       // In a real app, you would save this data to a database.
       if (saleItems.length > 0) {
-        setSaleCompleted(true);
+        setPaymentModalOpen(true);
       }
+  }
+
+  const handlePrint = () => {
+    window.print();
   }
 
 
@@ -333,21 +340,59 @@ export default function SalesPage() {
                         )}
                         
                         <div className="flex justify-end gap-2">
-                             <Button type="submit" disabled={saleItems.length === 0 || saleCompleted}>
-                                {saleCompleted ? 'Sale Recorded' : 'Record Sale'}
+                             <Button type="submit" disabled={saleItems.length === 0}>
+                                Record Sale & Proceed to Payment
                             </Button>
-                            {saleCompleted && (
-                                <Button variant="outline" onClick={() => window.print()}>
-                                    <Printer className="mr-2 h-4 w-4" />
-                                    Print Invoice
-                                </Button>
-                            )}
                         </div>
                     </form>
                 </CardContent>
             </Card>
+
+            <Dialog open={paymentModalOpen} onOpenChange={setPaymentModalOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Complete Payment</DialogTitle>
+                        <DialogDescription>
+                            Select a payment method to finalize the sale. Grand Total: ₹{grandTotal.toFixed(2)}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <Tabs defaultValue="cash" className="w-full">
+                        <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="cash">Cash</TabsTrigger>
+                            <TabsTrigger value="online">Online</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="cash">
+                           <div className="py-4 text-center">
+                                <p className="text-sm text-muted-foreground mb-4">Confirm cash payment and print the invoice.</p>
+                                <Button onClick={handlePrint}>
+                                    <Printer className="mr-2 h-4 w-4" /> Print Invoice
+                                </Button>
+                           </div>
+                        </TabsContent>
+                        <TabsContent value="online">
+                            <div className="py-4 text-center">
+                                <p className="text-sm text-muted-foreground mb-4">Scan the QR code to complete the payment.</p>
+                                <div className="flex justify-center mb-4">
+                                     <Image src="https://placehold.co/200x200.png" alt="QR Code" width={200} height={200} data-ai-hint="qr code" />
+                                </div>
+                                <Button onClick={handlePrint}>
+                                    <Printer className="mr-2 h-4 w-4" /> Confirm Payment & Print
+                                </Button>
+                           </div>
+                        </TabsContent>
+                    </Tabs>
+                    <DialogFooter>
+                       <DialogClose asChild>
+                            <Button type="button" variant="secondary">Close</Button>
+                       </DialogClose>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
         </main>
       </div>
     </div>
   );
 }
+
+    
