@@ -11,7 +11,7 @@ import {
   SidebarMenuButton,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Trash2, PlusCircle, Activity, Printer } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Trash2, PlusCircle, Activity, Printer, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -180,7 +180,7 @@ export default function SalesPage() {
                 </SidebarMenuItem>
                  <SidebarMenuItem>
                   <SidebarMenuButton href="/admin" tooltip="Admin">
-                    <Users />
+                    <Settings />
                     <span>Admin</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -411,3 +411,5 @@ export default function SalesPage() {
     </div>
   );
 }
+
+    

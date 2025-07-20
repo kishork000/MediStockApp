@@ -247,7 +247,7 @@ export default function AdminPage() {
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                         <DropdownMenuItem>Edit</DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => handleDeleteStore(store.id)} className="text-destructive">
+                                                        <DropdownMenuItem onSelect={() => handleDeleteStore(store.id)} className="text-destructive">
                                                             <Trash2 className="mr-2 h-4 w-4" /> Delete
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
@@ -358,3 +358,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    

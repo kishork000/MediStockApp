@@ -10,7 +10,7 @@ import {
   SidebarMenuButton,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { DollarSign, Home as HomeIcon, LayoutGrid, Package, Users, CreditCard, ShoppingCart, BarChart, Pill, Download, PlusSquare, Users2, Activity } from "lucide-react";
+import { DollarSign, Home as HomeIcon, LayoutGrid, Package, Users, CreditCard, ShoppingCart, BarChart, Pill, Download, PlusSquare, Users2, Activity, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { DashboardData } from "./dashboard/types";
 import StatCard from "@/components/dashboard/StatCard";
@@ -133,7 +133,7 @@ export default function Home() {
                 </SidebarMenuItem>
                  <SidebarMenuItem>
                   <SidebarMenuButton href="/admin" tooltip="Admin">
-                    <Users />
+                    <Settings />
                     <span>Admin</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -302,3 +302,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
