@@ -116,16 +116,12 @@ export default function Home() {
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
            <SidebarTrigger className="sm:hidden" />
-           <h1 className="text-xl font-semibold">MediStock Manager</h1>
+           <h1 className="text-xl font-semibold">
+            {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+           </h1>
         </header>
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
-            <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="dashboard">
-              <TabsList>
-                <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-                <TabsTrigger value="sales">Sales</TabsTrigger>
-                <TabsTrigger value="inventory">Inventory</TabsTrigger>
-                <TabsTrigger value="reports">Reports</TabsTrigger>
-              </TabsList>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsContent value="dashboard">
                 <div className="grid auto-rows-max items-start gap-4 md:gap-8 lg:col-span-2">
                   <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
