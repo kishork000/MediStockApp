@@ -50,6 +50,7 @@ const allTransferData = {
 const allPurchaseData = {
     "all": [
         { id: "INV-2024-123", date: "2024-07-25", items: 5, amount: "₹15,450.00", type: "Purchase" },
+        { id: "INV-2024-120", date: "2024-07-20", items: 2, amount: "₹8,500.00", type: "Purchase (Backdated)" },
         { id: "DN-2024-015", date: "2024-07-22", items: 1, amount: "₹2,300.00", type: "Return" },
     ]
 };
@@ -373,7 +374,7 @@ export default function StockReportsPage() {
                                             <TableCell className="font-medium">{report.id}</TableCell>
                                             <TableCell>{report.date}</TableCell>
                                             <TableCell>
-                                                <Badge variant={report.type === 'Purchase' ? 'default' : 'secondary'}>{report.type}</Badge>
+                                                <Badge variant={report.type.startsWith('Purchase') ? 'default' : 'secondary'}>{report.type}</Badge>
                                             </TableCell>
                                             <TableCell className="text-center">{report.items}</TableCell>
                                             <TableCell className="text-right">{report.amount}</TableCell>

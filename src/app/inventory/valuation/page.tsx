@@ -24,15 +24,17 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DateRangePicker } from "@/components/dashboard/DateRangePicker";
 import { DateRange } from "react-day-picker";
-import { addDays } from "date-fns";
+import { addDays, isWithinInterval } from "date-fns";
 
 
 const valuationData = [
-    { medicine: "Aspirin 100mg Tablet", price: 10, opening: 100, received: 50, sales: 30, balance: 120 },
-    { medicine: "Ibuprofen 200mg Capsule", price: 15.5, opening: 50, received: 10, sales: 40, balance: 20 },
-    { medicine: "Paracetamol 500mg Tablet", price: 5.75, opening: 200, received: 0, sales: 100, balance: 100 },
-    { medicine: "Amoxicillin 250mg Syrup", price: 55.2, opening: 60, received: 20, sales: 0, balance: 80 },
-    { medicine: "Atorvastatin 20mg Tablet", price: 45, opening: 150, received: 0, sales: 30, balance: 120 },
+    { medicine: "Aspirin 100mg Tablet", price: 10, opening: 100, received: 50, sales: 30, balance: 120, date: new Date(2023, 0, 25) },
+    { medicine: "Ibuprofen 200mg Capsule", price: 15.5, opening: 50, received: 10, sales: 40, balance: 20, date: new Date(2023, 1, 5) },
+    { medicine: "Paracetamol 500mg Tablet", price: 5.75, opening: 200, received: 0, sales: 100, balance: 100, date: new Date(2023, 1, 10) },
+    { medicine: "Amoxicillin 250mg Syrup", price: 55.2, opening: 60, received: 20, sales: 0, balance: 80, date: new Date(2023, 1, 15) },
+    { medicine: "Atorvastatin 20mg Tablet", price: 45, opening: 150, received: 0, sales: 30, balance: 120, date: new Date(2023, 1, 20) },
+    // Backdated entry example
+    { medicine: "Aspirin 100mg Tablet", price: 9.8, opening: 0, received: 100, sales: 0, balance: 100, date: new Date(2023, 0, 15) },
 ];
 
 const allStores = [
@@ -49,8 +51,8 @@ export default function ValuationReportPage() {
     const pathname = usePathname();
     const [selectedStore, setSelectedStore] = useState("all");
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
-      from: new Date(2023, 0, 20),
-      to: addDays(new Date(2023, 0, 20), 20),
+      from: new Date(2023, 0, 1),
+      to: new Date(),
     });
 
     const availableStores = useMemo(() => {
@@ -70,6 +72,13 @@ export default function ValuationReportPage() {
             setSelectedStore('all');
         }
     }, [user, availableStores]);
+
+
+    const filteredValuationData = useMemo(() => {
+        if (!dateRange?.from || !dateRange?.to) return valuationData;
+        // In a real app, filtering would also apply to the selected store.
+        return valuationData.filter(item => isWithinInterval(item.date, { start: dateRange.from!, end: dateRange.to! }));
+    }, [dateRange]);
 
 
     const sidebarRoutes = useMemo(() => {
@@ -108,7 +117,7 @@ export default function ValuationReportPage() {
     };
     
     const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory/') && r.inSidebar);
-    const totalValuation = valuationData.reduce((acc, item) => acc + (item.balance * item.price), 0);
+    const totalValuation = filteredValuationData.reduce((acc, item) => acc + (item.balance * item.price), 0);
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -218,7 +227,6 @@ export default function ValuationReportPage() {
                                 </SelectContent>
                             </Select>
                             <DateRangePicker date={dateRange} setDate={setDateRange} />
-                             <Button variant="outline"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
                         </div>
                     </div>
                 </CardHeader>
@@ -236,8 +244,8 @@ export default function ValuationReportPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {valuationData.map((item) => (
-                                    <TableRow key={item.medicine}>
+                                {filteredValuationData.map((item, index) => (
+                                    <TableRow key={`${item.medicine}-${index}`}>
                                         <TableCell className="font-medium">{item.medicine}</TableCell>
                                         <TableCell className="text-right">{item.opening}</TableCell>
                                         <TableCell className="text-right">{item.received}</TableCell>

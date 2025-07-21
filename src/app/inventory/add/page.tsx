@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, Warehouse, GitBranch, LogOut, ChevronDown, TrendingUp, PlusCircle, Trash2, Upload, File, Download, Undo, Pill, Building } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, Warehouse, GitBranch, LogOut, ChevronDown, TrendingUp, PlusCircle, Trash2, Upload, File, Download, Undo, Pill, Building, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -26,6 +26,10 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
 
 
 interface MedicineMaster {
@@ -69,6 +73,7 @@ export default function AddStockPage() {
 
     const [purchaseItems, setPurchaseItems] = useState<PurchaseItem[]>([]);
     const [invoiceNumber, setInvoiceNumber] = useState("");
+    const [invoiceDate, setInvoiceDate] = useState<Date | undefined>(new Date());
     const [manufacturer, setManufacturer] = useState("");
     const [destination, setDestination] = useState("warehouse");
 
@@ -127,6 +132,10 @@ export default function AddStockPage() {
             toast({ variant: 'destructive', title: 'Error', description: 'Please enter a purchase invoice number.' });
             return;
         }
+         if (!invoiceDate) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Please enter a purchase invoice date.' });
+            return;
+        }
         if (!manufacturer) {
             toast({ variant: 'destructive', title: 'Error', description: 'Please select a manufacturer.' });
             return;
@@ -142,18 +151,17 @@ export default function AddStockPage() {
             }
         }
         
-        // In a real app, you would send this data to your backend
-        console.log({ invoiceNumber, manufacturer, destination, items: purchaseItems, totalInvoiceValue });
-        toast({ title: 'Success', description: 'Stock added to inventory successfully.' });
+        console.log({ invoiceNumber, invoiceDate: format(invoiceDate, 'yyyy-MM-dd'), manufacturer, destination, items: purchaseItems, totalInvoiceValue });
+        toast({ title: 'Success', description: 'Stock added to inventory successfully. Reports will be updated to reflect the backdated entry if applicable.' });
         setPurchaseItems([]);
         setInvoiceNumber("");
         setManufacturer("");
+        setInvoiceDate(new Date());
     };
 
     const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
-            // Here you would parse the CSV file
             toast({
                 title: "File Uploaded",
                 description: `${file.name} has been uploaded. Processing will happen on the backend.`,
@@ -162,8 +170,8 @@ export default function AddStockPage() {
     };
     
     const downloadSampleCsv = () => {
-        const header = "MedicineID,Quantity,PricePerUnit,ExpiryDate(YYYY-MM-DD)\n";
-        const exampleRow = "MED001,100,10.50,2026-12-31\n";
+        const header = "MedicineID,Quantity,PricePerUnit,PurchaseDate(YYYY-MM-DD),ExpiryDate(YYYY-MM-DD)\n";
+        const exampleRow = "MED001,100,10.50,2024-07-20,2026-12-31\n";
         const blob = new Blob([header, exampleRow], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         if (link.download !== undefined) {
@@ -299,16 +307,33 @@ export default function AddStockPage() {
                 </TabsList>
                 <TabsContent value="bulk-add">
                     <Card>
-                        <CardHeader>
-                            <CardTitle>Add New Stock</CardTitle>
-                            <CardDescription>Fill in the form to add new stock to the warehouse based on a purchase invoice.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                             <form className="space-y-6" onSubmit={handleFormSubmit}>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <form onSubmit={handleFormSubmit}>
+                            <CardHeader>
+                                <CardTitle>Add New Stock</CardTitle>
+                                <CardDescription>Fill in the form to add new stock to the warehouse based on a purchase invoice.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                      <div className="space-y-2">
                                         <Label htmlFor="invoice-number">Purchase Invoice Number</Label>
                                         <Input id="invoice-number" placeholder="e.g., INV-2024-123" value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} required />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="invoice-date">Purchase Invoice Date</Label>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant={"outline"}
+                                                    className={cn("w-full justify-start text-left font-normal", !invoiceDate && "text-muted-foreground" )}
+                                                >
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {invoiceDate ? format(invoiceDate, "PPP") : <span>Pick a date</span>}
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0">
+                                                <Calendar mode="single" selected={invoiceDate} onSelect={setInvoiceDate} initialFocus />
+                                            </PopoverContent>
+                                        </Popover>
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="manufacturer">Manufacturer</Label>
@@ -337,7 +362,7 @@ export default function AddStockPage() {
                                 </div>
 
                                 {purchaseItems.length > 0 && (
-                                    <div className="relative w-full overflow-auto">
+                                    <div className="relative w-full overflow-auto rounded-lg border">
                                         <Table>
                                             <TableHeader>
                                                 <TableRow>
@@ -380,26 +405,27 @@ export default function AddStockPage() {
                                     </div>
                                 )}
                                 
-                                <div className="space-y-4">
+                                <div className="flex justify-between items-center mt-4">
+                                    <Button type="button" variant="outline" onClick={handleAddItem}>
+                                        <PlusCircle className="mr-2 h-4 w-4" />
+                                        Add Row
+                                    </Button>
                                     {purchaseItems.length > 0 && (
                                         <div className="text-right">
                                             <p className="text-lg font-bold">Total Invoice Amount: ₹{totalInvoiceValue.toFixed(2)}</p>
                                         </div>
                                     )}
-                                    
-                                    <div className="flex justify-between items-center">
-                                        <Button type="button" variant="outline" onClick={handleAddItem}>
-                                            <PlusCircle className="mr-2 h-4 w-4" />
-                                            Add Row
-                                        </Button>
-                                        <Button type="submit">
-                                            <PlusSquare className="mr-2 h-4 w-4"/>
-                                            Add All to Inventory
-                                        </Button>
-                                    </div>
                                 </div>
-                            </form>
-                        </CardContent>
+                            </CardContent>
+                             <CardContent className="pt-6">
+                                <div className="flex justify-end">
+                                    <Button type="submit">
+                                        <PlusSquare className="mr-2 h-4 w-4"/>
+                                        Add All to Inventory
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </form>
                     </Card>
                 </TabsContent>
                 <TabsContent value="csv-import">
