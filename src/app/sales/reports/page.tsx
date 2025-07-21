@@ -32,12 +32,12 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } f
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 const salesData = [
-    { invoiceId: "SALE001", pharmacist: "Pharmacist One", store: "Downtown Pharmacy", medicine: "Aspirin", quantity: 5, total: 50.00, date: "2024-07-28", paymentMethod: "Cash" },
-    { invoiceId: "SALE002", pharmacist: "Pharmacist One", store: "Downtown Pharmacy", medicine: "Paracetamol", quantity: 10, total: 57.50, date: "2024-07-28", paymentMethod: "Online" },
-    { invoiceId: "SALE003", pharmacist: "Pharmacist Two", store: "Uptown Health", medicine: "Ibuprofen", quantity: 8, total: 124.00, date: "2024-07-29", paymentMethod: "Cash" },
-    { invoiceId: "SALE004", pharmacist: "Pharmacist One", store: "Downtown Pharmacy", medicine: "Aspirin", quantity: 3, total: 30.00, date: "2024-07-29", paymentMethod: "Cash" },
-    { invoiceId: "SALE005", pharmacist: "Admin User", store: "Downtown Pharmacy", medicine: "Atorvastatin", quantity: 2, total: 90.00, date: "2024-07-30", paymentMethod: "Online" },
-    { invoiceId: "SALE006", pharmacist: "Pharmacist Two", store: "Uptown Health", medicine: "Metformin", quantity: 5, total: 125.00, date: "2024-07-30", paymentMethod: "Online" },
+    { invoiceId: "SALE001", pharmacist: "Pharmacist One", store: "Downtown Pharmacy", medicine: "Aspirin", quantity: 5, total: 50.00, date: "2024-07-28", paymentMethod: "Cash", patientName: "Alice Johnson" },
+    { invoiceId: "SALE002", pharmacist: "Pharmacist One", store: "Downtown Pharmacy", medicine: "Paracetamol", quantity: 10, total: 57.50, date: "2024-07-28", paymentMethod: "Online", patientName: "Bob Williams" },
+    { invoiceId: "SALE003", pharmacist: "Pharmacist Two", store: "Uptown Health", medicine: "Ibuprofen", quantity: 8, total: 124.00, date: "2024-07-29", paymentMethod: "Cash", patientName: "Charlie Brown" },
+    { invoiceId: "SALE004", pharmacist: "Pharmacist One", store: "Downtown Pharmacy", medicine: "Aspirin", quantity: 3, total: 30.00, date: "2024-07-29", paymentMethod: "Cash", patientName: "Diana Miller" },
+    { invoiceId: "SALE005", pharmacist: "Admin User", store: "Downtown Pharmacy", medicine: "Atorvastatin", quantity: 2, total: 90.00, date: "2024-07-30", paymentMethod: "Online", patientName: "Ethan Davis" },
+    { invoiceId: "SALE006", pharmacist: "Pharmacist Two", store: "Uptown Health", medicine: "Metformin", quantity: 5, total: 125.00, date: "2024-07-30", paymentMethod: "Online", patientName: "Alice Johnson" },
 ];
 
 const allStores = [
@@ -444,7 +444,7 @@ export default function SalesReportPage() {
     </div>
     
     <Dialog open={isSalesDetailModalOpen} onOpenChange={setIsSalesDetailModalOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
             <DialogHeader>
                 {modalView !== 'summary' && (
                     <Button variant="ghost" size="icon" className="absolute left-4 top-4" onClick={() => setModalView('summary')}>
@@ -475,6 +475,7 @@ export default function SalesReportPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Invoice ID</TableHead>
+                                <TableHead>Patient</TableHead>
                                 <TableHead className="text-right">Amount (₹)</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -482,6 +483,7 @@ export default function SalesReportPage() {
                             {(modalView === 'cash' ? analytics.cashInvoices : analytics.onlineInvoices).map((invoice) => (
                                 <TableRow key={invoice.invoiceId}>
                                     <TableCell className="font-medium">{invoice.invoiceId}</TableCell>
+                                    <TableCell>{invoice.patientName}</TableCell>
                                     <TableCell className="text-right">{invoice.total.toFixed(2)}</TableCell>
                                 </TableRow>
                             ))}
@@ -494,5 +496,3 @@ export default function SalesReportPage() {
     </>
   );
 }
-
-    
