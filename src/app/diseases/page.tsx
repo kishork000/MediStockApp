@@ -130,7 +130,7 @@ export default function DiseasesPage() {
                     </SidebarMenuItem>
                 )}
 
-                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory') && r.inSidebar && hasPermission(r.path)).map((route) => (
+                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path)).map((route) => (
                     <SidebarMenuItem key={route.path}>
                         <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}>
                             {getIcon(route.name)}

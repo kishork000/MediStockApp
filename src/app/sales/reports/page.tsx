@@ -240,273 +240,111 @@ export default function SalesReportPage() {
 
   return (
     <>
-    <div className="flex min-h-screen w-full flex-col bg-muted/40">
-      <Sidebar>
-          <SidebarHeader>
-            <SidebarMenuButton className="pointer-events-none">
-              <LayoutGrid className="size-6" />
-              <span className="text-lg font-semibold">MediStock</span>
-            </SidebarMenuButton>
-          </SidebarHeader>
-          <SidebarContent>
-             <SidebarMenu>
-                {hasPermission('/') && (
-                    <SidebarMenuItem>
-                        <SidebarMenuButton href="/" tooltip="Dashboard">
-                            <HomeIcon />
-                            <span>Dashboard</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                )}
-                
-                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path)).map((route) => (
-                    <SidebarMenuItem key={route.path}>
-                        <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}>
-                            {getIcon(route.name)}
-                            <span>{route.name}</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                ))}
-
-                {hasPermission('/inventory/warehouse') && (
-                    <Collapsible className="w-full" defaultOpen={pathname.startsWith('/inventory')}>
-                        <CollapsibleTrigger asChild>
-                           <SidebarMenuButton className="justify-between">
-                                <div className="flex items-center gap-3">
-                                    <Package />
-                                    <span>Stock Management</span>
-                                </div>
-                                <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                            </SidebarMenuButton>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                            <SidebarMenu className="ml-7 mt-2 border-l pl-3">
-                                {stockManagementRoutes.map((route) => (
-                                    <SidebarMenuItem key={route.path}>
-                                        <SidebarMenuButton href={route.path} tooltip={route.name} size="sm" isActive={pathname === route.path}>
-                                            {getIcon(route.name)}
-                                            <span>{route.name}</span>
-                                        </SidebarMenuButton>
-                                    </SidebarMenuItem>
-                                ))}
-                            </SidebarMenu>
-                        </CollapsibleContent>
-                    </Collapsible>
-                )}
-                 
-                 {hasPermission('/admin') && (
-                    <SidebarMenuItem>
-                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname === '/admin'}>
-                            {getIcon('Admin')}
-                            <span>Admin</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                 )}
-            </SidebarMenu>
-          </SidebarContent>
-           <SidebarFooter>
-              <SidebarMenu>
-                  <SidebarMenuItem>
-                      <SidebarMenuButton onClick={logout} tooltip="Logout">
-                          <LogOut />
-                          <span>Logout</span>
-                      </SidebarMenuButton>
-                  </SidebarMenuItem>
-              </SidebarMenu>
-          </SidebarFooter>
-      </Sidebar>
-      <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
-        <header className="sticky top-0 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
-           <SidebarTrigger className="sm:hidden" />
-           <div className="flex w-full items-center justify-between">
-              <h1 className="text-xl font-semibold">Sales Reports & Analytics</h1>
-              <ThemeToggle />
-           </div>
-        </header>
-        <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
-            <Card>
-                <CardHeader>
-                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                        <div>
-                            <CardTitle>Sales Performance</CardTitle>
-                            <CardDescription>Analyze sales data with powerful filters.</CardDescription>
-                        </div>
-                         <div className="flex flex-wrap items-center gap-2">
-                            <Select 
-                                value={selectedStore} 
-                                onValueChange={setSelectedStore}
-                                disabled={user?.role === 'Pharmacist'}
-                            >
-                                <SelectTrigger className="w-full sm:w-[160px]">
-                                    <SelectValue placeholder="Select Store" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {availableStores.map(store => (
-                                        <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                             <Select value={selectedPharmacist} onValueChange={setSelectedPharmacist}>
-                                <SelectTrigger className="w-full sm:w-[180px]">
-                                    <SelectValue placeholder="Select Pharmacist" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {pharmacists.map(p => (
-                                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <DateRangePicker date={dateRange} setDate={setDateRange} />
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent className="space-y-8">
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                        <Card className="cursor-pointer hover:bg-muted/50" onClick={handleSalesCardClick}>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Total Sales Value</CardTitle>
-                                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">₹{analytics.totalSalesValue.toFixed(2)}</div>
-                                <p className="text-xs text-muted-foreground">Click to see details</p>
-                            </CardContent>
-                        </Card>
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Total Items Sold</CardTitle>
-                                <Package className="h-4 w-4 text-muted-foreground" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">{analytics.totalItemsSold}</div>
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                     <Card>
-                        <CardHeader>
-                            <CardTitle>Sales Over Time</CardTitle>
-                            <CardDescription>Total sales value in the selected period.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                             <ChartContainer config={salesOverTimeChartConfig} className="min-h-[200px] w-full">
-                                <AreaChart
-                                  accessibilityLayer
-                                  data={analytics.salesOverTime}
-                                  margin={{
-                                    left: 12,
-                                    right: 12,
-                                  }}
-                                >
-                                    <CartesianGrid vertical={false} />
-                                    <XAxis
-                                        dataKey="date"
-                                        tickLine={false}
-                                        axisLine={false}
-                                        tickMargin={8}
-                                        tickFormatter={(value) => value.slice(0, 6)}
-                                    />
-                                    <YAxis
-                                      tickLine={false}
-                                      axisLine={false}
-                                      tickMargin={8}
-                                      tickFormatter={(value) => `₹${value}`}
-                                    />
-                                    <ChartTooltip
-                                      cursor={false}
-                                      content={<ChartTooltipContent formatter={(value) => `₹${Number(value).toFixed(2)}`} />}
-                                    />
-                                    <defs>
-                                        <linearGradient id="fillTotal" x1="0" y1="0" x2="0" y2="1">
-                                            <stop
-                                            offset="5%"
-                                            stopColor="var(--color-total)"
-                                            stopOpacity={0.8}
-                                            />
-                                            <stop
-                                            offset="95%"
-                                            stopColor="var(--color-total)"
-                                            stopOpacity={0.1}
-                                            />
-                                        </linearGradient>
-                                    </defs>
-                                    <Area
-                                        dataKey="total"
-                                        type="natural"
-                                        fill="url(#fillTotal)"
-                                        fillOpacity={0.4}
-                                        stroke="var(--color-total)"
-                                        stackId="a"
-                                    />
-                                </AreaChart>
-                            </ChartContainer>
-                        </CardContent>
-                    </Card>
-
-                    <div className="grid gap-8 md:grid-cols-2">
-                        <TopSellingMedicinesChart data={analytics.highSellingMedicines} config={highSellingChartConfig} />
-                        <SalesByPharmacistChart data={analytics.pharmacistSales} config={pharmacistSalesChartConfig} />
-                    </div>
-
-                     <div className="mt-6 flex justify-end items-center">
-                        <Button size="sm" variant="outline"><Download className="mr-2" /> Download Full Report</Button>
-                    </div>
-                </CardContent>
-            </Card>
-        </main>
-      </div>
-    </div>
     
-    <Dialog open={isSalesDetailModalOpen} onOpenChange={setIsSalesDetailModalOpen}>
-        <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-                {modalView !== 'summary' && (
-                    <Button variant="ghost" size="icon" className="absolute left-4 top-4" onClick={() => setModalView('summary')}>
-                        <ArrowLeft className="h-4 w-4" />
-                    </Button>
-                )}
-                <DialogTitle>Sales Details</DialogTitle>
-                <DialogDescription>
-                    {modalView === 'summary' && 'Breakdown of sales by payment method.'}
-                    {modalView === 'cash' && 'Details of all cash invoices.'}
-                    {modalView === 'online' && 'Details of all online invoices.'}
-                </DialogDescription>
-            </DialogHeader>
-            {modalView === 'summary' ? (
-                <div className="grid gap-4 py-4">
-                    <div className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 cursor-pointer" onClick={() => setModalView('cash')}>
-                        <span className="font-medium">Cash Sales</span>
-                        <span className="font-bold">₹{analytics.cashSalesValue.toFixed(2)}</span>
-                    </div>
-                    <div className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 cursor-pointer" onClick={() => setModalView('online')}>
-                        <span className="font-medium">Online Sales</span>
-                        <span className="font-bold">₹{analytics.onlineSalesValue.toFixed(2)}</span>
-                    </div>
-                </div>
-            ) : (
-                <div className="max-h-[400px] overflow-y-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Invoice ID</TableHead>
-                                <TableHead>Patient</TableHead>
-                                <TableHead className="text-right">Amount (₹)</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {(modalView === 'cash' ? analytics.cashInvoices : analytics.onlineInvoices).map((invoice) => (
-                                <TableRow key={invoice.invoiceId}>
-                                    <TableCell className="font-medium">{invoice.invoiceId}</TableCell>
-                                    <TableCell>{invoice.patientName}</TableCell>
-                                    <TableCell className="text-right">{invoice.total.toFixed(2)}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </div>
-            )}
-        </DialogContent>
-    </Dialog>
-    </>
+      
+          
+            
+              
+  
+                
+                    
+                
+
+                
+                     
+                    
+                     
+                    
+                
+                 
+                
+               
+                 
+
+              
+              
+                   
+                   
+                   
+               
+                
+                    Sales Performance
+                    Analyze sales data with powerful filters.
+                    
+                        
+                             
+                                Select Store
+                                   
+                                           
+                                                {availableStores.map(store => (
+                                               {store.name}
+                                            
+                                        
+                                     
+                               
+                                 
+                               
+                                Select Pharmacist
+                                   
+                                           
+                                       
+                                  
+
+                                          
+                                            {pharmacists.map(p => (
+                                               {p.name}
+                                           
+                                        
+                                     
+                                 
+                             
+                             
+                        
+                    
+                
+                
+                  
+                    
+                         
+                         Total Sales Value
+                           
+                        
+                         ₹{analytics.totalSalesValue.toFixed(2)}
+                         Click to see details
+                     
+                      
+                          Total Items Sold
+                           
+                        
+                        {analytics.totalItemsSold}
+                    
+
+                     
+                        Sales Over Time
+                         Total sales value in the selected period.
+                        
+                                   {  }
+                    
+
+                     
+                        
+                    
+                  
+                    
+                      
+                   
+
+        
+          
+            
+              
+                
+                    
+                        
+
+                
+            
+       
+    
   );
 }

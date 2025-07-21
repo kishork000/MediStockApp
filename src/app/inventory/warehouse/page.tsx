@@ -112,7 +112,7 @@ export default function WarehouseInventoryPage() {
                     </SidebarMenuItem>
                 ))}
 
-                {hasPermission('/inventory/warehouse') && (
+                {hasPermission('/inventory') && (
                     <Collapsible className="w-full" defaultOpen={pathname.startsWith('/inventory')}>
                         <CollapsibleTrigger asChild>
                              <SidebarMenuButton className="justify-between">
