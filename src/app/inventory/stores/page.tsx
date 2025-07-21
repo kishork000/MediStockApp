@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, Search } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, Search, Undo, Pill, Building } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -33,15 +33,21 @@ const allStores = [
 
 const storeInventory = {
     "STR002": [
-        { name: "Aspirin", opening: 100, received: 70, sales: 20, quantity: 150, status: "In Stock" },
-        { name: "Ibuprofen", opening: 50, received: 0, sales: 30, quantity: 20, status: "Low Stock" },
-        { name: "Paracetamol", opening: 80, received: 50, sales: 30, quantity: 100, status: "In Stock" },
+        { name: "Aspirin", opening: 100, received: 70, sales: 20, quantity: 150, minStockLevel: 50, status: "In Stock" },
+        { name: "Ibuprofen", opening: 50, received: 0, sales: 30, quantity: 20, minStockLevel: 25, status: "Low Stock" },
+        { name: "Paracetamol", opening: 80, received: 50, sales: 30, quantity: 100, minStockLevel: 100, status: "In Stock" },
     ],
     "STR003": [
-        { name: "Amoxicillin", opening: 50, received: 50, sales: 20, quantity: 80, status: "In Stock" },
-        { name: "Lisinopril", opening: 100, received: 40, sales: 20, quantity: 120, status: "In Stock" },
-        { name: "Metformin", opening: 25, received: 0, sales: 25, quantity: 0, status: "Out of Stock" },
+        { name: "Amoxicillin", opening: 50, received: 50, sales: 20, quantity: 80, minStockLevel: 40, status: "In Stock" },
+        { name: "Lisinopril", opening: 100, received: 40, sales: 20, quantity: 120, minStockLevel: 60, status: "In Stock" },
+        { name: "Metformin", opening: 25, received: 0, sales: 25, quantity: 0, minStockLevel: 30, status: "Out of Stock" },
     ],
+};
+
+const getStatus = (quantity: number, minStockLevel: number) => {
+    if (quantity <= 0) return "Out of Stock";
+    if (quantity < minStockLevel) return "Low Stock";
+    return "In Stock";
 };
 
 export default function StoreInventoryPage() {
@@ -113,10 +119,12 @@ export default function StoreInventoryPage() {
             case 'Dashboard': return <HomeIcon />;
             case 'Patients': return <Users2 />;
             case 'Sales': return <ShoppingCart />;
-            case 'Sales Reports': return <BarChart />;
             case 'Warehouse Stock': return <Warehouse />;
             case 'Store Stock': return <Package />;
-            case 'Add Medicine': return <PlusSquare />;
+            case 'Medicine Master': return <Pill />;
+            case 'Manufacturer Master': return <Building />;
+            case 'Add Stock': return <PlusSquare />;
+            case 'Return to Manufacturer': return <Undo />;
             case 'Stock Transfer': return <GitBranch />;
             case 'Inventory Reports': return <BarChart />;
             case 'Valuation Report': return <TrendingUp />;
@@ -260,7 +268,9 @@ export default function StoreInventoryPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredInventory.map((item) => (
+                            {filteredInventory.map((item) => {
+                                const status = getStatus(item.quantity, item.minStockLevel);
+                                return (
                                 <TableRow key={item.name}>
                                     <TableCell className="font-medium">{item.name}</TableCell>
                                     <TableCell className="text-right">{item.opening}</TableCell>
@@ -268,12 +278,12 @@ export default function StoreInventoryPage() {
                                     <TableCell className="text-right">{item.sales}</TableCell>
                                     <TableCell className="text-right font-bold">{item.quantity}</TableCell>
                                     <TableCell className="text-right">
-                                        <Badge variant={item.status === 'In Stock' ? 'default' : item.status === 'Low Stock' ? 'secondary' : 'destructive'}>
-                                            {item.status}
+                                        <Badge variant={status === 'In Stock' ? 'default' : status === 'Low Stock' ? 'secondary' : 'destructive'}>
+                                            {status}
                                         </Badge>
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                            )})}
                         </TableBody>
                     </Table>
                 </CardContent>

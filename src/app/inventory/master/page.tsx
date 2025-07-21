@@ -33,16 +33,19 @@ interface MedicineMaster {
     id: string;
     name: string;
     hsnCode: string;
-    price: number;
+    purchasePrice: number;
+    sellingPrice: number;
     gstSlab: string;
+    minStockLevel: number;
+    unitType: string;
 }
 
 const initialMedicines: MedicineMaster[] = [
-    { id: "MED001", name: "Aspirin 100mg", hsnCode: "300490", price: 1.00, gstSlab: "5" },
-    { id: "MED002", name: "Ibuprofen 200mg", hsnCode: "300490", price: 2.50, gstSlab: "12" },
-    { id: "MED003", name: "Paracetamol 500mg", hsnCode: "300490", price: 0.50, gstSlab: "5" },
-    { id: "MED004", name: "Amoxicillin 250mg", hsnCode: "300450", price: 8.00, gstSlab: "12" },
-    { id: "MED005", name: "Atorvastatin 20mg", hsnCode: "300490", price: 15.00, gstSlab: "12" },
+    { id: "MED001", name: "Aspirin 100mg", hsnCode: "300490", purchasePrice: 1.00, sellingPrice: 1.20, gstSlab: "5", minStockLevel: 100, unitType: 'PCS' },
+    { id: "MED002", name: "Ibuprofen 200mg", hsnCode: "300490", purchasePrice: 2.50, sellingPrice: 3.00, gstSlab: "12", minStockLevel: 50, unitType: 'PCS' },
+    { id: "MED003", name: "Paracetamol 500mg", hsnCode: "300490", purchasePrice: 0.50, sellingPrice: 0.60, gstSlab: "5", minStockLevel: 200, unitType: 'PCS' },
+    { id: "MED004", name: "Amoxicillin 250mg", hsnCode: "300450", purchasePrice: 8.00, sellingPrice: 9.50, gstSlab: "12", minStockLevel: 50, unitType: 'STRIP' },
+    { id: "MED005", name: "Atorvastatin 20mg", hsnCode: "300490", purchasePrice: 15.00, sellingPrice: 18.00, gstSlab: "12", minStockLevel: 75, unitType: 'PCS' },
 ];
 
 export default function MedicineMasterPage() {
@@ -72,16 +75,22 @@ export default function MedicineMasterPage() {
         const formData = new FormData(e.currentTarget);
         const name = formData.get("medicine-name") as string;
         const hsnCode = formData.get("hsn-code") as string;
-        const price = parseFloat(formData.get("price") as string);
+        const purchasePrice = parseFloat(formData.get("purchase-price") as string);
+        const sellingPrice = parseFloat(formData.get("selling-price") as string);
         const gstSlab = formData.get("gst-slab") as string;
+        const minStockLevel = parseInt(formData.get("min-stock") as string, 10);
+        const unitType = formData.get("unit-type") as string;
 
-        if (name && hsnCode && price && gstSlab) {
+        if (name && hsnCode && purchasePrice && sellingPrice && gstSlab && minStockLevel && unitType) {
             const newMedicine: MedicineMaster = {
                 id: `MED${(medicines.length + 1).toString().padStart(3, '0')}`,
                 name,
                 hsnCode,
-                price,
+                purchasePrice,
+                sellingPrice,
                 gstSlab,
+                minStockLevel,
+                unitType,
             };
             setMedicines([...medicines, newMedicine]);
             toast({ title: "Success", description: "Medicine added to master list." });
@@ -223,9 +232,10 @@ export default function MedicineMasterPage() {
                             <TableRow>
                                 <TableHead className="hidden sm:table-cell">ID</TableHead>
                                 <TableHead>Name</TableHead>
-                                <TableHead className="hidden md:table-cell">HSN Code</TableHead>
-                                <TableHead className="hidden md:table-cell text-right">Price (₹)</TableHead>
-                                <TableHead className="hidden md:table-cell text-right">GST</TableHead>
+                                <TableHead className="hidden md:table-cell">HSN</TableHead>
+                                <TableHead className="hidden md:table-cell text-right">Selling Price (₹)</TableHead>
+                                <TableHead className="hidden md:table-cell text-right">Unit</TableHead>
+                                <TableHead className="hidden md:table-cell text-right">Min Stock</TableHead>
                                 <TableHead>
                                     <span className="sr-only">Actions</span>
                                 </TableHead>
@@ -237,8 +247,9 @@ export default function MedicineMasterPage() {
                                     <TableCell className="hidden sm:table-cell font-medium">{med.id}</TableCell>
                                     <TableCell>{med.name}</TableCell>
                                     <TableCell className="hidden md:table-cell">{med.hsnCode}</TableCell>
-                                    <TableCell className="hidden md:table-cell text-right">{med.price.toFixed(2)}</TableCell>
-                                    <TableCell className="hidden md:table-cell text-right">{med.gstSlab}%</TableCell>
+                                    <TableCell className="hidden md:table-cell text-right">{med.sellingPrice.toFixed(2)}</TableCell>
+                                    <TableCell className="hidden md:table-cell text-right">{med.unitType}</TableCell>
+                                    <TableCell className="hidden md:table-cell text-right">{med.minStockLevel}</TableCell>
                                     <TableCell>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
@@ -266,12 +277,12 @@ export default function MedicineMasterPage() {
       </div>
 
        <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-lg">
                  <form onSubmit={handleAddMedicine}>
                     <DialogHeader>
                         <DialogTitle>Add New Medicine</DialogTitle>
                         <DialogDescription>
-                            Define a new medicine in the master list.
+                            Define a new medicine in the master list with its properties.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
@@ -279,16 +290,12 @@ export default function MedicineMasterPage() {
                             <Label htmlFor="medicine-name">Medicine Name</Label>
                             <Input id="medicine-name" name="medicine-name" placeholder="e.g., Paracetamol 500mg" required />
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="hsn-code">HSN Code</Label>
-                            <Input id="hsn-code" name="hsn-code" placeholder="e.g., 300490" required />
-                        </div>
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="price">Default Price (₹)</Label>
-                                <Input id="price" name="price" type="number" step="0.01" placeholder="10.50" required />
+                             <div className="space-y-2">
+                                <Label htmlFor="hsn-code">HSN Code</Label>
+                                <Input id="hsn-code" name="hsn-code" placeholder="e.g., 300490" required />
                             </div>
-                            <div className="space-y-2">
+                             <div className="space-y-2">
                                 <Label htmlFor="gst-slab">GST Slab</Label>
                                 <Select name="gst-slab" required>
                                     <SelectTrigger id="gst-slab">
@@ -300,6 +307,37 @@ export default function MedicineMasterPage() {
                                         <SelectItem value="12">12%</SelectItem>
                                         <SelectItem value="18">18%</SelectItem>
                                         <SelectItem value="28">28%</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="purchase-price">Default Purchase Price (₹)</Label>
+                                <Input id="purchase-price" name="purchase-price" type="number" step="0.01" placeholder="9.50" required />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="selling-price">Selling Price (₹)</Label>
+                                <Input id="selling-price" name="selling-price" type="number" step="0.01" placeholder="10.50" required />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="min-stock">Minimum Stock Level</Label>
+                                <Input id="min-stock" name="min-stock" type="number" placeholder="50" required />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="unit-type">Unit Type</Label>
+                                <Select name="unit-type" required>
+                                    <SelectTrigger id="unit-type">
+                                        <SelectValue placeholder="Select Unit" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="PCS">Pieces (PCS)</SelectItem>
+                                        <SelectItem value="BOX">Box</SelectItem>
+                                        <SelectItem value="STRIP">Strip</SelectItem>
+                                        <SelectItem value="BTL">Bottle (BTL)</SelectItem>
+                                        <SelectItem value="TUBE">Tube</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>

@@ -26,14 +26,20 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const inventoryData = [
-    { name: "Aspirin", quantity: 1500, status: "In Stock", manufacturer: "Bayer", expiry: "2025-12-31" },
-    { name: "Ibuprofen", quantity: 2000, status: "In Stock", manufacturer: "Advil", expiry: "2026-06-30" },
-    { name: "Paracetamol", quantity: 450, status: "Low Stock", manufacturer: "Tylenol", expiry: "2024-10-31" },
-    { name: "Amoxicillin", quantity: 800, status: "In Stock", manufacturer: "Generic", expiry: "2025-08-01" },
-    { name: "Lisinopril", quantity: 1200, status: "In Stock", manufacturer: "Zestril", expiry: "2026-02-28" },
-    { name: "Metformin", quantity: 0, status: "Out of Stock", manufacturer: "Glucophage", expiry: "2024-09-15" },
-    { name: "Atorvastatin", quantity: 900, status: "In Stock", manufacturer: "Lipitor", expiry: "2025-11-20" },
+    { name: "Aspirin", quantity: 1500, minStockLevel: 500, manufacturer: "Bayer", expiry: "2025-12-31" },
+    { name: "Ibuprofen", quantity: 200, minStockLevel: 250, manufacturer: "Advil", expiry: "2026-06-30" },
+    { name: "Paracetamol", quantity: 450, minStockLevel: 1000, manufacturer: "Tylenol", expiry: "2024-10-31" },
+    { name: "Amoxicillin", quantity: 800, minStockLevel: 300, manufacturer: "Generic", expiry: "2025-08-01" },
+    { name: "Lisinopril", quantity: 1200, minStockLevel: 400, manufacturer: "Zestril", expiry: "2026-02-28" },
+    { name: "Metformin", quantity: 0, minStockLevel: 500, manufacturer: "Glucophage", expiry: "2024-09-15" },
+    { name: "Atorvastatin", quantity: 900, minStockLevel: 350, manufacturer: "Lipitor", expiry: "2025-11-20" },
 ];
+
+const getStatus = (quantity: number, minStockLevel: number) => {
+    if (quantity === 0) return "Out of Stock";
+    if (quantity < minStockLevel) return "Low Stock";
+    return "In Stock";
+};
 
 export default function WarehouseInventoryPage() {
     const { user, logout, loading, hasPermission } = useAuth();
@@ -182,14 +188,16 @@ export default function WarehouseInventoryPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {inventoryData.map((item) => (
+                        {inventoryData.map((item) => {
+                            const status = getStatus(item.quantity, item.minStockLevel);
+                            return (
                             <TableRow key={item.name}>
                                 <TableCell className="font-medium">{item.name}</TableCell>
                                 <TableCell>{item.manufacturer}</TableCell>
                                 <TableCell className="text-right">{item.quantity}</TableCell>
                                 <TableCell className="text-right">
-                                    <Badge variant={item.status === 'In Stock' ? 'default' : item.status === 'Low Stock' ? 'secondary' : 'destructive'}>
-                                        {item.status}
+                                    <Badge variant={status === 'In Stock' ? 'default' : status === 'Low Stock' ? 'secondary' : 'destructive'}>
+                                        {status}
                                     </Badge>
                                 </TableCell>
                                 <TableCell>{item.expiry}</TableCell>
@@ -210,7 +218,7 @@ export default function WarehouseInventoryPage() {
                                     </DropdownMenu>
                                 </TableCell>
                             </TableRow>
-                        ))}
+                        )})}
                     </TableBody>
                 </Table>
                 </CardContent>

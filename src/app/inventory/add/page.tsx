@@ -36,16 +36,19 @@ interface MedicineMaster {
     id: string;
     name: string;
     hsnCode: string;
-    price: number;
+    purchasePrice: number;
+    sellingPrice: number;
     gstSlab: string;
+    minStockLevel: number;
+    unitType: string;
 }
 
 const medicineMasterData: MedicineMaster[] = [
-    { id: "MED001", name: "Aspirin 100mg", hsnCode: "300490", price: 1.00, gstSlab: "5" },
-    { id: "MED002", name: "Ibuprofen 200mg", hsnCode: "300490", price: 2.50, gstSlab: "12" },
-    { id: "MED003", name: "Paracetamol 500mg", hsnCode: "300490", price: 0.50, gstSlab: "5" },
-    { id: "MED004", name: "Amoxicillin 250mg", hsnCode: "300450", price: 8.00, gstSlab: "12" },
-    { id: "MED005", name: "Atorvastatin 20mg", hsnCode: "300490", price: 15.00, gstSlab: "12" },
+    { id: "MED001", name: "Aspirin 100mg", hsnCode: "300490", purchasePrice: 1.00, sellingPrice: 1.20, gstSlab: "5", minStockLevel: 100, unitType: 'PCS' },
+    { id: "MED002", name: "Ibuprofen 200mg", hsnCode: "300490", purchasePrice: 2.50, sellingPrice: 3.00, gstSlab: "12", minStockLevel: 50, unitType: 'PCS' },
+    { id: "MED003", name: "Paracetamol 500mg", hsnCode: "300490", purchasePrice: 0.50, sellingPrice: 0.60, gstSlab: "5", minStockLevel: 200, unitType: 'PCS' },
+    { id: "MED004", name: "Amoxicillin 250mg", hsnCode: "300450", purchasePrice: 8.00, sellingPrice: 9.50, gstSlab: "12", minStockLevel: 50, unitType: 'STRIP' },
+    { id: "MED005", name: "Atorvastatin 20mg", hsnCode: "300490", purchasePrice: 15.00, sellingPrice: 18.00, gstSlab: "12", minStockLevel: 75, unitType: 'PCS' },
 ];
 
 const manufacturerOptions = [
@@ -113,7 +116,7 @@ export default function AddStockPage() {
                 ...item, 
                 medicineId: selectedMedicine.id,
                 medicineName: selectedMedicine.name,
-                pricePerUnit: selectedMedicine.price,
+                pricePerUnit: selectedMedicine.purchasePrice,
             } : item
         ));
     };
@@ -306,8 +309,8 @@ export default function AddStockPage() {
                     <TabsTrigger value="csv-import">Import from CSV</TabsTrigger>
                 </TabsList>
                 <TabsContent value="bulk-add">
-                    <Card>
-                        <form onSubmit={handleFormSubmit}>
+                    <form onSubmit={handleFormSubmit}>
+                        <Card>
                             <CardHeader>
                                 <CardTitle>Add New Stock</CardTitle>
                                 <CardDescription>Fill in the form to add new stock to the warehouse based on a purchase invoice.</CardDescription>
@@ -405,19 +408,19 @@ export default function AddStockPage() {
                                     </div>
                                 )}
                                 
-                                <div className="flex justify-between items-center mt-4">
-                                    <Button type="button" variant="outline" onClick={handleAddItem}>
+                                <div className="mt-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+                                     <Button type="button" variant="outline" onClick={handleAddItem}>
                                         <PlusCircle className="mr-2 h-4 w-4" />
                                         Add Row
                                     </Button>
-                                    {purchaseItems.length > 0 && (
-                                        <div className="text-right">
+                                    <div className="flex-grow text-right">
+                                        {purchaseItems.length > 0 && (
                                             <p className="text-lg font-bold">Total Invoice Amount: ₹{totalInvoiceValue.toFixed(2)}</p>
-                                        </div>
-                                    )}
+                                        )}
+                                    </div>
                                 </div>
                             </CardContent>
-                             <CardContent className="pt-6">
+                            <CardContent className="pt-0">
                                 <div className="flex justify-end">
                                     <Button type="submit">
                                         <PlusSquare className="mr-2 h-4 w-4"/>
@@ -425,8 +428,8 @@ export default function AddStockPage() {
                                     </Button>
                                 </div>
                             </CardContent>
-                        </form>
-                    </Card>
+                        </Card>
+                    </form>
                 </TabsContent>
                 <TabsContent value="csv-import">
                     <Card>
@@ -477,6 +480,3 @@ export default function AddStockPage() {
       </div>
     </div>
   );
-  
-    
-    
