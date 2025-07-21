@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, MoreHorizontal, FilePenLine, Trash2, Search } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, MoreHorizontal, FilePenLine, Trash2, Search, Upload, Send, FileText } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,9 @@ import { useRouter, usePathname } from "next/navigation";
 import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
 interface Patient {
@@ -39,14 +42,36 @@ interface Patient {
     bp?: string;
     sugar?: string;
     address?: string;
+    medicineHistory?: { date: string; medicine: string; dosage: string }[];
+    reports?: { date: string; name: string; url: string }[];
 }
 
 const initialPatients: Patient[] = [
-    { id: "PAT001", name: "Alice Johnson", age: 58, gender: "Female", mobile: "9876543210", lastVisit: "2024-07-15", bp: "120/80", sugar: "98 mg/dL", address: "123 Maple St, Springfield" },
-    { id: "PAT002", name: "Bob Williams", age: 45, gender: "Male", mobile: "9876543211", lastVisit: "2024-07-12", bp: "130/85", sugar: "110 mg/dL", address: "456 Oak Ave, Springfield" },
-    { id: "PAT003", name: "Charlie Brown", age: 62, gender: "Male", mobile: "9876543212", lastVisit: "2024-07-20", bp: "140/90", sugar: "150 mg/dL", address: "789 Pine Ln, Springfield" },
-    { id: "PAT004", name: "Diana Miller", age: 34, gender: "Female", mobile: "9876543213", lastVisit: "2024-06-30", bp: "110/70", sugar: "85 mg/dL", address: "101 Elm Ct, Springfield" },
-    { id: "PAT005", name: "Ethan Davis", age: 71, gender: "Male", mobile: "9876543214", lastVisit: "2024-07-18", bp: "135/88", sugar: "125 mg/dL", address: "212 Birch Rd, Springfield" },
+    { 
+        id: "PAT001", name: "Alice Johnson", age: 58, gender: "Female", mobile: "9876543210", lastVisit: "2024-07-15", bp: "120/80", sugar: "98 mg/dL", address: "123 Maple St, Springfield",
+        medicineHistory: [
+            { date: "2024-07-15", medicine: "Lisinopril", dosage: "10mg daily" },
+            { date: "2024-06-10", medicine: "Atorvastatin", dosage: "20mg daily" },
+        ],
+        reports: [ { date: "2024-07-15", name: "Blood Test Report", url: "#" } ]
+    },
+    { 
+        id: "PAT002", name: "Bob Williams", age: 45, gender: "Male", mobile: "9876543211", lastVisit: "2024-07-12", bp: "130/85", sugar: "110 mg/dL", address: "456 Oak Ave, Springfield",
+        medicineHistory: [
+            { date: "2024-07-12", medicine: "Ibuprofen", dosage: "200mg as needed" }
+        ],
+        reports: []
+    },
+    { 
+        id: "PAT003", name: "Charlie Brown", age: 62, gender: "Male", mobile: "9876543212", lastVisit: "2024-07-20", bp: "140/90", sugar: "150 mg/dL", address: "789 Pine Ln, Springfield",
+        medicineHistory: [
+            { date: "2024-07-20", medicine: "Metformin", dosage: "500mg twice daily" },
+            { date: "2024-07-20", medicine: "Aspirin", dosage: "81mg daily" },
+        ],
+        reports: [ { date: "2024-07-20", name: "ECG Report", url: "#" } ]
+    },
+    { id: "PAT004", name: "Diana Miller", age: 34, gender: "Female", mobile: "9876543213", lastVisit: "2024-06-30", bp: "110/70", sugar: "85 mg/dL", address: "101 Elm Ct, Springfield", medicineHistory: [], reports: [] },
+    { id: "PAT005", name: "Ethan Davis", age: 71, gender: "Male", mobile: "9876543214", lastVisit: "2024-07-18", bp: "135/88", sugar: "125 mg/dL", address: "212 Birch Rd, Springfield", medicineHistory: [], reports: [] },
 ];
 
 
@@ -54,11 +79,13 @@ export default function PatientsPage() {
   const { user, logout, loading, hasPermission } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const { toast } = useToast();
   const [patients, setPatients] = useState<Patient[]>(initialPatients);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedPatientIds, setSelectedPatientIds] = useState<string[]>([]);
 
 
   const sidebarRoutes = useMemo(() => {
@@ -115,6 +142,37 @@ export default function PatientsPage() {
       setIsEditModalOpen(false);
       setSelectedPatient(null);
   }
+
+  const handleSelectPatient = (patientId: string, checked: boolean | 'indeterminate') => {
+      if (checked) {
+          setSelectedPatientIds(prev => [...prev, patientId]);
+      } else {
+          setSelectedPatientIds(prev => prev.filter(id => id !== patientId));
+      }
+  };
+
+  const handleSelectAll = (checked: boolean | 'indeterminate') => {
+      if (checked) {
+          setSelectedPatientIds(filteredPatients.map(p => p.id));
+      } else {
+          setSelectedPatientIds([]);
+      }
+  };
+
+  const sendReminder = (patientName: string) => {
+      toast({
+          title: "Reminder Sent",
+          description: `Reminder has been sent to ${patientName}.`
+      });
+  };
+  
+  const sendBulkReminders = () => {
+      toast({
+          title: "Bulk Reminders Sent",
+          description: `Reminders have been sent to ${selectedPatientIds.length} selected patients.`
+      });
+      setSelectedPatientIds([]);
+  };
 
     if (loading || !user) {
         return (
@@ -233,15 +291,23 @@ export default function PatientsPage() {
                             <CardTitle>Patient Directory</CardTitle>
                             <CardDescription>View and manage patient records. New patients are added via the sales form.</CardDescription>
                         </div>
-                        <div className="relative">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                type="search"
-                                placeholder="Search by name, mobile, or ID..."
-                                className="w-full sm:w-[300px] pl-8"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
+                        <div className="flex items-center gap-2">
+                            {selectedPatientIds.length > 0 && (
+                                <Button size="sm" variant="outline" onClick={sendBulkReminders}>
+                                    <Send className="mr-2 h-4 w-4" />
+                                    Send Reminder ({selectedPatientIds.length})
+                                </Button>
+                            )}
+                            <div className="relative">
+                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    type="search"
+                                    placeholder="Search by name, mobile, or ID..."
+                                    className="w-full sm:w-[300px] pl-8"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
                         </div>
                     </div>
                 </CardHeader>
@@ -249,6 +315,13 @@ export default function PatientsPage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
+                                <TableHead className="w-[50px]">
+                                    <Checkbox 
+                                        onCheckedChange={(checked) => handleSelectAll(checked)}
+                                        checked={selectedPatientIds.length === filteredPatients.length && filteredPatients.length > 0}
+                                        aria-label="Select all"
+                                    />
+                                </TableHead>
                                 <TableHead>Name</TableHead>
                                 <TableHead className="hidden sm:table-cell">Mobile No.</TableHead>
                                 <TableHead className="hidden sm:table-cell">Age</TableHead>
@@ -260,7 +333,14 @@ export default function PatientsPage() {
                         </TableHeader>
                         <TableBody>
                             {filteredPatients.map((patient) => (
-                                <TableRow key={patient.id}>
+                                <TableRow key={patient.id} data-state={selectedPatientIds.includes(patient.id) ? "selected" : ""}>
+                                    <TableCell>
+                                        <Checkbox 
+                                            onCheckedChange={(checked) => handleSelectPatient(patient.id, checked)}
+                                            checked={selectedPatientIds.includes(patient.id)}
+                                            aria-label={`Select ${patient.name}`}
+                                        />
+                                    </TableCell>
                                     <TableCell className="font-medium">{patient.name}</TableCell>
                                     <TableCell className="hidden sm:table-cell">{patient.mobile}</TableCell>
                                     <TableCell className="hidden sm:table-cell">{patient.age}</TableCell>
@@ -297,30 +377,95 @@ export default function PatientsPage() {
         {selectedPatient && (
             <>
                 <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-                    <DialogContent className="sm:max-w-md">
+                    <DialogContent className="sm:max-w-2xl">
                         <DialogHeader>
                             <DialogTitle>Patient Details: {selectedPatient.name}</DialogTitle>
-                            <DialogDescription>
-                                Full record for {selectedPatient.name}.
-                            </DialogDescription>
                         </DialogHeader>
-                        <div className="grid gap-4 py-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <p><strong className="font-medium">ID:</strong> {selectedPatient.id}</p>
-                                <p><strong className="font-medium">Age:</strong> {selectedPatient.age}</p>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <p><strong className="font-medium">Gender:</strong> {selectedPatient.gender}</p>
-                                <p><strong className="font-medium">Mobile:</strong> {selectedPatient.mobile}</p>
-                            </div>
-                             <div className="grid grid-cols-2 gap-4">
-                                <p><strong className="font-medium">BP:</strong> {selectedPatient.bp || 'N/A'}</p>
-                                <p><strong className="font-medium">Sugar:</strong> {selectedPatient.sugar || 'N/A'}</p>
-                            </div>
-                             <p><strong className="font-medium">Address:</strong> {selectedPatient.address || 'N/A'}</p>
-                            <p><strong className="font-medium">Last Visit:</strong> {selectedPatient.lastVisit}</p>
-                        </div>
+                        <Tabs defaultValue="details">
+                            <TabsList className="grid w-full grid-cols-3">
+                                <TabsTrigger value="details">Vitals & Info</TabsTrigger>
+                                <TabsTrigger value="history">Medicine History</TabsTrigger>
+                                <TabsTrigger value="reports">Health Reports</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="details" className="py-4">
+                                <div className="grid gap-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <p><strong className="font-medium">ID:</strong> {selectedPatient.id}</p>
+                                        <p><strong className="font-medium">Age:</strong> {selectedPatient.age}</p>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <p><strong className="font-medium">Gender:</strong> {selectedPatient.gender}</p>
+                                        <p><strong className="font-medium">Mobile:</strong> {selectedPatient.mobile}</p>
+                                    </div>
+                                     <div className="grid grid-cols-2 gap-4">
+                                        <p><strong className="font-medium">BP:</strong> {selectedPatient.bp || 'N/A'}</p>
+                                        <p><strong className="font-medium">Sugar:</strong> {selectedPatient.sugar || 'N/A'}</p>
+                                    </div>
+                                     <p><strong className="font-medium">Address:</strong> {selectedPatient.address || 'N/A'}</p>
+                                    <p><strong className="font-medium">Last Visit:</strong> {selectedPatient.lastVisit}</p>
+                                </div>
+                            </TabsContent>
+                            <TabsContent value="history" className="py-4">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Date</TableHead>
+                                            <TableHead>Medicine</TableHead>
+                                            <TableHead>Dosage</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {selectedPatient.medicineHistory?.length ? selectedPatient.medicineHistory.map((item, index) => (
+                                            <TableRow key={index}>
+                                                <TableCell>{item.date}</TableCell>
+                                                <TableCell>{item.medicine}</TableCell>
+                                                <TableCell>{item.dosage}</TableCell>
+                                            </TableRow>
+                                        )) : (
+                                            <TableRow><TableCell colSpan={3} className="text-center">No medicine history found.</TableCell></TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </TabsContent>
+                            <TabsContent value="reports" className="py-4">
+                                <div className="flex justify-end mb-4">
+                                    <Button variant="outline">
+                                        <Upload className="mr-2 h-4 w-4"/> Upload Report
+                                        <Input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                                    </Button>
+                                </div>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Date</TableHead>
+                                            <TableHead>Report Name</TableHead>
+                                            <TableHead className="text-right">Action</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {selectedPatient.reports?.length ? selectedPatient.reports.map((report, index) => (
+                                            <TableRow key={index}>
+                                                <TableCell>{report.date}</TableCell>
+                                                <TableCell>{report.name}</TableCell>
+                                                <TableCell className="text-right">
+                                                    <Button variant="ghost" size="icon" asChild>
+                                                        <a href={report.url} target="_blank" rel="noopener noreferrer">
+                                                            <FileText className="h-4 w-4" />
+                                                        </a>
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        )) : (
+                                            <TableRow><TableCell colSpan={3} className="text-center">No reports found.</TableCell></TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </TabsContent>
+                        </Tabs>
                         <DialogFooter>
+                            <Button type="button" variant="outline" onClick={() => sendReminder(selectedPatient.name)}>
+                                <Send className="mr-2 h-4 w-4"/> Send Reminder
+                            </Button>
                             <DialogClose asChild>
                                 <Button type="button" variant="secondary" onClick={() => setSelectedPatient(null)}>Close</Button>
                             </DialogClose>
