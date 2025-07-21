@@ -31,17 +31,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 interface MedicineMaster {
     id: string;
     name: string;
-    manufacturer: string;
-    price: number;
-    gstSlab: string;
 }
 
 const medicineMasterData: MedicineMaster[] = [
-    { id: "MED001", name: "Aspirin 100mg", manufacturer: "Bayer", price: 10.00, gstSlab: "5" },
-    { id: "MED002", name: "Ibuprofen 200mg", manufacturer: "Advil", price: 15.50, gstSlab: "5" },
-    { id: "MED003", name: "Paracetamol 500mg", manufacturer: "Tylenol", price: 5.75, gstSlab: "5" },
-    { id: "MED004", name: "Amoxicillin 250mg", manufacturer: "Generic", price: 55.20, gstSlab: "12" },
-    { id: "MED005", name: "Atorvastatin 20mg", manufacturer: "Lipitor", price: 45.00, gstSlab: "12" },
+    { id: "MED001", name: "Aspirin 100mg" },
+    { id: "MED002", name: "Ibuprofen 200mg" },
+    { id: "MED003", name: "Paracetamol 500mg" },
+    { id: "MED004", name: "Amoxicillin 250mg" },
+    { id: "MED005", name: "Atorvastatin 20mg" },
 ];
 
 
@@ -104,9 +101,6 @@ export default function AddStockPage() {
                 ...item, 
                 medicineId: selectedMedicine.id,
                 medicineName: selectedMedicine.name,
-                manufacturer: selectedMedicine.manufacturer,
-                pricePerUnit: selectedMedicine.price,
-                gstSlab: selectedMedicine.gstSlab,
             } : item
         ));
     };
@@ -144,8 +138,8 @@ export default function AddStockPage() {
     };
     
     const downloadSampleCsv = () => {
-        const header = "MedicineID,Quantity,PricePerUnit,ExpiryDate(YYYY-MM-DD)\n";
-        const exampleRow = "MED001,100,10.50,2026-12-31\n";
+        const header = "MedicineID,Manufacturer,Quantity,PricePerUnit,ExpiryDate(YYYY-MM-DD)\n";
+        const exampleRow = "MED001,Bayer,100,10.50,2026-12-31\n";
         const blob = new Blob([header, exampleRow], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         if (link.download !== undefined) {
@@ -310,6 +304,7 @@ export default function AddStockPage() {
                                             <TableHeader>
                                                 <TableRow>
                                                     <TableHead className="min-w-[250px]">Medicine</TableHead>
+                                                    <TableHead className="min-w-[150px]">Manufacturer</TableHead>
                                                     <TableHead className="w-[100px]">Quantity</TableHead>
                                                     <TableHead className="w-[150px]">Price/Unit (₹)</TableHead>
                                                     <TableHead className="w-[150px]">Expiry</TableHead>
@@ -325,19 +320,22 @@ export default function AddStockPage() {
                                                                 <SelectTrigger><SelectValue placeholder="Select Medicine" /></SelectTrigger>
                                                                 <SelectContent>
                                                                     {medicineMasterData.map(med => (
-                                                                        <SelectItem key={med.id} value={med.id}>{med.name} ({med.manufacturer})</SelectItem>
+                                                                        <SelectItem key={med.id} value={med.id}>{med.name}</SelectItem>
                                                                     ))}
                                                                 </SelectContent>
                                                             </Select>
                                                         </TableCell>
-                                                        <TableCell>
-                                                            <Input type="number" value={item.quantity} onChange={e => handleItemChange(item.id, 'quantity', parseInt(e.target.value, 10))} min="1" />
+                                                         <TableCell>
+                                                            <Input placeholder="e.g. Bayer" value={item.manufacturer} onChange={e => handleItemChange(item.id, 'manufacturer', e.target.value)} required/>
                                                         </TableCell>
                                                         <TableCell>
-                                                            <Input type="number" value={item.pricePerUnit} onChange={e => handleItemChange(item.id, 'pricePerUnit', parseFloat(e.target.value))} />
+                                                            <Input type="number" value={item.quantity} onChange={e => handleItemChange(item.id, 'quantity', parseInt(e.target.value, 10))} min="1" required/>
                                                         </TableCell>
                                                         <TableCell>
-                                                            <Input type="date" value={item.expiryDate} onChange={e => handleItemChange(item.id, 'expiryDate', e.target.value)} />
+                                                            <Input type="number" value={item.pricePerUnit} onChange={e => handleItemChange(item.id, 'pricePerUnit', parseFloat(e.target.value))} required/>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Input type="date" value={item.expiryDate} onChange={e => handleItemChange(item.id, 'expiryDate', e.target.value)} required/>
                                                         </TableCell>
                                                         <TableCell>
                                                              <Select value={item.gstSlab} onValueChange={value => handleItemChange(item.id, 'gstSlab', value)}>

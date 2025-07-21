@@ -20,7 +20,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { allAppRoutes } from "@/lib/types";
@@ -31,17 +30,14 @@ import { useToast } from "@/hooks/use-toast";
 interface MedicineMaster {
     id: string;
     name: string;
-    manufacturer: string;
-    price: number;
-    gstSlab: string;
 }
 
 const initialMedicines: MedicineMaster[] = [
-    { id: "MED001", name: "Aspirin 100mg", manufacturer: "Bayer", price: 10.00, gstSlab: "5" },
-    { id: "MED002", name: "Ibuprofen 200mg", manufacturer: "Advil", price: 15.50, gstSlab: "5" },
-    { id: "MED003", name: "Paracetamol 500mg", manufacturer: "Tylenol", price: 5.75, gstSlab: "5" },
-    { id: "MED004", name: "Amoxicillin 250mg", manufacturer: "Generic", price: 55.20, gstSlab: "12" },
-    { id: "MED005", name: "Atorvastatin 20mg", manufacturer: "Lipitor", price: 45.00, gstSlab: "12" },
+    { id: "MED001", name: "Aspirin 100mg" },
+    { id: "MED002", name: "Ibuprofen 200mg" },
+    { id: "MED003", name: "Paracetamol 500mg" },
+    { id: "MED004", name: "Amoxicillin 250mg" },
+    { id: "MED005", name: "Atorvastatin 20mg" },
 ];
 
 export default function MedicineMasterPage() {
@@ -70,17 +66,11 @@ export default function MedicineMasterPage() {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
         const name = formData.get("medicine-name") as string;
-        const manufacturer = formData.get("manufacturer") as string;
-        const price = parseFloat(formData.get("price") as string);
-        const gstSlab = formData.get("gst-slab") as string;
 
-        if (name && manufacturer && price && gstSlab) {
+        if (name) {
             const newMedicine: MedicineMaster = {
                 id: `MED${(medicines.length + 1).toString().padStart(3, '0')}`,
                 name,
-                manufacturer,
-                price,
-                gstSlab,
             };
             setMedicines([...medicines, newMedicine]);
             toast({ title: "Success", description: "Medicine added to master list." });
@@ -221,9 +211,6 @@ export default function MedicineMasterPage() {
                             <TableRow>
                                 <TableHead className="hidden sm:table-cell">ID</TableHead>
                                 <TableHead>Name</TableHead>
-                                <TableHead>Manufacturer</TableHead>
-                                <TableHead className="text-right">Price (₹)</TableHead>
-                                <TableHead className="text-right">GST</TableHead>
                                 <TableHead>
                                     <span className="sr-only">Actions</span>
                                 </TableHead>
@@ -234,9 +221,6 @@ export default function MedicineMasterPage() {
                                 <TableRow key={med.id}>
                                     <TableCell className="hidden sm:table-cell font-medium">{med.id}</TableCell>
                                     <TableCell>{med.name}</TableCell>
-                                    <TableCell>{med.manufacturer}</TableCell>
-                                    <TableCell className="text-right">{med.price.toFixed(2)}</TableCell>
-                                    <TableCell className="text-right">{med.gstSlab}%</TableCell>
                                     <TableCell>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
@@ -276,29 +260,6 @@ export default function MedicineMasterPage() {
                         <div className="space-y-2">
                             <Label htmlFor="medicine-name">Medicine Name</Label>
                             <Input id="medicine-name" name="medicine-name" placeholder="e.g., Paracetamol 500mg" required />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="manufacturer">Manufacturer</Label>
-                            <Input id="manufacturer" name="manufacturer" placeholder="e.g., Cipla" required />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="price">Default Price (₹)</Label>
-                            <Input id="price" name="price" type="number" step="0.01" placeholder="10.50" required />
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="gst-slab">Default GST</Label>
-                            <Select name="gst-slab" required>
-                                <SelectTrigger id="gst-slab">
-                                    <SelectValue placeholder="Select GST %" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="0">0%</SelectItem>
-                                    <SelectItem value="5">5%</SelectItem>
-                                    <SelectItem value="12">12%</SelectItem>
-                                    <SelectItem value="18">18%</SelectItem>
-                                    <SelectItem value="28">28%</SelectItem>
-                                </SelectContent>
-                            </Select>
                         </div>
                     </div>
                     <DialogFooter>
