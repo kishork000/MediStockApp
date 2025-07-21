@@ -14,7 +14,7 @@ const initialUsers = [
 
 const initialPermissions: RolePermissions = {
     Admin: allAppRoutes.map(r => r.path), // Admin has all permissions
-    Pharmacist: ['/', '/patients', '/sales', '/inventory', '/inventory/stores', '/inventory/transfer'],
+    Pharmacist: ['/', '/patients', '/sales', '/inventory/stores', '/inventory/transfer'],
     Technician: ['/', '/sales']
 };
 
@@ -59,8 +59,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         const userPermissions = permissions[user.role] || [];
         
-        // Special case for the collapsible trigger parent
-        // It should be visible if any child route is permitted
+        // For the collapsible trigger, it should be visible if any child route is permitted
         if (path === '/inventory') {
             return userPermissions.some(p => p.startsWith('/inventory/'));
         }
@@ -80,7 +79,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
 
         if (user && pathname !== '/login' && !hasPermission(pathname)) {
-            router.push('/');
+            // If user doesn't have permission, redirect to their default allowed page (e.g., dashboard)
+            // This prevents getting stuck on a page they've just lost access to.
+             if(hasPermission('/')) {
+                router.push('/');
+             } else {
+                // If they can't even see the dashboard, log them out.
+                logout();
+             }
         }
 
     }, [user, loading, pathname, router, hasPermission]);
@@ -134,4 +140,3 @@ export const useAuth = (): AuthContextType => {
     }
     return context;
 };
-

@@ -23,7 +23,7 @@ export const allAppRoutes: AppRoute[] = [
     { path: "/patients", name: "Patients", inSidebar: true },
     { path: "/sales", name: "Sales", inSidebar: true },
     { path: "/sales/reports", name: "Sales Reports", inSidebar: true },
-    { path: "/inventory", name: "Warehouse Stock", inSidebar: true },
+    { path: "/inventory/warehouse", name: "Warehouse Stock", inSidebar: true },
     { path: "/inventory/stores", name: "Store Stock", inSidebar: true },
     { path: "/inventory/add", name: "Add Medicine", inSidebar: true },
     { path: "/inventory/transfer", name: "Stock Transfer", inSidebar: true },
