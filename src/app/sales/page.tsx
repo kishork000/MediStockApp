@@ -202,6 +202,17 @@ export default function SalesPage() {
 
   const handlePrint = () => {
     window.print();
+    // After printing, close the modal and reset the sale form
+    setPaymentModalOpen(false);
+    resetSaleForm();
+  }
+
+  const resetSaleForm = () => {
+      setSaleItems([]);
+      setSelectedDiseases([]);
+      setPatientForm({
+          name: "", mobile: "", age: "", gender: "", bp: "", sugar: "", address: "",
+      });
   }
   
   const handlePatientFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -738,7 +749,7 @@ export default function SalesPage() {
                     </Tabs>
                     <DialogFooter>
                        <DialogClose asChild>
-                            <Button type="button" variant="secondary">Close</Button>
+                            <Button type="button" variant="secondary" onClick={() => setPaymentModalOpen(false)}>Close</Button>
                        </DialogClose>
                     </DialogFooter>
                 </DialogContent>
@@ -795,5 +806,6 @@ export default function SalesPage() {
     </>
   );
 }
+
 
 
