@@ -62,7 +62,7 @@ export default function StockTransferPage() {
             quantity: currentTransferItem.quantity,
         };
 
-        setTransferItems([...transferItems, newItem]);
+        setTransferItems(prevItems => [...prevItems, newItem]);
         setCurrentTransferItem({ medicine: "", quantity: 1 });
     };
 
@@ -82,7 +82,7 @@ export default function StockTransferPage() {
             quantity: currentReturnItem.quantity,
         };
 
-        setReturnItems([...returnItems, newItem]);
+        setReturnItems(prevItems => [...prevItems, newItem]);
         setCurrentReturnItem({ medicine: "", quantity: 1 });
     };
 

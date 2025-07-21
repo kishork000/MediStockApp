@@ -241,7 +241,7 @@ export default function PatientsPage() {
                         </div>
                         <DialogFooter>
                             <DialogClose asChild>
-                                <Button type="button" variant="secondary">Close</Button>
+                                <Button type="button" variant="secondary" onClick={() => setSelectedPatient(null)}>Close</Button>
                             </DialogClose>
                         </DialogFooter>
                     </DialogContent>
@@ -301,7 +301,7 @@ export default function PatientsPage() {
                             </div>
                             <DialogFooter>
                                 <DialogClose asChild>
-                                    <Button type="button" variant="secondary">Cancel</Button>
+                                    <Button type="button" variant="secondary" onClick={() => setSelectedPatient(null)}>Cancel</Button>
                                 </DialogClose>
                                 <Button type="submit">Save Changes</Button>
                             </DialogFooter>
@@ -313,5 +313,3 @@ export default function PatientsPage() {
     </div>
   );
 }
-
-    
