@@ -55,18 +55,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const hasPermission = useCallback((path: string): boolean => {
         if (!user) return false;
-        
-        // Admins can access everything, regardless of checkboxes
         if (user.role === 'Admin') return true;
 
-        // All logged-in users can access the dashboard
-        if (path === '/') return true;
+        const userPermissions = permissions[user.role] || [];
         
-        const userPermissions = permissions[user.role];
+        // Exact match is the highest priority
+        if (userPermissions.includes(path)) {
+            return true;
+        }
 
-        // Check for an exact path match. This is the most reliable way.
-        if (userPermissions?.includes(path)) return true;
-
+        // Special case for grouped routes like /inventory
+        // If a user has permission for ANY route starting with a base path (e.g., /inventory/add)
+        // they should also have access to the base path itself (for the collapsible trigger).
+        if (path === '/inventory') {
+            return userPermissions.some(p => p.startsWith('/inventory/'));
+        }
+        
         return false;
     }, [user, permissions]);
 
@@ -79,7 +83,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return;
         }
 
-        if (user && pathname !== '/login' && !hasPermission(pathname)) {
+        // Allow access to the root page for all logged-in users, but check others
+        if (user && pathname !== '/' && pathname !== '/login' && !hasPermission(pathname)) {
             // If user is on a page they don't have permission for, redirect to dashboard
             router.push('/');
         }
@@ -93,11 +98,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const { password, ...userToStore } = foundUser;
             setUser(userToStore);
             localStorage.setItem('medi-stock-user', JSON.stringify(userToStore));
-            // Reload permissions from storage on login to get the latest
+            
+            // CRITICAL FIX: Reload permissions from storage on login to get the latest for that role.
             const storedPermissions = localStorage.getItem('medi-stock-permissions');
             if (storedPermissions) {
                 setPermissionsState(JSON.parse(storedPermissions));
+            } else {
+                setPermissionsState(initialPermissions);
             }
+            
             return true;
         }
         return false;
