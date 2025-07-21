@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo, useEffect } from "react";
@@ -63,11 +62,12 @@ export default function StockReportsPage() {
             case 'Dashboard': return <HomeIcon />;
             case 'Patients': return <Users2 />;
             case 'Sales': return <ShoppingCart />;
+            case 'Sales Reports': return <BarChart />;
             case 'Warehouse Stock': return <Warehouse />;
             case 'Store Stock': return <Package />;
             case 'Add Medicine': return <PlusSquare />;
             case 'Stock Transfer': return <GitBranch />;
-            case 'Stock Reports': return <BarChart />;
+            case 'Inventory Reports': return <BarChart />;
             case 'Valuation Report': return <TrendingUp />;
             case 'Diseases': return <Activity />;
             case 'Admin': return <Settings />;
@@ -135,7 +135,7 @@ export default function StockReportsPage() {
                  <SidebarMenuItem>
                   <SidebarMenuButton href="/inventory/reports" tooltip="Reports">
                     <BarChart />
-                    <span>Reports</span>
+                    <span>Inventory Reports</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
             </SidebarMenu>
@@ -155,7 +155,7 @@ export default function StockReportsPage() {
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
            <SidebarTrigger className="sm:hidden" />
            <div className="flex w-full items-center justify-between">
-              <h1 className="text-xl font-semibold">Stock Reports</h1>
+              <h1 className="text-xl font-semibold">Inventory Reports</h1>
               <ThemeToggle />
            </div>
         </header>
@@ -243,5 +243,3 @@ export default function StockReportsPage() {
     </div>
   );
 }
-
-    
