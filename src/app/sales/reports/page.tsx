@@ -32,12 +32,12 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } f
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 const salesData = [
-    { invoiceId: "SALE001", pharmacist: "Pharmacist One", store: "Downtown Pharmacy", medicine: "Aspirin", quantity: 5, total: 50.00, date: "2024-07-28", paymentMethod: "Cash", patientName: "Alice Johnson" },
-    { invoiceId: "SALE002", pharmacist: "Pharmacist One", store: "Downtown Pharmacy", medicine: "Paracetamol", quantity: 10, total: 57.50, date: "2024-07-28", paymentMethod: "Online", patientName: "Bob Williams" },
-    { invoiceId: "SALE003", pharmacist: "Pharmacist Two", store: "Uptown Health", medicine: "Ibuprofen", quantity: 8, total: 124.00, date: "2024-07-29", paymentMethod: "Cash", patientName: "Charlie Brown" },
-    { invoiceId: "SALE004", pharmacist: "Pharmacist One", store: "Downtown Pharmacy", medicine: "Aspirin", quantity: 3, total: 30.00, date: "2024-07-29", paymentMethod: "Cash", patientName: "Diana Miller" },
-    { invoiceId: "SALE005", pharmacist: "Admin User", store: "Downtown Pharmacy", medicine: "Atorvastatin", quantity: 2, total: 90.00, date: "2024-07-30", paymentMethod: "Online", patientName: "Ethan Davis" },
-    { invoiceId: "SALE006", pharmacist: "Pharmacist Two", store: "Uptown Health", medicine: "Metformin", quantity: 5, total: 125.00, date: "2024-07-30", paymentMethod: "Online", patientName: "Alice Johnson" },
+    { invoiceId: "SALE001", pharmacist: "Pharmacist One", store: "Downtown Pharmacy", medicine: "Aspirin", quantity: 5, total: 50.00, date: "2024-07-28", paymentMethod: "Cash", patientName: "Alice Johnson", storeId: "STR002" },
+    { invoiceId: "SALE002", pharmacist: "Pharmacist One", store: "Downtown Pharmacy", medicine: "Paracetamol", quantity: 10, total: 57.50, date: "2024-07-28", paymentMethod: "Online", patientName: "Bob Williams", storeId: "STR002" },
+    { invoiceId: "SALE003", pharmacist: "Pharmacist Two", store: "Uptown Health", medicine: "Ibuprofen", quantity: 8, total: 124.00, date: "2024-07-29", paymentMethod: "Cash", patientName: "Charlie Brown", storeId: "STR003" },
+    { invoiceId: "SALE004", pharmacist: "Pharmacist One", store: "Downtown Pharmacy", medicine: "Aspirin", quantity: 3, total: 30.00, date: "2024-07-29", paymentMethod: "Cash", patientName: "Diana Miller", storeId: "STR002" },
+    { invoiceId: "SALE005", pharmacist: "Admin User", store: "Downtown Pharmacy", medicine: "Atorvastatin", quantity: 2, total: 90.00, date: "2024-07-30", paymentMethod: "Online", patientName: "Ethan Davis", storeId: "STR002" },
+    { invoiceId: "SALE006", pharmacist: "Pharmacist Two", store: "Uptown Health", medicine: "Metformin", quantity: 5, total: 125.00, date: "2024-07-30", paymentMethod: "Online", patientName: "Alice Johnson", storeId: "STR003" },
 ];
 
 const allStores = [
@@ -101,21 +101,15 @@ export default function SalesReportPage() {
         return [];
     }, [user]);
 
-    useEffect(() => {
-        if (user?.role === 'Pharmacist' && user.assignedStore) {
-            const assignedStore = allStores.find(s => s.storeId === user.assignedStore);
-            if(assignedStore) {
-                setSelectedStore(assignedStore.id);
-            }
-        }
-    }, [user]);
-
-
+    
     const handleApplyFilters = () => {
         let data = [...salesData];
 
         if (selectedStore !== "all") {
-            data = data.filter(sale => sale.store === selectedStore);
+            const store = allStores.find(s => s.id === selectedStore);
+            if (store) {
+                 data = data.filter(sale => sale.storeId === store.storeId);
+            }
         }
 
         if (selectedPharmacist !== "all") {
@@ -134,11 +128,22 @@ export default function SalesReportPage() {
         setFilteredData(data);
     };
     
-    // Apply filters on initial load
+    // Apply filters on initial load and when user changes
+    useEffect(() => {
+        if (user?.role === 'Pharmacist' && user.assignedStore) {
+            const assignedStore = allStores.find(s => s.storeId === user.assignedStore);
+            if(assignedStore) {
+                setSelectedStore(assignedStore.id);
+            }
+        } else if (user?.role === 'Admin') {
+            setSelectedStore('all');
+        }
+    }, [user]);
+
     useEffect(() => {
         handleApplyFilters();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [selectedStore, selectedPharmacist, dateRange, user]);
 
 
     const analytics = useMemo(() => {
@@ -263,7 +268,7 @@ export default function SalesReportPage() {
                     </SidebarMenuItem>
                 ))}
 
-                {hasPermission('/inventory') && (
+                {hasPermission('/inventory/warehouse') && (
                     <Collapsible className="w-full" defaultOpen={pathname.startsWith('/inventory')}>
                         <CollapsibleTrigger asChild>
                            <SidebarMenuButton className="justify-between">
@@ -352,7 +357,6 @@ export default function SalesReportPage() {
                                 </SelectContent>
                             </Select>
                             <DateRangePicker date={dateRange} setDate={setDateRange} />
-                            <Button onClick={handleApplyFilters}><Filter className="mr-2 h-4 w-4" /> Apply</Button>
                         </div>
                     </div>
                 </CardHeader>

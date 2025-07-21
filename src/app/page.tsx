@@ -30,6 +30,7 @@ import { allAppRoutes, AppRoute } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import Link from "next/link";
 
 const generateData = (factor = 1) => [
   { name: "Jan", total: Math.floor(Math.random() * 5000 * factor) + 1000 },
@@ -182,7 +183,7 @@ export default function Home() {
                     </SidebarMenuItem>
                 ))}
 
-                {hasPermission('/inventory') && (
+                {hasPermission('/inventory/warehouse') && (
                     <Collapsible className="w-full" defaultOpen={pathname.startsWith('/inventory')}>
                         <CollapsibleTrigger asChild>
                             <SidebarMenuButton className="justify-between">
@@ -325,17 +326,23 @@ export default function Home() {
                         <CardDescription>Download detailed reports for sales, inventory, and finances.</CardDescription>
                     </CardHeader>
                     <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                       <Button variant="outline">
+                       <Button variant="outline" asChild>
+                          <Link href="/sales/reports">
                            <Download className="mr-2 h-4 w-4" />
-                           Download Sales Report
+                           View Sales Report
+                          </Link>
                        </Button>
-                       <Button variant="outline">
-                           <Download className="mr-2 h-4 w-4" />
-                           Download Inventory Report
+                       <Button variant="outline" asChild>
+                           <Link href="/inventory/reports">
+                             <Download className="mr-2 h-4 w-4" />
+                             View Inventory Report
+                           </Link>
                        </Button>
-                       <Button variant="outline">
-                           <Download className="mr-2 h-4 w-4" />
-                           Download Financial Summary
+                       <Button variant="outline" asChild>
+                           <Link href="/inventory/valuation">
+                             <Download className="mr-2 h-4 w-4" />
+                             View Valuation Report
+                           </Link>
                        </Button>
                     </CardContent>
                 </Card>

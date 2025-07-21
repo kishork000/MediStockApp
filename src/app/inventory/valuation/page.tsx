@@ -36,22 +36,18 @@ const valuationData = [
 ];
 
 const allStores = [
-    { id: "store1", name: "Downtown Pharmacy" },
-    { id: "store2", name: "Uptown Health" },
-    { id: "warehouse", name: "Main Warehouse" },
+    { id: "all", name: "All Locations" },
+    { id: "STR001", name: "Main Warehouse" },
+    { id: "STR002", name: "Downtown Pharmacy" },
+    { id: "STR003", name: "Uptown Health" },
 ];
-
-// Mock mapping from store ID in AuthContext to store ID in this page's data
-const storeIdMapping: { [key: string]: string } = {
-    "STR002": "store1", // Pharmacist One assigned to Downtown Pharmacy
-};
 
 
 export default function ValuationReportPage() {
     const { user, logout, loading, hasPermission } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
-    const [selectedStore, setSelectedStore] = useState(allStores[0].id);
+    const [selectedStore, setSelectedStore] = useState("all");
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
       from: new Date(2023, 0, 20),
       to: addDays(new Date(2023, 0, 20), 20),
@@ -62,8 +58,7 @@ export default function ValuationReportPage() {
             return allStores;
         }
         if (user?.role === 'Pharmacist' && user.assignedStore) {
-            const assignedStoreId = storeIdMapping[user.assignedStore];
-            return allStores.filter(s => s.id === assignedStoreId);
+            return allStores.filter(s => s.id === user.assignedStore);
         }
         return [];
     }, [user]);
@@ -71,6 +66,8 @@ export default function ValuationReportPage() {
     useEffect(() => {
         if (user?.role === 'Pharmacist' && availableStores.length > 0) {
             setSelectedStore(availableStores[0].id);
+        } else if (user?.role === 'Admin') {
+            setSelectedStore('all');
         }
     }, [user, availableStores]);
 
@@ -110,7 +107,7 @@ export default function ValuationReportPage() {
         }
     };
     
-    const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory') && r.inSidebar);
+    const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory/') && r.inSidebar);
     const totalValuation = valuationData.reduce((acc, item) => acc + (item.balance * item.price), 0);
 
   return (
@@ -133,7 +130,7 @@ export default function ValuationReportPage() {
                     </SidebarMenuItem>
                 )}
                 
-                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory') && r.inSidebar && hasPermission(r.path)).map((route) => (
+                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path)).map((route) => (
                     <SidebarMenuItem key={route.path}>
                         <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}>
                             {getIcon(route.name)}
@@ -142,7 +139,7 @@ export default function ValuationReportPage() {
                     </SidebarMenuItem>
                 ))}
 
-                {hasPermission('/inventory') && (
+                {hasPermission('/inventory/warehouse') && (
                     <Collapsible className="w-full" defaultOpen={pathname.startsWith('/inventory')}>
                         <CollapsibleTrigger asChild>
                            <SidebarMenuButton className="justify-between">
@@ -212,7 +209,7 @@ export default function ValuationReportPage() {
                                 disabled={user?.role === 'Pharmacist' && availableStores.length === 1}
                             >
                                 <SelectTrigger className="w-full sm:w-[200px]">
-                                    <SelectValue placeholder="Select Store" />
+                                    <SelectValue placeholder="Select Location" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {availableStores.map(store => (
@@ -265,4 +262,3 @@ export default function ValuationReportPage() {
     </div>
   );
 }
-
