@@ -46,6 +46,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const storedPermissions = localStorage.getItem('medi-stock-permissions');
         if (storedPermissions) {
             setPermissionsState(JSON.parse(storedPermissions));
+        } else {
+            // If no permissions in storage, set initial and save them
+            localStorage.setItem('medi-stock-permissions', JSON.stringify(initialPermissions));
         }
         setLoading(false);
     }, []);
@@ -53,20 +56,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const hasPermission = useCallback((path: string): boolean => {
         if (!user) return false;
         
-        // Admins can access everything
+        // Admins can access everything, regardless of checkboxes
         if (user.role === 'Admin') return true;
 
         // All logged-in users can access the dashboard
         if (path === '/') return true;
         
         const userPermissions = permissions[user.role];
-        
-        // Check for direct path match
-        if (userPermissions?.includes(path)) return true;
 
-        // Check for parent path match (e.g., /inventory for /inventory/add)
-        const parentPath = path.substring(0, path.lastIndexOf('/'));
-        if (parentPath && userPermissions?.includes(parentPath)) return true;
+        // Check for an exact path match. This is the most reliable way.
+        if (userPermissions?.includes(path)) return true;
 
         return false;
     }, [user, permissions]);
@@ -94,6 +93,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const { password, ...userToStore } = foundUser;
             setUser(userToStore);
             localStorage.setItem('medi-stock-user', JSON.stringify(userToStore));
+            // Reload permissions from storage on login to get the latest
+            const storedPermissions = localStorage.getItem('medi-stock-permissions');
+            if (storedPermissions) {
+                setPermissionsState(JSON.parse(storedPermissions));
+            }
             return true;
         }
         return false;
@@ -126,5 +130,3 @@ export const useAuth = (): AuthContextType => {
     }
     return context;
 };
-
-    
