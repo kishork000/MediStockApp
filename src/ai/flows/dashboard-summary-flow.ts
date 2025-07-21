@@ -14,18 +14,22 @@ const prompt = ai.definePrompt({
   name: 'dashboardSummaryPrompt',
   input: {schema: DashboardDataSchema},
   output: {schema: z.string()},
-  prompt: `You are a business analyst. Summarize the following dashboard data in a short, easy-to-read paragraph. Highlight the most important changes and trends.
+  prompt: `You are a business analyst. Your task is to summarize the following dashboard data into a concise, easy-to-read paragraph. 
+Focus on highlighting the most important changes and trends in revenue, sales, and stock. 
+Always provide a textual summary, even if the data seems unremarkable.
 
-Total Revenue: {{{totalRevenue}}} ({{{revenueChange}}})
-Total Sales: {{{sales}}} ({{{salesChange}}})
-New Prescriptions: {{{subscriptions}}} ({{{subscriptionsChange}}})
-Stock Availability: {{{stockAvailability}}} ({{{stockChange}}})
+Here is the data:
+Total Revenue: {{{totalRevenue}}} (change: {{{revenueChange}}})
+Total Sales: {{{sales}}} (change: {{{salesChange}}})
+New Prescriptions: {{{subscriptions}}} (change: {{{subscriptionsChange}}})
+Stock Availability: {{{stockAvailability}}} (change: {{{stockChange}}})
 
-Monthly Sales Overview:
+Monthly Sales Figures:
 {{#each overview}}
-- {{this.name}}: {{{this.total}}}
+- {{this.name}}: {{this.total}}
 {{/each}}
-`,
+
+Please provide your summary now.`,
 });
 
 const summarizeDashboardFlow = ai.defineFlow(
@@ -36,7 +40,11 @@ const summarizeDashboardFlow = ai.defineFlow(
   },
   async (input) => {
     const {output} = await prompt(input);
-    return output!;
+    if (!output) {
+      // If the model returns null or undefined, return a fallback message.
+      return 'AI summary could not be generated at this time. Please try again.';
+    }
+    return output;
   }
 );
 
