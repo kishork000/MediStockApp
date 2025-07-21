@@ -144,6 +144,7 @@ export default function PatientsPage() {
   }
 
   const handleSelectPatient = (patientId: string, checked: boolean | 'indeterminate') => {
+      if (typeof checked !== 'boolean') return;
       if (checked) {
           setSelectedPatientIds(prev => [...prev, patientId]);
       } else {
@@ -152,6 +153,7 @@ export default function PatientsPage() {
   };
 
   const handleSelectAll = (checked: boolean | 'indeterminate') => {
+      if (typeof checked !== 'boolean') return;
       if (checked) {
           setSelectedPatientIds(filteredPatients.map(p => p.id));
       } else {
@@ -257,7 +259,7 @@ export default function PatientsPage() {
                 )}
                  
                  <SidebarMenuItem>
-                  <SidebarMenuButton href="/" tooltip="Reports">
+                  <SidebarMenuButton href="/inventory/reports" tooltip="Reports">
                     <BarChart />
                     <span>Reports</span>
                   </SidebarMenuButton>
@@ -429,7 +431,7 @@ export default function PatientsPage() {
                             </TabsContent>
                             <TabsContent value="reports" className="py-4">
                                 <div className="flex justify-end mb-4">
-                                    <Button variant="outline">
+                                    <Button variant="outline" className="relative">
                                         <Upload className="mr-2 h-4 w-4"/> Upload Report
                                         <Input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
                                     </Button>
