@@ -82,10 +82,7 @@ export default function SalesReportPage() {
     const [filteredData, setFilteredData] = useState(salesData);
     const [selectedStore, setSelectedStore] = useState("all");
     const [selectedPharmacist, setSelectedPharmacist] = useState("all");
-    const [dateRange, setDateRange] = useState<DateRange | undefined>({
-      from: new Date(2024, 6, 20),
-      to: addDays(new Date(), 0), // Set 'to' date to today
-    });
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
     
     const [isSalesDetailModalOpen, setIsSalesDetailModalOpen] = useState(false);
     const [modalView, setModalView] = useState<'summary' | 'cash' | 'online'>('summary');
@@ -356,8 +353,7 @@ export default function SalesReportPage() {
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                <DateRangePicker date={dateRange} setDate={setDateRange} />
-                                <Button onClick={handleApplyFilters} className="w-full sm:w-auto"><Filter className="mr-2" /> Apply</Button>
+                                <DateRangePicker onUpdate={(values) => setDateRange(values.range)} />
                             </div>
                         </div>
                     </CardHeader>

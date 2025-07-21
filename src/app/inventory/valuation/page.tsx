@@ -50,10 +50,7 @@ export default function ValuationReportPage() {
     const router = useRouter();
     const pathname = usePathname();
     const [selectedStore, setSelectedStore] = useState("all");
-    const [dateRange, setDateRange] = useState<DateRange | undefined>({
-      from: new Date(2023, 0, 1),
-      to: new Date(),
-    });
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
     const availableStores = useMemo(() => {
         if (user?.role === 'Admin') {
@@ -226,7 +223,7 @@ export default function ValuationReportPage() {
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <DateRangePicker date={dateRange} setDate={setDateRange} />
+                            <DateRangePicker onUpdate={(values) => setDateRange(values.range)} />
                         </div>
                     </div>
                 </CardHeader>

@@ -68,10 +68,7 @@ export default function StoreInventoryPage() {
     const pathname = usePathname();
     const [selectedStore, setSelectedStore] = useState("");
     const [selectedMedicine, setSelectedMedicine] = useState("all");
-    const [dateRange, setDateRange] = useState<DateRange | undefined>({
-        from: new Date(2024, 6, 1),
-        to: new Date(),
-    });
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
     const availableStores = useMemo(() => {
         if (user?.role === 'Admin') {
@@ -269,7 +266,7 @@ export default function StoreInventoryPage() {
                                     ))}
                                 </SelectContent>
                             </Select>
-                             <DateRangePicker date={dateRange} setDate={setDateRange} className="w-full sm:w-auto" />
+                             <DateRangePicker onUpdate={(values) => setDateRange(values.range)} />
                         </div>
                     </div>
                 </CardHeader>
