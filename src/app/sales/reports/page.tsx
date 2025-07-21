@@ -27,8 +27,8 @@ import { DateRange } from "react-day-picker";
 import { addDays, parseISO, startOfDay, endOfDay, format } from "date-fns";
 import { SalesByPharmacistChart } from "@/components/sales/SalesByPharmacistChart";
 import { TopSellingMedicinesChart } from "@/components/sales/TopSellingMedicinesChart";
-import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 
 const salesData = [
     { pharmacist: "Pharmacist One", store: "Downtown Pharmacy", medicine: "Aspirin", quantity: 5, total: 50.00, date: "2024-07-28" },
@@ -411,3 +411,5 @@ export default function SalesReportPage() {
       </div>
     </div>
   );
+
+    
