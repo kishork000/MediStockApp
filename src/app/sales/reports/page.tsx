@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, Filter, Download } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, Filter, Download, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -29,14 +29,15 @@ import { SalesByPharmacistChart } from "@/components/sales/SalesByPharmacistChar
 import { TopSellingMedicinesChart } from "@/components/sales/TopSellingMedicinesChart";
 import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 const salesData = [
-    { pharmacist: "Pharmacist One", store: "Downtown Pharmacy", medicine: "Aspirin", quantity: 5, total: 50.00, date: "2024-07-28" },
-    { pharmacist: "Pharmacist One", store: "Downtown Pharmacy", medicine: "Paracetamol", quantity: 10, total: 57.50, date: "2024-07-28" },
-    { pharmacist: "Pharmacist Two", store: "Uptown Health", medicine: "Ibuprofen", quantity: 8, total: 124.00, date: "2024-07-29" },
-    { pharmacist: "Pharmacist One", store: "Downtown Pharmacy", medicine: "Aspirin", quantity: 3, total: 30.00, date: "2024-07-29" },
-    { pharmacist: "Admin User", store: "Downtown Pharmacy", medicine: "Atorvastatin", quantity: 2, total: 90.00, date: "2024-07-30" },
-    { pharmacist: "Pharmacist Two", store: "Uptown Health", medicine: "Metformin", quantity: 5, total: 125.00, date: "2024-07-30" },
+    { invoiceId: "SALE001", pharmacist: "Pharmacist One", store: "Downtown Pharmacy", medicine: "Aspirin", quantity: 5, total: 50.00, date: "2024-07-28", paymentMethod: "Cash" },
+    { invoiceId: "SALE002", pharmacist: "Pharmacist One", store: "Downtown Pharmacy", medicine: "Paracetamol", quantity: 10, total: 57.50, date: "2024-07-28", paymentMethod: "Online" },
+    { invoiceId: "SALE003", pharmacist: "Pharmacist Two", store: "Uptown Health", medicine: "Ibuprofen", quantity: 8, total: 124.00, date: "2024-07-29", paymentMethod: "Cash" },
+    { invoiceId: "SALE004", pharmacist: "Pharmacist One", store: "Downtown Pharmacy", medicine: "Aspirin", quantity: 3, total: 30.00, date: "2024-07-29", paymentMethod: "Cash" },
+    { invoiceId: "SALE005", pharmacist: "Admin User", store: "Downtown Pharmacy", medicine: "Atorvastatin", quantity: 2, total: 90.00, date: "2024-07-30", paymentMethod: "Online" },
+    { invoiceId: "SALE006", pharmacist: "Pharmacist Two", store: "Uptown Health", medicine: "Metformin", quantity: 5, total: 125.00, date: "2024-07-30", paymentMethod: "Online" },
 ];
 
 const allStores = [
@@ -86,6 +87,10 @@ export default function SalesReportPage() {
       to: addDays(new Date(), 0), // Set 'to' date to today
     });
     
+    const [isSalesDetailModalOpen, setIsSalesDetailModalOpen] = useState(false);
+    const [modalView, setModalView] = useState<'summary' | 'cash' | 'online'>('summary');
+
+
     const availableStores = useMemo(() => {
         if (user?.role === 'Admin') {
             return allStores;
@@ -138,7 +143,13 @@ export default function SalesReportPage() {
 
     const analytics = useMemo(() => {
         const totalSalesValue = filteredData.reduce((acc, sale) => acc + sale.total, 0);
+        const cashSalesValue = filteredData.filter(s => s.paymentMethod === 'Cash').reduce((acc, sale) => acc + sale.total, 0);
+        const onlineSalesValue = filteredData.filter(s => s.paymentMethod === 'Online').reduce((acc, sale) => acc + sale.total, 0);
+        
         const totalItemsSold = filteredData.reduce((acc, sale) => acc + sale.quantity, 0);
+        const cashInvoices = filteredData.filter(s => s.paymentMethod === 'Cash');
+        const onlineInvoices = filteredData.filter(s => s.paymentMethod === 'Online');
+
 
         const highSellingMedicines = filteredData.reduce((acc, sale) => {
             const existing = acc.find(item => item.name === sale.medicine);
@@ -172,7 +183,7 @@ export default function SalesReportPage() {
         }, [] as { date: string; total: number; }[]).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
 
-        return { totalSalesValue, totalItemsSold, highSellingMedicines, pharmacistSales, salesOverTime };
+        return { totalSalesValue, cashSalesValue, onlineSalesValue, totalItemsSold, highSellingMedicines, pharmacistSales, salesOverTime, cashInvoices, onlineInvoices };
 
     }, [filteredData]);
 
@@ -215,7 +226,13 @@ export default function SalesReportPage() {
     
     const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory') && r.inSidebar);
 
+    const handleSalesCardClick = () => {
+        setModalView('summary');
+        setIsSalesDetailModalOpen(true);
+    };
+
   return (
+    <>
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <Sidebar>
           <SidebarHeader>
@@ -331,13 +348,14 @@ export default function SalesReportPage() {
                 </CardHeader>
                 <CardContent className="space-y-8">
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                        <Card>
+                        <Card className="cursor-pointer hover:bg-muted/50" onClick={handleSalesCardClick}>
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium">Total Sales Value</CardTitle>
                                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
                                 <div className="text-2xl font-bold">₹{analytics.totalSalesValue.toFixed(2)}</div>
+                                <p className="text-xs text-muted-foreground">Click to see details</p>
                             </CardContent>
                         </Card>
                         <Card>
@@ -424,6 +442,55 @@ export default function SalesReportPage() {
         </main>
       </div>
     </div>
-  );
-
     
+    <Dialog open={isSalesDetailModalOpen} onOpenChange={setIsSalesDetailModalOpen}>
+        <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+                {modalView !== 'summary' && (
+                    <Button variant="ghost" size="icon" className="absolute left-4 top-4" onClick={() => setModalView('summary')}>
+                        <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                )}
+                <DialogTitle>Sales Details</DialogTitle>
+                <DialogDescription>
+                    {modalView === 'summary' && 'Breakdown of sales by payment method.'}
+                    {modalView === 'cash' && 'Details of all cash invoices.'}
+                    {modalView === 'online' && 'Details of all online invoices.'}
+                </DialogDescription>
+            </DialogHeader>
+            {modalView === 'summary' ? (
+                <div className="grid gap-4 py-4">
+                    <div className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 cursor-pointer" onClick={() => setModalView('cash')}>
+                        <span className="font-medium">Cash Sales</span>
+                        <span className="font-bold">₹{analytics.cashSalesValue.toFixed(2)}</span>
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 cursor-pointer" onClick={() => setModalView('online')}>
+                        <span className="font-medium">Online Sales</span>
+                        <span className="font-bold">₹{analytics.onlineSalesValue.toFixed(2)}</span>
+                    </div>
+                </div>
+            ) : (
+                <div className="max-h-[400px] overflow-y-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Invoice ID</TableHead>
+                                <TableHead className="text-right">Amount (₹)</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {(modalView === 'cash' ? analytics.cashInvoices : analytics.onlineInvoices).map((invoice) => (
+                                <TableRow key={invoice.invoiceId}>
+                                    <TableCell className="font-medium">{invoice.invoiceId}</TableCell>
+                                    <TableCell className="text-right">{invoice.total.toFixed(2)}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            )}
+        </DialogContent>
+    </Dialog>
+    </>
+  );
+}
