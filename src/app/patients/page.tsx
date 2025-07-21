@@ -11,7 +11,7 @@ import {
   SidebarMenuButton,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Activity, MoreHorizontal, FilePenLine, Trash2, Settings } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Activity, MoreHorizontal, FilePenLine, Trash2, Settings, GitBranch } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
@@ -124,6 +124,12 @@ export default function PatientsPage() {
                   <SidebarMenuButton href="/inventory/add" tooltip="Add Medicine">
                     <PlusSquare />
                     <span>Add Medicine</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                 <SidebarMenuItem>
+                  <SidebarMenuButton href="/inventory/transfer" tooltip="Stock Transfer">
+                    <GitBranch />
+                    <span>Stock Transfer</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                  <SidebarMenuItem>
@@ -307,5 +313,3 @@ export default function PatientsPage() {
     </div>
   );
 }
-
-    

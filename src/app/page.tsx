@@ -10,7 +10,7 @@ import {
   SidebarMenuButton,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { DollarSign, Home as HomeIcon, LayoutGrid, Package, Users, CreditCard, ShoppingCart, BarChart, Pill, Download, PlusSquare, Users2, Activity, Settings } from "lucide-react";
+import { DollarSign, Home as HomeIcon, LayoutGrid, Package, Users, CreditCard, ShoppingCart, BarChart, Pill, Download, PlusSquare, Users2, Activity, Settings, GitBranch } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { DashboardData } from "./dashboard/types";
 import StatCard from "@/components/dashboard/StatCard";
@@ -117,6 +117,12 @@ export default function Home() {
                   <SidebarMenuButton href="/inventory/add" tooltip="Add Medicine">
                     <PlusSquare />
                     <span>Add Medicine</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                 <SidebarMenuItem>
+                  <SidebarMenuButton href="/inventory/transfer" tooltip="Stock Transfer">
+                    <GitBranch />
+                    <span>Stock Transfer</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                  <SidebarMenuItem>
@@ -302,5 +308,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
