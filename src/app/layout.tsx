@@ -24,12 +24,14 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <AuthProvider>
-          <SidebarProvider>
-            {children}
-            <Toaster />
-          </SidebarProvider>
+            <SidebarProvider>
+                {children}
+                <Toaster />
+            </SidebarProvider>
         </AuthProvider>
       </body>
     </html>
   );
 }
+
+    

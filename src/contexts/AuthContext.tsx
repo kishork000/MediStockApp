@@ -1,27 +1,32 @@
 
 "use client";
 
-import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { User, UserRole, RolePermissions, allAppRoutes } from '@/lib/types';
+
 
 // Mock user data - in a real app, this would come from an API
 const initialUsers = [
-    { name: "Admin User", email: "admin@medistock.com", role: "Admin", assignedStore: "STR001", password: "password" },
-    { name: "Pharmacist One", email: "pharmacist1@medistock.com", role: "Pharmacist", assignedStore: "STR002", password: "password" },
+    { name: "Admin User", email: "admin@medistock.com", role: "Admin" as UserRole, assignedStore: "STR001", password: "password" },
+    { name: "Pharmacist One", email: "pharmacist1@medistock.com", role: "Pharmacist" as UserRole, assignedStore: "STR002", password: "password" },
 ];
 
-interface User {
-    name: string;
-    email: string;
-    role: "Admin" | "Pharmacist" | "Technician";
-    assignedStore?: string;
-}
+const initialPermissions: RolePermissions = {
+    Admin: allAppRoutes.map(r => r.path), // Admin has all permissions
+    Pharmacist: ['/', '/patients', '/sales', '/inventory/transfer'],
+    Technician: ['/', '/sales']
+};
+
 
 interface AuthContextType {
     user: User | null;
     login: (email: string, pass: string) => Promise<boolean>;
     logout: () => void;
     loading: boolean;
+    permissions: RolePermissions;
+    setPermissions: (permissions: RolePermissions) => void;
+    hasPermission: (path: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,6 +34,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
+    const [permissions, setPermissionsState] = useState<RolePermissions>(initialPermissions);
     const router = useRouter();
     const pathname = usePathname();
 
@@ -37,14 +43,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (storedUser) {
             setUser(JSON.parse(storedUser));
         }
+        const storedPermissions = localStorage.getItem('medi-stock-permissions');
+        if (storedPermissions) {
+            setPermissionsState(JSON.parse(storedPermissions));
+        }
         setLoading(false);
     }, []);
 
-     useEffect(() => {
-        if (!loading && !user && pathname !== '/login') {
+    const hasPermission = useCallback((path: string): boolean => {
+        if (!user) return false;
+        // Allow access to the root page for all logged-in users
+        if (path === '/') return true;
+        
+        const userPermissions = permissions[user.role];
+        return userPermissions?.includes(path) ?? false;
+    }, [user, permissions]);
+
+
+    useEffect(() => {
+        if (loading) return;
+
+        if (!user && pathname !== '/login') {
             router.push('/login');
+            return;
         }
-    }, [user, loading, pathname, router]);
+
+        if (user && pathname !== '/login' && !hasPermission(pathname)) {
+            // If user is on a page they don't have permission for, redirect to dashboard
+            router.push('/');
+        }
+
+    }, [user, loading, pathname, router, hasPermission]);
 
 
     const login = async (email: string, pass: string): Promise<boolean> => {
@@ -64,7 +93,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         router.push('/login');
     };
 
-    const value = { user, login, logout, loading };
+    const setPermissions = (newPermissions: RolePermissions) => {
+        setPermissionsState(newPermissions);
+        localStorage.setItem('medi-stock-permissions', JSON.stringify(newPermissions));
+    }
+
+    const value = { user, login, logout, loading, permissions, setPermissions, hasPermission };
 
     return (
         <AuthContext.Provider value={value}>
@@ -80,3 +114,5 @@ export const useAuth = (): AuthContextType => {
     }
     return context;
 };
+
+    

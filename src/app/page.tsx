@@ -12,7 +12,7 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { DollarSign, Home as HomeIcon, LayoutGrid, Package, Users, CreditCard, ShoppingCart, BarChart, Pill, Download, PlusSquare, Users2, Activity, Settings, GitBranch, LogOut } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import type { DashboardData } from "./dashboard/types";
 import StatCard from "@/components/dashboard/StatCard";
 import OverviewChart from "@/components/dashboard/OverviewChart";
@@ -26,6 +26,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { MoreHorizontal } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import { allAppRoutes, AppRoute } from "@/lib/types";
 
 const generateData = () => [
   { name: "Jan", total: Math.floor(Math.random() * 5000) + 1000 },
@@ -64,8 +65,12 @@ const salesData = [
 export default function Home() {
   const [data, setData] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("dashboard");
-  const { user, logout, loading } = useAuth();
+  const { user, logout, loading, hasPermission } = useAuth();
   const router = useRouter();
+
+  const sidebarRoutes = useMemo(() => {
+    return allAppRoutes.filter(route => hasPermission(route.path));
+  }, [hasPermission]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -102,6 +107,21 @@ export default function Home() {
     );
   }
 
+  const getIcon = (name: string) => {
+    switch (name) {
+        case 'Dashboard': return <HomeIcon />;
+        case 'Patients': return <Users2 />;
+        case 'Sales': return <ShoppingCart />;
+        case 'Inventory': return <Package />;
+        case 'Add Medicine': return <PlusSquare />;
+        case 'Stock Transfer': return <GitBranch />;
+        case 'Diseases': return <Activity />;
+        case 'Reports': return <BarChart />;
+        case 'Admin': return <Settings />;
+        default: return <LayoutGrid />;
+    }
+  };
+
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -114,58 +134,36 @@ export default function Home() {
           </SidebarHeader>
           <SidebarContent>
             <SidebarMenu>
-                <SidebarMenuItem>
+               <SidebarMenuItem>
                   <SidebarMenuButton onClick={() => handleTabChange("dashboard")} isActive={activeTab === "dashboard"} tooltip="Dashboard">
                     <HomeIcon />
                     <span>Dashboard</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                {sidebarRoutes.map((route) => {
+                  if (route.path === '/') return null; // handled separately
+                  if (route.inSidebar) {
+                    return (
+                       <SidebarMenuItem key={route.path}>
+                          <SidebarMenuButton href={route.path} tooltip={route.name}>
+                              {getIcon(route.name)}
+                              <span>{route.name}</span>
+                          </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )
+                  }
+                  return null;
+                })}
                  <SidebarMenuItem>
-                  <SidebarMenuButton href="/patients" tooltip="Patients">
-                    <Users2 />
-                    <span>Patients</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton href="/sales" tooltip="Sales">
-                    <ShoppingCart />
-                    <span>Sales</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
                   <SidebarMenuButton onClick={() => handleTabChange("inventory")} isActive={activeTab === "inventory"} tooltip="Inventory">
                     <Package />
                     <span>Inventory</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton href="/inventory/add" tooltip="Add Medicine">
-                    <PlusSquare />
-                    <span>Add Medicine</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
                  <SidebarMenuItem>
-                  <SidebarMenuButton href="/inventory/transfer" tooltip="Stock Transfer">
-                    <GitBranch />
-                    <span>Stock Transfer</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                 <SidebarMenuItem>
-                  <SidebarMenuButton href="/diseases" tooltip="Diseases">
-                    <Activity />
-                    <span>Diseases</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
                   <SidebarMenuButton onClick={() => handleTabChange("reports")} isActive={activeTab === "reports"} tooltip="Reports">
                     <BarChart />
                     <span>Reports</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                 <SidebarMenuItem>
-                  <SidebarMenuButton href="/admin" tooltip="Admin">
-                    <Settings />
-                    <span>Admin</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
             </SidebarMenu>
@@ -361,3 +359,5 @@ export default function Home() {
     </div>
   );
 }
+
+    

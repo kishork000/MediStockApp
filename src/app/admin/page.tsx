@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Activity, Settings, Store, MoreHorizontal, Trash2, GitBranch, LogOut } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Activity, Settings, Store, MoreHorizontal, Trash2, GitBranch, LogOut, ShieldCheck } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -26,12 +26,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import { Checkbox } from "@/components/ui/checkbox";
+import { allAppRoutes, AppRoute, UserRole } from "@/lib/types";
 
 
 interface User {
     name: string;
     email: string;
-    role: "Admin" | "Pharmacist" | "Technician";
+    role: UserRole;
     assignedStore?: string;
     password?: string;
 }
@@ -57,7 +59,7 @@ const initialUsers: User[] = [
 
 
 export default function AdminPage() {
-    const { user, logout, loading } = useAuth();
+    const { user, logout, loading, permissions, setPermissions } = useAuth();
     const router = useRouter();
 
     const [companyName, setCompanyName] = useState("MediStock Pharmacy");
@@ -68,8 +70,8 @@ export default function AdminPage() {
     const [users, setUsers] = useState<User[]>(initialUsers);
 
      useEffect(() => {
-        if (!loading && !user) {
-        router.push('/login');
+        if (!loading && (!user || user.role !== 'Admin')) {
+            router.push('/');
         }
     }, [user, loading, router]);
 
@@ -124,11 +126,32 @@ export default function AdminPage() {
         setUsers(users.filter(u => u.email !== email));
     };
 
+    const handlePermissionChange = (role: UserRole, route: string, checked: boolean | 'indeterminate') => {
+        if (typeof checked !== 'boolean') return;
+        
+        const newPermissions = { ...permissions };
+        if (checked) {
+            newPermissions[role] = [...newPermissions[role], route];
+        } else {
+            newPermissions[role] = newPermissions[role].filter(r => r !== route);
+        }
+        setPermissions(newPermissions);
+    };
+
+
     if (loading || !user) {
         return (
         <div className="flex items-center justify-center min-h-screen">
             <div className="text-2xl">Loading...</div>
         </div>
+        );
+    }
+
+    if (user.role !== 'Admin') {
+         return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="text-2xl text-destructive">Access Denied. Admins only.</div>
+            </div>
         );
     }
 
@@ -221,6 +244,7 @@ export default function AdminPage() {
                 <div className="flex items-center">
                     <TabsList>
                         <TabsTrigger value="users">User Management</TabsTrigger>
+                        <TabsTrigger value="permissions">Permissions</TabsTrigger>
                         <TabsTrigger value="stores">Store Management</TabsTrigger>
                         <TabsTrigger value="add-user">Add User</TabsTrigger>
                         <TabsTrigger value="settings">Company Settings</TabsTrigger>
@@ -275,6 +299,43 @@ export default function AdminPage() {
                                     ))}
                                 </TableBody>
                             </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                <TabsContent value="permissions">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Role Permissions</CardTitle>
+                            <CardDescription>Define which pages each role can access. Changes are saved automatically.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                {(Object.keys(permissions) as UserRole[]).map(role => (
+                                    <div key={role}>
+                                        <h3 className="font-semibold text-lg mb-4 flex items-center">
+                                            <ShieldCheck className="mr-2 h-5 w-5" /> {role}
+                                        </h3>
+                                        <div className="space-y-3">
+                                            {allAppRoutes.map(route => (
+                                                <div key={`${role}-${route.path}`} className="flex items-center space-x-2">
+                                                    <Checkbox 
+                                                        id={`${role}-${route.path}`}
+                                                        checked={permissions[role].includes(route.path)}
+                                                        onCheckedChange={(checked) => handlePermissionChange(role, route.path, checked)}
+                                                        disabled={role === 'Admin'}
+                                                    />
+                                                    <label
+                                                        htmlFor={`${role}-${route.path}`}
+                                                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                                    >
+                                                        {route.name}
+                                                    </label>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </CardContent>
                     </Card>
                 </TabsContent>
@@ -395,15 +456,15 @@ export default function AdminPage() {
                             <form className="space-y-4" onSubmit={handleSaveSettings}>
                                 <div className="space-y-2">
                                     <Label htmlFor="company-name">Company Name</Label>
-                                    <Input id="company-name" name="company-name" value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
+                                    <Input id="company-name" name="company-name" defaultValue={companyName} onChange={(e) => setCompanyName(e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="company-address">Company Address</Label>
-                                    <Textarea id="company-address" name="company-address" value={companyAddress} onChange={(e) => setCompanyAddress(e.target.value)} />
+                                    <Textarea id="company-address" name="company-address" defaultValue={companyAddress} onChange={(e) => setCompanyAddress(e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="gstin">GSTIN</Label>
-                                    <Input id="gstin" name="gstin" value={gstin} onChange={(e) => setGstin(e.target.value)} />
+                                    <Input id="gstin" name="gstin" defaultValue={gstin} onChange={(e) => setGstin(e.target.value)} />
                                 </div>
                                 <Button type="submit">Save Settings</Button>
                             </form>
@@ -449,3 +510,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
