@@ -41,12 +41,18 @@ const medicineMasterData: MedicineMaster[] = [
     { id: "MED005", name: "Atorvastatin 20mg" },
 ];
 
+const manufacturerOptions = [
+    { id: "MAN001", name: "Bayer" },
+    { id: "MAN002", name: "Pfizer" },
+    { id: "MAN003", name: "Sun Pharma" },
+    { id: "MAN004", name: "Cipla" },
+];
+
 
 interface PurchaseItem {
     id: number;
     medicineId: string;
     medicineName: string;
-    manufacturer: string;
     quantity: number;
     pricePerUnit: number;
     expiryDate: string;
@@ -61,6 +67,7 @@ export default function AddStockPage() {
 
     const [purchaseItems, setPurchaseItems] = useState<PurchaseItem[]>([]);
     const [invoiceNumber, setInvoiceNumber] = useState("");
+    const [manufacturer, setManufacturer] = useState("");
     const [destination, setDestination] = useState("warehouse");
 
     const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
@@ -77,7 +84,6 @@ export default function AddStockPage() {
             id: Date.now(),
             medicineId: "",
             medicineName: "",
-            manufacturer: "",
             quantity: 1,
             pricePerUnit: 0,
             expiryDate: "",
@@ -115,15 +121,20 @@ export default function AddStockPage() {
             toast({ variant: 'destructive', title: 'Error', description: 'Please enter a purchase invoice number.' });
             return;
         }
+        if (!manufacturer) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Please select a manufacturer.' });
+            return;
+        }
         if (purchaseItems.length === 0) {
             toast({ variant: 'destructive', title: 'Error', description: 'Please add at least one medicine to the list.' });
             return;
         }
         // In a real app, you would send this data to your backend
-        console.log({ invoiceNumber, destination, items: purchaseItems });
+        console.log({ invoiceNumber, manufacturer, destination, items: purchaseItems });
         toast({ title: 'Success', description: 'Stock added to inventory successfully.' });
         setPurchaseItems([]);
         setInvoiceNumber("");
+        setManufacturer("");
     };
 
     const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -138,8 +149,8 @@ export default function AddStockPage() {
     };
     
     const downloadSampleCsv = () => {
-        const header = "MedicineID,Manufacturer,Quantity,PricePerUnit,ExpiryDate(YYYY-MM-DD)\n";
-        const exampleRow = "MED001,Bayer,100,10.50,2026-12-31\n";
+        const header = "MedicineID,Quantity,PricePerUnit,ExpiryDate(YYYY-MM-DD)\n";
+        const exampleRow = "MED001,100,10.50,2026-12-31\n";
         const blob = new Blob([header, exampleRow], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         if (link.download !== undefined) {
@@ -280,10 +291,23 @@ export default function AddStockPage() {
                         </CardHeader>
                         <CardContent>
                              <form className="space-y-6" onSubmit={handleFormSubmit}>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                      <div className="space-y-2">
                                         <Label htmlFor="invoice-number">Purchase Invoice Number</Label>
                                         <Input id="invoice-number" placeholder="e.g., INV-2024-123" value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} required />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="manufacturer">Manufacturer</Label>
+                                        <Select value={manufacturer} onValueChange={setManufacturer} required>
+                                            <SelectTrigger id="manufacturer">
+                                                <SelectValue placeholder="Select Manufacturer" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {manufacturerOptions.map(man => (
+                                                    <SelectItem key={man.id} value={man.name}>{man.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="destination-store">Destination</Label>
@@ -304,7 +328,6 @@ export default function AddStockPage() {
                                             <TableHeader>
                                                 <TableRow>
                                                     <TableHead className="min-w-[250px]">Medicine</TableHead>
-                                                    <TableHead className="min-w-[150px]">Manufacturer</TableHead>
                                                     <TableHead className="w-[100px]">Quantity</TableHead>
                                                     <TableHead className="w-[150px]">Price/Unit (₹)</TableHead>
                                                     <TableHead className="w-[150px]">Expiry</TableHead>
@@ -324,9 +347,6 @@ export default function AddStockPage() {
                                                                     ))}
                                                                 </SelectContent>
                                                             </Select>
-                                                        </TableCell>
-                                                         <TableCell>
-                                                            <Input placeholder="e.g. Bayer" value={item.manufacturer} onChange={e => handleItemChange(item.id, 'manufacturer', e.target.value)} required/>
                                                         </TableCell>
                                                         <TableCell>
                                                             <Input type="number" value={item.quantity} onChange={e => handleItemChange(item.id, 'quantity', parseInt(e.target.value, 10))} min="1" required/>
@@ -379,8 +399,27 @@ export default function AddStockPage() {
                             <CardTitle>Import Stock from CSV File</CardTitle>
                             <CardDescription>Upload a CSV file to add multiple medicines to your inventory at once.</CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-4 text-center">
-                             <div className="border-2 border-dashed border-muted-foreground/50 rounded-lg p-8 flex flex-col items-center justify-center">
+                        <CardContent className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="csv-invoice-number">Purchase Invoice Number</Label>
+                                    <Input id="csv-invoice-number" placeholder="e.g., INV-2024-123" required />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="csv-manufacturer">Manufacturer</Label>
+                                    <Select required>
+                                        <SelectTrigger id="csv-manufacturer">
+                                            <SelectValue placeholder="Select Manufacturer" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {manufacturerOptions.map(man => (
+                                                <SelectItem key={man.id} value={man.name}>{man.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                            <div className="border-2 border-dashed border-muted-foreground/50 rounded-lg p-8 flex flex-col items-center justify-center text-center">
                                 <Upload className="h-12 w-12 text-muted-foreground" />
                                 <p className="mt-4 text-muted-foreground">Drag & drop your CSV file here or click to upload.</p>
                                 <Button asChild className="mt-4">
@@ -391,7 +430,7 @@ export default function AddStockPage() {
                                     </label>
                                 </Button>
                             </div>
-                             <Button variant="link" onClick={downloadSampleCsv}>
+                            <Button variant="link" onClick={downloadSampleCsv}>
                                 <Download className="mr-2 h-4 w-4" />
                                 Download Sample CSV File
                             </Button>
