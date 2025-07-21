@@ -59,7 +59,6 @@ interface PurchaseItem {
     quantity: number;
     pricePerUnit: number;
     expiryDate: string;
-    gstSlab: string;
 }
 
 export default function AddStockPage() {
@@ -90,7 +89,6 @@ export default function AddStockPage() {
             quantity: 1,
             pricePerUnit: 0,
             expiryDate: "",
-            gstSlab: "12",
         };
         setPurchaseItems([...purchaseItems, newItem]);
     };
@@ -111,7 +109,6 @@ export default function AddStockPage() {
                 medicineId: selectedMedicine.id,
                 medicineName: selectedMedicine.name,
                 pricePerUnit: selectedMedicine.price,
-                gstSlab: selectedMedicine.gstSlab,
             } : item
         ));
     };
@@ -119,6 +116,10 @@ export default function AddStockPage() {
     const handleRemoveItem = (id: number) => {
         setPurchaseItems(purchaseItems.filter(item => item.id !== id));
     };
+
+    const totalInvoiceValue = useMemo(() => {
+        return purchaseItems.reduce((acc, item) => acc + (item.quantity * item.pricePerUnit), 0);
+    }, [purchaseItems]);
 
     const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -135,7 +136,7 @@ export default function AddStockPage() {
             return;
         }
         // In a real app, you would send this data to your backend
-        console.log({ invoiceNumber, manufacturer, destination, items: purchaseItems });
+        console.log({ invoiceNumber, manufacturer, destination, items: purchaseItems, totalInvoiceValue });
         toast({ title: 'Success', description: 'Stock added to inventory successfully.' });
         setPurchaseItems([]);
         setInvoiceNumber("");
@@ -336,8 +337,7 @@ export default function AddStockPage() {
                                                     <TableHead className="min-w-[250px]">Medicine</TableHead>
                                                     <TableHead className="w-[100px]">Quantity</TableHead>
                                                     <TableHead className="w-[150px]">Price/Unit (₹)</TableHead>
-                                                    <TableHead className="w-[150px]">Expiry</TableHead>
-                                                    <TableHead className="w-[120px]">GST %</TableHead>
+                                                    <TableHead className="w-[150px]">Expiry (Optional)</TableHead>
                                                     <TableHead className="w-[50px]"></TableHead>
                                                 </TableRow>
                                             </TableHeader>
@@ -358,22 +358,10 @@ export default function AddStockPage() {
                                                             <Input type="number" value={item.quantity} onChange={e => handleItemChange(item.id, 'quantity', parseInt(e.target.value, 10))} min="1" required/>
                                                         </TableCell>
                                                         <TableCell>
-                                                            <Input type="number" value={item.pricePerUnit} onChange={e => handleItemChange(item.id, 'pricePerUnit', parseFloat(e.target.value))} required/>
+                                                            <Input type="number" value={item.pricePerUnit} onChange={e => handleItemChange(item.id, 'pricePerUnit', parseFloat(e.target.value))} step="0.01" required/>
                                                         </TableCell>
                                                         <TableCell>
-                                                            <Input type="date" value={item.expiryDate} onChange={e => handleItemChange(item.id, 'expiryDate', e.target.value)} required/>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                             <Select value={item.gstSlab} onValueChange={value => handleItemChange(item.id, 'gstSlab', value)}>
-                                                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                                                <SelectContent>
-                                                                    <SelectItem value="0">0%</SelectItem>
-                                                                    <SelectItem value="5">5%</SelectItem>
-                                                                    <SelectItem value="12">12%</SelectItem>
-                                                                    <SelectItem value="18">18%</SelectItem>
-                                                                    <SelectItem value="28">28%</SelectItem>
-                                                                </SelectContent>
-                                                            </Select>
+                                                            <Input type="date" value={item.expiryDate} onChange={e => handleItemChange(item.id, 'expiryDate', e.target.value)} />
                                                         </TableCell>
                                                         <TableCell>
                                                             <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
@@ -382,6 +370,12 @@ export default function AddStockPage() {
                                                 ))}
                                             </TableBody>
                                         </Table>
+                                    </div>
+                                )}
+                                
+                                {purchaseItems.length > 0 && (
+                                    <div className="text-right">
+                                        <p className="text-lg font-bold">Total Invoice Amount: ₹{totalInvoiceValue.toFixed(2)}</p>
                                     </div>
                                 )}
                                 
@@ -448,3 +442,5 @@ export default function AddStockPage() {
       </div>
     </div>
   );
+
+    
