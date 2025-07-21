@@ -11,7 +11,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, Pill, Undo } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +21,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { useMemo, useEffect } from "react";
-import { allAppRoutes, AppRoute } from "@/lib/types";
+import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -40,9 +40,8 @@ export default function WarehouseInventoryPage() {
     const router = useRouter();
     const pathname = usePathname();
 
-    const sidebarRoutes = useMemo(() => {
-        return allAppRoutes.filter(route => route.path !== '/');
-    }, []);
+    const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
+    const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && route.inSidebar && hasPermission(route.path)), [hasPermission]);
 
     useEffect(() => {
         if (!loading && !user) {
@@ -65,7 +64,9 @@ export default function WarehouseInventoryPage() {
             case 'Sales': return <ShoppingCart />;
             case 'Warehouse Stock': return <Warehouse />;
             case 'Store Stock': return <Package />;
-            case 'Add Medicine': return <PlusSquare />;
+            case 'Medicine Master': return <Pill />;
+            case 'Add Stock': return <PlusSquare />;
+            case 'Return to Manufacturer': return <Undo />;
             case 'Stock Transfer': return <GitBranch />;
             case 'Inventory Reports': return <BarChart />;
             case 'Valuation Report': return <TrendingUp />;
@@ -75,8 +76,6 @@ export default function WarehouseInventoryPage() {
         }
     };
     
-    const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory') && r.inSidebar);
-
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <Sidebar>
@@ -97,7 +96,7 @@ export default function WarehouseInventoryPage() {
                     </SidebarMenuItem>
                 )}
                 
-                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory') && r.inSidebar && hasPermission(r.path)).map((route) => (
+                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path)).map((route) => (
                     <SidebarMenuItem key={route.path}>
                         <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}>
                             {getIcon(route.name)}
@@ -119,7 +118,7 @@ export default function WarehouseInventoryPage() {
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                             <SidebarMenu className="ml-7 mt-2 border-l pl-3">
-                                {stockManagementRoutes.filter(route => hasPermission(route.path)).map((route) => (
+                                {stockManagementRoutes.map((route) => (
                                     <SidebarMenuItem key={route.path}>
                                         <SidebarMenuButton href={route.path} tooltip={route.name} size="sm" isActive={pathname === route.path}>
                                             {getIcon(route.name)}

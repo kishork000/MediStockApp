@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, Warehouse, GitBranch, LogOut, ChevronDown, TrendingUp, PlusCircle, Trash2, Upload, File, Download, Undo } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, Warehouse, GitBranch, LogOut, ChevronDown, TrendingUp, PlusCircle, Trash2, Upload, File, Download, Undo, Pill } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -28,8 +28,26 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
+interface MedicineMaster {
+    id: string;
+    name: string;
+    manufacturer: string;
+    price: number;
+    gstSlab: string;
+}
+
+const medicineMasterData: MedicineMaster[] = [
+    { id: "MED001", name: "Aspirin 100mg", manufacturer: "Bayer", price: 10.00, gstSlab: "5" },
+    { id: "MED002", name: "Ibuprofen 200mg", manufacturer: "Advil", price: 15.50, gstSlab: "5" },
+    { id: "MED003", name: "Paracetamol 500mg", manufacturer: "Tylenol", price: 5.75, gstSlab: "5" },
+    { id: "MED004", name: "Amoxicillin 250mg", manufacturer: "Generic", price: 55.20, gstSlab: "12" },
+    { id: "MED005", name: "Atorvastatin 20mg", manufacturer: "Lipitor", price: 45.00, gstSlab: "12" },
+];
+
+
 interface PurchaseItem {
     id: number;
+    medicineId: string;
     medicineName: string;
     manufacturer: string;
     quantity: number;
@@ -38,7 +56,7 @@ interface PurchaseItem {
     gstSlab: string;
 }
 
-export default function AddMedicinePage() {
+export default function AddStockPage() {
     const { user, logout, loading, hasPermission } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
@@ -48,13 +66,8 @@ export default function AddMedicinePage() {
     const [invoiceNumber, setInvoiceNumber] = useState("");
     const [destination, setDestination] = useState("warehouse");
 
-    const sidebarRoutes = useMemo(() => {
-        return allAppRoutes.filter(route => route.path !== '/');
-    }, []);
-    
-    const stockManagementRoutes = useMemo(() => {
-        return allAppRoutes.filter(route => route.path.startsWith('/inventory/') && route.inSidebar && hasPermission(route.path));
-    }, [hasPermission]);
+    const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
+    const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && route.inSidebar && hasPermission(route.path)), [hasPermission]);
 
     useEffect(() => {
         if (!loading && !user) {
@@ -65,6 +78,7 @@ export default function AddMedicinePage() {
     const handleAddItem = () => {
         const newItem: PurchaseItem = {
             id: Date.now(),
+            medicineId: "",
             medicineName: "",
             manufacturer: "",
             quantity: 1,
@@ -78,6 +92,22 @@ export default function AddMedicinePage() {
     const handleItemChange = (id: number, field: keyof PurchaseItem, value: string | number) => {
         setPurchaseItems(purchaseItems.map(item =>
             item.id === id ? { ...item, [field]: value } : item
+        ));
+    };
+
+    const handleMedicineSelect = (id: number, medicineId: string) => {
+        const selectedMedicine = medicineMasterData.find(m => m.id === medicineId);
+        if (!selectedMedicine) return;
+
+        setPurchaseItems(purchaseItems.map(item =>
+            item.id === id ? { 
+                ...item, 
+                medicineId: selectedMedicine.id,
+                medicineName: selectedMedicine.name,
+                manufacturer: selectedMedicine.manufacturer,
+                pricePerUnit: selectedMedicine.price,
+                gstSlab: selectedMedicine.gstSlab,
+            } : item
         ));
     };
 
@@ -114,8 +144,8 @@ export default function AddMedicinePage() {
     };
     
     const downloadSampleCsv = () => {
-        const header = "MedicineName,Manufacturer,Quantity,PricePerUnit,ExpiryDate(YYYY-MM-DD),GSTSlab(%)\n";
-        const exampleRow = "Paracetamol 500mg,Pharma Inc.,100,10.50,2026-12-31,12\n";
+        const header = "MedicineID,Quantity,PricePerUnit,ExpiryDate(YYYY-MM-DD)\n";
+        const exampleRow = "MED001,100,10.50,2026-12-31\n";
         const blob = new Blob([header, exampleRow], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         if (link.download !== undefined) {
@@ -145,7 +175,8 @@ export default function AddMedicinePage() {
             case 'Sales Reports': return <BarChart />;
             case 'Warehouse Stock': return <Warehouse />;
             case 'Store Stock': return <Package />;
-            case 'Add Medicine': return <PlusSquare />;
+            case 'Medicine Master': return <Pill />;
+            case 'Add Stock': return <PlusSquare />;
             case 'Return to Manufacturer': return <Undo />;
             case 'Stock Transfer': return <GitBranch />;
             case 'Inventory Reports': return <BarChart />;
@@ -244,14 +275,14 @@ export default function AddMedicinePage() {
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
             <Tabs defaultValue="bulk-add">
                 <TabsList>
-                    <TabsTrigger value="bulk-add">Bulk Add Stock</TabsTrigger>
+                    <TabsTrigger value="bulk-add">Add Stock</TabsTrigger>
                     <TabsTrigger value="csv-import">Import from CSV</TabsTrigger>
                 </TabsList>
                 <TabsContent value="bulk-add">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Add New Medicine Stock</CardTitle>
-                            <CardDescription>Fill in the form to add new medicine stock to the warehouse.</CardDescription>
+                            <CardTitle>Add New Stock</CardTitle>
+                            <CardDescription>Fill in the form to add new stock to the warehouse based on a purchase invoice.</CardDescription>
                         </CardHeader>
                         <CardContent>
                              <form className="space-y-6" onSubmit={handleFormSubmit}>
@@ -278,10 +309,9 @@ export default function AddMedicinePage() {
                                         <Table>
                                             <TableHeader>
                                                 <TableRow>
-                                                    <TableHead className="min-w-[200px]">Medicine Name</TableHead>
-                                                    <TableHead className="min-w-[150px]">Manufacturer</TableHead>
+                                                    <TableHead className="min-w-[250px]">Medicine</TableHead>
                                                     <TableHead className="w-[100px]">Quantity</TableHead>
-                                                    <TableHead className="w-[120px]">Price/Unit (₹)</TableHead>
+                                                    <TableHead className="w-[150px]">Price/Unit (₹)</TableHead>
                                                     <TableHead className="w-[150px]">Expiry</TableHead>
                                                     <TableHead className="w-[120px]">GST %</TableHead>
                                                     <TableHead className="w-[50px]"></TableHead>
@@ -291,10 +321,14 @@ export default function AddMedicinePage() {
                                                 {purchaseItems.map(item => (
                                                     <TableRow key={item.id}>
                                                         <TableCell>
-                                                            <Input value={item.medicineName} onChange={e => handleItemChange(item.id, 'medicineName', e.target.value)} placeholder="e.g., Paracetamol" />
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Input value={item.manufacturer} onChange={e => handleItemChange(item.id, 'manufacturer', e.target.value)} placeholder="e.g., Pharma Inc." />
+                                                            <Select value={item.medicineId} onValueChange={value => handleMedicineSelect(item.id, value)}>
+                                                                <SelectTrigger><SelectValue placeholder="Select Medicine" /></SelectTrigger>
+                                                                <SelectContent>
+                                                                    {medicineMasterData.map(med => (
+                                                                        <SelectItem key={med.id} value={med.id}>{med.name} ({med.manufacturer})</SelectItem>
+                                                                    ))}
+                                                                </SelectContent>
+                                                            </Select>
                                                         </TableCell>
                                                         <TableCell>
                                                             <Input type="number" value={item.quantity} onChange={e => handleItemChange(item.id, 'quantity', parseInt(e.target.value, 10))} min="1" />

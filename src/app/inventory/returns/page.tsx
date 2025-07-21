@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, Undo, PlusCircle, Trash2 } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, Undo, PlusCircle, Trash2, Pill } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -51,14 +51,8 @@ export default function ReturnToManufacturerPage() {
     const [currentReturnItem, setCurrentReturnItem] = useState({ medicine: "", quantity: 1 });
     const [debitNoteNumber, setDebitNoteNumber] = useState("");
 
-
-    const sidebarRoutes = useMemo(() => {
-        return allAppRoutes.filter(route => route.path !== '/');
-    }, []);
-
-    const stockManagementRoutes = useMemo(() => {
-        return allAppRoutes.filter(route => route.path.startsWith('/inventory/') && route.inSidebar && hasPermission(route.path));
-    }, [hasPermission]);
+    const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
+    const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && route.inSidebar && hasPermission(route.path)), [hasPermission]);
 
     useEffect(() => {
         if (!loading && !user) {
@@ -119,7 +113,8 @@ export default function ReturnToManufacturerPage() {
             case 'Sales': return <ShoppingCart />;
             case 'Warehouse Stock': return <Warehouse />;
             case 'Store Stock': return <Package />;
-            case 'Add Medicine': return <PlusSquare />;
+            case 'Medicine Master': return <Pill />;
+            case 'Add Stock': return <PlusSquare />;
             case 'Return to Manufacturer': return <Undo />;
             case 'Stock Transfer': return <GitBranch />;
             case 'Inventory Reports': return <BarChart />;
@@ -159,7 +154,7 @@ export default function ReturnToManufacturerPage() {
                     </SidebarMenuItem>
                 ))}
 
-                {hasPermission('/inventory/warehouse') && (
+                {hasPermission('/inventory') && (
                     <Collapsible className="w-full" defaultOpen={pathname.startsWith('/inventory')}>
                         <CollapsibleTrigger asChild>
                            <SidebarMenuButton className="justify-between">
