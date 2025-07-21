@@ -35,21 +35,45 @@ const valuationData = [
     { medicine: "Atorvastatin 20mg Tablet", price: 45, opening: 150, received: 0, sales: 30, balance: 120 },
 ];
 
-const stores = [
+const allStores = [
     { id: "store1", name: "Downtown Pharmacy" },
     { id: "store2", name: "Uptown Health" },
     { id: "warehouse", name: "Main Warehouse" },
 ];
+
+// Mock mapping from store ID in AuthContext to store ID in this page's data
+const storeIdMapping: { [key: string]: string } = {
+    "STR002": "store1", // Pharmacist One assigned to Downtown Pharmacy
+};
 
 
 export default function ValuationReportPage() {
     const { user, logout, loading, hasPermission } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
+    const [selectedStore, setSelectedStore] = useState(allStores[0].id);
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
       from: new Date(2023, 0, 20),
       to: addDays(new Date(2023, 0, 20), 20),
     });
+
+    const availableStores = useMemo(() => {
+        if (user?.role === 'Admin') {
+            return allStores;
+        }
+        if (user?.role === 'Pharmacist' && user.assignedStore) {
+            const assignedStoreId = storeIdMapping[user.assignedStore];
+            return allStores.filter(s => s.id === assignedStoreId);
+        }
+        return [];
+    }, [user]);
+
+    useEffect(() => {
+        if (user?.role === 'Pharmacist' && availableStores.length > 0) {
+            setSelectedStore(availableStores[0].id);
+        }
+    }, [user, availableStores]);
+
 
     const sidebarRoutes = useMemo(() => {
         return allAppRoutes.filter(route => hasPermission(route.path) && route.path !== '/');
@@ -174,12 +198,16 @@ export default function ValuationReportPage() {
                             <CardDescription>Detailed report of stock movement and valuation.</CardDescription>
                         </div>
                          <div className="flex flex-wrap items-center gap-4">
-                            <Select defaultValue="store1">
+                            <Select 
+                                value={selectedStore} 
+                                onValueChange={setSelectedStore}
+                                disabled={user?.role === 'Pharmacist' && availableStores.length === 1}
+                            >
                                 <SelectTrigger className="w-full sm:w-[200px]">
                                     <SelectValue placeholder="Select Store" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {stores.map(store => (
+                                    {availableStores.map(store => (
                                         <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
                                     ))}
                                 </SelectContent>
@@ -190,30 +218,32 @@ export default function ValuationReportPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="min-w-[200px]">Medicine</TableHead>
-                                <TableHead className="text-right">Opening Stock</TableHead>
-                                <TableHead className="text-right">Received</TableHead>
-                                <TableHead className="text-right">Sales</TableHead>
-                                <TableHead className="text-right font-semibold">Balance Stock</TableHead>
-                                <TableHead className="text-right font-bold">Valuation (₹)</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {valuationData.map((item) => (
-                                <TableRow key={item.medicine}>
-                                    <TableCell className="font-medium">{item.medicine}</TableCell>
-                                    <TableCell className="text-right">{item.opening}</TableCell>
-                                    <TableCell className="text-right">{item.received}</TableCell>
-                                    <TableCell className="text-right">{item.sales}</TableCell>
-                                    <TableCell className="text-right font-semibold">{item.balance}</TableCell>
-                                    <TableCell className="text-right font-bold">{(item.balance * item.price).toFixed(2)}</TableCell>
+                    <div className="relative w-full overflow-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="min-w-[200px]">Medicine</TableHead>
+                                    <TableHead className="text-right">Opening Stock</TableHead>
+                                    <TableHead className="text-right">Received</TableHead>
+                                    <TableHead className="text-right">Sales</TableHead>
+                                    <TableHead className="text-right font-semibold">Balance Stock</TableHead>
+                                    <TableHead className="text-right font-bold">Valuation (₹)</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {valuationData.map((item) => (
+                                    <TableRow key={item.medicine}>
+                                        <TableCell className="font-medium">{item.medicine}</TableCell>
+                                        <TableCell className="text-right">{item.opening}</TableCell>
+                                        <TableCell className="text-right">{item.received}</TableCell>
+                                        <TableCell className="text-right">{item.sales}</TableCell>
+                                        <TableCell className="text-right font-semibold">{item.balance}</TableCell>
+                                        <TableCell className="text-right font-bold">{(item.balance * item.price).toFixed(2)}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
                      <div className="mt-6 flex justify-between items-center">
                         <Button size="sm" variant="outline"><Download className="mr-2" /> Download Report</Button>
                         <div className="text-right">
@@ -227,5 +257,3 @@ export default function ValuationReportPage() {
     </div>
   );
 }
-
-    

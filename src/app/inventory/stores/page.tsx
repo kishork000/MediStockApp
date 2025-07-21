@@ -23,7 +23,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ThemeToggle } from "@/components/theme-toggle";
 
-const stores = [
+const allStores = [
     { id: "store1", name: "Downtown Pharmacy" },
     { id: "store2", name: "Uptown Health" },
 ];
@@ -41,11 +41,35 @@ const storeInventory = {
     ],
 };
 
+// Mock mapping from store ID in AuthContext to store ID in this page's data
+const storeIdMapping: { [key: string]: string } = {
+    "STR002": "store1", // Pharmacist One assigned to Downtown Pharmacy
+};
+
 export default function StoreInventoryPage() {
     const { user, logout, loading, hasPermission } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
-    const [selectedStore, setSelectedStore] = useState(stores[0].id);
+    const [selectedStore, setSelectedStore] = useState(allStores[0].id);
+
+    const availableStores = useMemo(() => {
+        if (user?.role === 'Admin') {
+            return allStores;
+        }
+        if (user?.role === 'Pharmacist' && user.assignedStore) {
+            const assignedStoreId = storeIdMapping[user.assignedStore];
+            return allStores.filter(s => s.id === assignedStoreId);
+        }
+        return [];
+    }, [user]);
+
+    useEffect(() => {
+        // If the user is a pharmacist, default to their assigned store
+        if (user?.role === 'Pharmacist' && availableStores.length > 0) {
+            setSelectedStore(availableStores[0].id);
+        }
+    }, [user, availableStores]);
+
 
     const sidebarRoutes = useMemo(() => {
         return allAppRoutes.filter(route => hasPermission(route.path) && route.path !== '/');
@@ -169,12 +193,16 @@ export default function StoreInventoryPage() {
                             <CardDescription>Select a store to view its current stock levels.</CardDescription>
                         </div>
                         <div className="w-64">
-                             <Select value={selectedStore} onValueChange={setSelectedStore}>
+                             <Select 
+                                value={selectedStore} 
+                                onValueChange={setSelectedStore}
+                                disabled={user?.role === 'Pharmacist' && availableStores.length === 1}
+                             >
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select a store" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {stores.map(store => (
+                                    {availableStores.map(store => (
                                         <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
                                     ))}
                                 </SelectContent>
@@ -192,7 +220,7 @@ export default function StoreInventoryPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {storeInventory[selectedStore as keyof typeof storeInventory].map((item) => (
+                            {storeInventory[selectedStore as keyof typeof storeInventory]?.map((item) => (
                                 <TableRow key={item.name}>
                                     <TableCell className="font-medium">{item.name}</TableCell>
                                     <TableCell className="text-right">{item.quantity}</TableCell>
@@ -212,5 +240,3 @@ export default function StoreInventoryPage() {
     </div>
   );
 }
-
-    

@@ -113,6 +113,11 @@ const companyInfo = {
     gstin: "22AAAAA0000A1Z5"
 };
 
+const storeOptions = [
+    { value: "downtown-pharmacy", label: "Downtown Pharmacy", id: "STR002" },
+    { value: "uptown-health", label: "Uptown Health", id: "STR003" }, // Assuming a new store
+];
+
 
 export default function SalesPage() {
   const { user, logout, loading, hasPermission } = useAuth();
@@ -126,6 +131,7 @@ export default function SalesPage() {
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [printSize, setPrintSize] = useState("80mm");
   const [medicineOptions, setMedicineOptions] = useState<Medicine[]>(initialMedicineStock);
+  const [currentStore, setCurrentStore] = useState(storeOptions[0].value);
   
   // Patient form state
   const [patientForm, setPatientForm] = useState({
@@ -146,6 +152,23 @@ export default function SalesPage() {
   const sidebarRoutes = useMemo(() => {
     return allAppRoutes.filter(route => hasPermission(route.path) && route.path !== '/');
   }, [hasPermission]);
+  
+  const availableStores = useMemo(() => {
+    if (user?.role === 'Admin') {
+        return storeOptions;
+    }
+    if (user?.role === 'Pharmacist' && user.assignedStore) {
+        return storeOptions.filter(s => s.id === user.assignedStore);
+    }
+    return [];
+  }, [user]);
+
+  useEffect(() => {
+    if (user?.role === 'Pharmacist' && availableStores.length > 0) {
+        setCurrentStore(availableStores[0].value);
+    }
+  }, [user, availableStores]);
+
 
   useEffect(() => {
     if (!loading && !user) {
@@ -458,13 +481,18 @@ export default function SalesPage() {
             <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                     <Label htmlFor="current-store" className="hidden sm:block">Current Store:</Label>
-                    <Select defaultValue="downtown-pharmacy">
+                    <Select 
+                        value={currentStore}
+                        onValueChange={setCurrentStore}
+                        disabled={user?.role === 'Pharmacist' && availableStores.length === 1}
+                    >
                         <SelectTrigger id="current-store" className="w-[180px]">
                             <SelectValue placeholder="Select Store"/>
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="downtown-pharmacy">Downtown Pharmacy</SelectItem>
-                            <SelectItem value="uptown-health">Uptown Health</SelectItem>
+                            {availableStores.map(store => (
+                                <SelectItem key={store.value} value={store.value}>{store.label}</SelectItem>
+                            ))}
                         </SelectContent>
                     </Select>
                 </div>

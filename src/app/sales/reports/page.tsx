@@ -39,10 +39,10 @@ const salesData = [
     { pharmacist: "Pharmacist Two", store: "Uptown Health", medicine: "Metformin", quantity: 5, total: 125.00, date: "2024-07-30" },
 ];
 
-const stores = [
-    { id: "all", name: "All Stores" },
-    { id: "Downtown Pharmacy", name: "Downtown Pharmacy" },
-    { id: "Uptown Health", name: "Uptown Health" },
+const allStores = [
+    { id: "all", name: "All Stores", storeId: "all" },
+    { id: "Downtown Pharmacy", name: "Downtown Pharmacy", storeId: "STR002" },
+    { id: "Uptown Health", name: "Uptown Health", storeId: "STR003" },
 ];
 
 const pharmacists = [
@@ -64,6 +64,26 @@ export default function SalesReportPage() {
       from: new Date(2024, 6, 20),
       to: addDays(new Date(), 0), // Set 'to' date to today
     });
+    
+    const availableStores = useMemo(() => {
+        if (user?.role === 'Admin') {
+            return allStores;
+        }
+        if (user?.role === 'Pharmacist' && user.assignedStore) {
+            return allStores.filter(s => s.storeId === user.assignedStore || s.storeId === 'all');
+        }
+        return [];
+    }, [user]);
+
+    useEffect(() => {
+        if (user?.role === 'Pharmacist' && user.assignedStore) {
+            const assignedStore = allStores.find(s => s.storeId === user.assignedStore);
+            if(assignedStore) {
+                setSelectedStore(assignedStore.id);
+            }
+        }
+    }, [user]);
+
 
     const handleApplyFilters = () => {
         let data = [...salesData];
@@ -259,12 +279,16 @@ export default function SalesReportPage() {
                             <CardDescription>Analyze sales data with powerful filters.</CardDescription>
                         </div>
                          <div className="flex flex-wrap items-center gap-2">
-                            <Select value={selectedStore} onValueChange={setSelectedStore}>
+                            <Select 
+                                value={selectedStore} 
+                                onValueChange={setSelectedStore}
+                                disabled={user?.role === 'Pharmacist'}
+                            >
                                 <SelectTrigger className="w-full sm:w-[160px]">
                                     <SelectValue placeholder="Select Store" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {stores.map(store => (
+                                    {availableStores.map(store => (
                                         <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
                                     ))}
                                 </SelectContent>
@@ -344,5 +368,3 @@ export default function SalesReportPage() {
       </div>
     </div>
   );
-
-    
