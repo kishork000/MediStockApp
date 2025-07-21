@@ -33,16 +33,26 @@ const allStores = [
 
 const storeInventory = {
     "STR002": [
-        { name: "Aspirin", opening: 100, received: 70, sales: 20, quantity: 150, minStockLevel: 50, status: "In Stock" },
-        { name: "Ibuprofen", opening: 50, received: 0, sales: 30, quantity: 20, minStockLevel: 25, status: "Low Stock" },
-        { name: "Paracetamol", opening: 80, received: 50, sales: 30, quantity: 100, minStockLevel: 100, status: "In Stock" },
+        { name: "Aspirin", value: "aspirin", opening: 100, received: 70, sales: 20, quantity: 150, minStockLevel: 50, status: "In Stock" },
+        { name: "Ibuprofen", value: "ibuprofen", opening: 50, received: 0, sales: 30, quantity: 20, minStockLevel: 25, status: "Low Stock" },
+        { name: "Paracetamol", value: "paracetamol", opening: 80, received: 50, sales: 30, quantity: 100, minStockLevel: 100, status: "In Stock" },
     ],
     "STR003": [
-        { name: "Amoxicillin", opening: 50, received: 50, sales: 20, quantity: 80, minStockLevel: 40, status: "In Stock" },
-        { name: "Lisinopril", opening: 100, received: 40, sales: 20, quantity: 120, minStockLevel: 60, status: "In Stock" },
-        { name: "Metformin", opening: 25, received: 0, sales: 25, quantity: 0, minStockLevel: 30, status: "Out of Stock" },
+        { name: "Amoxicillin", value: "amoxicillin", opening: 50, received: 50, sales: 20, quantity: 80, minStockLevel: 40, status: "In Stock" },
+        { name: "Lisinopril", value: "lisinopril", opening: 100, received: 40, sales: 20, quantity: 120, minStockLevel: 60, status: "In Stock" },
+        { name: "Metformin", value: "metformin", opening: 25, received: 0, sales: 25, quantity: 0, minStockLevel: 30, status: "Out of Stock" },
     ],
 };
+
+const medicineOptions = [
+    { value: "all", name: "All Medicines" },
+    { value: "aspirin", name: "Aspirin" },
+    { value: "ibuprofen", name: "Ibuprofen" },
+    { value: "paracetamol", name: "Paracetamol" },
+    { value: "amoxicillin", name: "Amoxicillin" },
+    { value: "lisinopril", name: "Lisinopril" },
+    { value: "metformin", name: "Metformin" },
+];
 
 const getStatus = (quantity: number, minStockLevel: number) => {
     if (quantity <= 0) return "Out of Stock";
@@ -55,7 +65,7 @@ export default function StoreInventoryPage() {
     const router = useRouter();
     const pathname = usePathname();
     const [selectedStore, setSelectedStore] = useState("");
-    const [medicineQuery, setMedicineQuery] = useState("");
+    const [selectedMedicine, setSelectedMedicine] = useState("all");
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
     const availableStores = useMemo(() => {
@@ -78,10 +88,8 @@ export default function StoreInventoryPage() {
     const filteredInventory = useMemo(() => {
         let inventory = storeInventory[selectedStore as keyof typeof storeInventory] || [];
 
-        if (medicineQuery) {
-            inventory = inventory.filter(item => 
-                item.name.toLowerCase().includes(medicineQuery.toLowerCase())
-            );
+        if (selectedMedicine !== 'all') {
+            inventory = inventory.filter(item => item.value === selectedMedicine);
         }
 
         // Note: Date range filtering is not applied as the mock data doesn't contain dates.
@@ -89,7 +97,7 @@ export default function StoreInventoryPage() {
 
         return inventory;
 
-    }, [selectedStore, medicineQuery, dateRange]);
+    }, [selectedStore, selectedMedicine, dateRange]);
 
 
     const sidebarRoutes = useMemo(() => {
@@ -226,13 +234,13 @@ export default function StoreInventoryPage() {
                             <CardTitle>View Store Inventory</CardTitle>
                             <CardDescription>Select a store to view its current stock levels.</CardDescription>
                         </div>
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
                              <Select 
                                 value={selectedStore} 
                                 onValueChange={setSelectedStore}
                                 disabled={user?.role === 'Pharmacist' && availableStores.length === 1}
                              >
-                                <SelectTrigger className="w-full sm:w-auto">
+                                <SelectTrigger className="w-full sm:w-[200px]">
                                     <SelectValue placeholder="Select a store" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -241,51 +249,62 @@ export default function StoreInventoryPage() {
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <div className="relative">
-                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    type="search"
-                                    placeholder="Search medicine..."
-                                    className="w-full sm:w-[200px] pl-8"
-                                    value={medicineQuery}
-                                    onChange={(e) => setMedicineQuery(e.target.value)}
-                                />
-                            </div>
+                            <Select 
+                                value={selectedMedicine}
+                                onValueChange={setSelectedMedicine}
+                            >
+                                <SelectTrigger className="w-full sm:w-[200px]">
+                                    <SelectValue placeholder="Select Medicine" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {medicineOptions.map(med => (
+                                        <SelectItem key={med.value} value={med.value}>{med.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                              <DateRangePicker date={dateRange} setDate={setDateRange} />
                         </div>
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Medicine</TableHead>
-                                <TableHead className="text-right">Open</TableHead>
-                                <TableHead className="text-right">Rcvd</TableHead>
-                                <TableHead className="text-right">Sold</TableHead>
-                                <TableHead className="text-right font-bold">Avail</TableHead>
-                                <TableHead className="text-right">Status</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredInventory.map((item) => {
-                                const status = getStatus(item.quantity, item.minStockLevel);
-                                return (
-                                <TableRow key={item.name}>
-                                    <TableCell className="font-medium">{item.name}</TableCell>
-                                    <TableCell className="text-right">{item.opening}</TableCell>
-                                    <TableCell className="text-right">{item.received}</TableCell>
-                                    <TableCell className="text-right">{item.sales}</TableCell>
-                                    <TableCell className="text-right font-bold">{item.quantity}</TableCell>
-                                    <TableCell className="text-right">
-                                        <Badge variant={status === 'In Stock' ? 'default' : status === 'Low Stock' ? 'secondary' : 'destructive'}>
-                                            {status}
-                                        </Badge>
-                                    </TableCell>
+                    <div className="relative w-full overflow-auto rounded-lg border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Medicine</TableHead>
+                                    <TableHead className="text-right">Open</TableHead>
+                                    <TableHead className="text-right">Rcvd</TableHead>
+                                    <TableHead className="text-right">Sold</TableHead>
+                                    <TableHead className="text-right font-bold">Avail</TableHead>
+                                    <TableHead className="text-right">Status</TableHead>
                                 </TableRow>
-                            )})}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredInventory.length > 0 ? filteredInventory.map((item) => {
+                                    const status = getStatus(item.quantity, item.minStockLevel);
+                                    return (
+                                    <TableRow key={item.name}>
+                                        <TableCell className="font-medium">{item.name}</TableCell>
+                                        <TableCell className="text-right">{item.opening}</TableCell>
+                                        <TableCell className="text-right">{item.received}</TableCell>
+                                        <TableCell className="text-right">{item.sales}</TableCell>
+                                        <TableCell className="text-right font-bold">{item.quantity}</TableCell>
+                                        <TableCell className="text-right">
+                                            <Badge variant={status === 'In Stock' ? 'default' : status === 'Low Stock' ? 'secondary' : 'destructive'}>
+                                                {status}
+                                            </Badge>
+                                        </TableCell>
+                                    </TableRow>
+                                )}) : (
+                                    <TableRow>
+                                        <TableCell colSpan={6} className="text-center h-24">
+                                            No stock data available for the selected filters.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </CardContent>
             </Card>
         </main>
