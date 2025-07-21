@@ -40,11 +40,10 @@ const summarizeDashboardFlow = ai.defineFlow(
   },
   async (input) => {
     const {output} = await prompt(input);
-    if (!output) {
-      // If the model returns null or undefined, return a fallback message.
-      return 'AI summary could not be generated at this time. Please try again.';
-    }
-    return output;
+    // Ensure we always return a string, providing a fallback if the model returns null/undefined.
+    return (
+      output || 'AI summary could not be generated at this time. Please try again.'
+    );
   }
 );
 
