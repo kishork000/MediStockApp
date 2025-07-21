@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -22,6 +22,9 @@ import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { DateRangePicker } from "@/components/dashboard/DateRangePicker";
+import { DateRange } from "react-day-picker";
+import { Input } from "@/components/ui/input";
 
 const allStores = [
     { id: "STR002", name: "Downtown Pharmacy" },
@@ -46,6 +49,8 @@ export default function StoreInventoryPage() {
     const router = useRouter();
     const pathname = usePathname();
     const [selectedStore, setSelectedStore] = useState("");
+    const [medicineQuery, setMedicineQuery] = useState("");
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
     const availableStores = useMemo(() => {
         if (user?.role === 'Admin') {
@@ -64,9 +69,30 @@ export default function StoreInventoryPage() {
     }, [availableStores, selectedStore]);
 
 
+    const filteredInventory = useMemo(() => {
+        let inventory = storeInventory[selectedStore as keyof typeof storeInventory] || [];
+
+        if (medicineQuery) {
+            inventory = inventory.filter(item => 
+                item.name.toLowerCase().includes(medicineQuery.toLowerCase())
+            );
+        }
+
+        // Note: Date range filtering is not applied as the mock data doesn't contain dates.
+        // In a real application, you would filter the data based on the dateRange state.
+
+        return inventory;
+
+    }, [selectedStore, medicineQuery, dateRange]);
+
+
     const sidebarRoutes = useMemo(() => {
         return allAppRoutes.filter(route => route.path !== '/');
     }, []);
+
+     const stockManagementRoutes = useMemo(() => {
+        return allAppRoutes.filter(route => route.path.startsWith('/inventory/') && route.inSidebar && hasPermission(route.path));
+    }, [hasPermission]);
 
     useEffect(() => {
         if (!loading && !user) {
@@ -87,6 +113,7 @@ export default function StoreInventoryPage() {
             case 'Dashboard': return <HomeIcon />;
             case 'Patients': return <Users2 />;
             case 'Sales': return <ShoppingCart />;
+            case 'Sales Reports': return <BarChart />;
             case 'Warehouse Stock': return <Warehouse />;
             case 'Store Stock': return <Package />;
             case 'Add Medicine': return <PlusSquare />;
@@ -98,8 +125,6 @@ export default function StoreInventoryPage() {
             default: return <LayoutGrid />;
         }
     };
-
-    const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory') && r.inSidebar);
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -121,7 +146,7 @@ export default function StoreInventoryPage() {
                     </SidebarMenuItem>
                 )}
                 
-                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory') && r.inSidebar && hasPermission(r.path)).map((route) => (
+                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path)).map((route) => (
                     <SidebarMenuItem key={route.path}>
                         <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}>
                             {getIcon(route.name)}
@@ -143,7 +168,7 @@ export default function StoreInventoryPage() {
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                              <SidebarMenu className="ml-7 mt-2 border-l pl-3">
-                                {stockManagementRoutes.filter(route => hasPermission(route.path)).map((route) => (
+                                {stockManagementRoutes.map((route) => (
                                     <SidebarMenuItem key={route.path}>
                                         <SidebarMenuButton href={route.path} tooltip={route.name} size="sm" isActive={pathname === route.path}>
                                             {getIcon(route.name)}
@@ -188,18 +213,18 @@ export default function StoreInventoryPage() {
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
             <Card>
                 <CardHeader>
-                    <div className="flex justify-between items-center">
+                     <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                         <div>
                             <CardTitle>View Store Inventory</CardTitle>
                             <CardDescription>Select a store to view its current stock levels.</CardDescription>
                         </div>
-                        <div className="w-64">
+                        <div className="flex flex-wrap items-center gap-2">
                              <Select 
                                 value={selectedStore} 
                                 onValueChange={setSelectedStore}
                                 disabled={user?.role === 'Pharmacist' && availableStores.length === 1}
                              >
-                                <SelectTrigger>
+                                <SelectTrigger className="w-full sm:w-auto">
                                     <SelectValue placeholder="Select a store" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -208,6 +233,17 @@ export default function StoreInventoryPage() {
                                     ))}
                                 </SelectContent>
                             </Select>
+                            <div className="relative">
+                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    type="search"
+                                    placeholder="Search medicine..."
+                                    className="w-full sm:w-[200px] pl-8"
+                                    value={medicineQuery}
+                                    onChange={(e) => setMedicineQuery(e.target.value)}
+                                />
+                            </div>
+                             <DateRangePicker date={dateRange} setDate={setDateRange} />
                         </div>
                     </div>
                 </CardHeader>
@@ -224,7 +260,7 @@ export default function StoreInventoryPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {storeInventory[selectedStore as keyof typeof storeInventory]?.map((item) => (
+                            {filteredInventory.map((item) => (
                                 <TableRow key={item.name}>
                                     <TableCell className="font-medium">{item.name}</TableCell>
                                     <TableCell className="text-right">{item.opening}</TableCell>
@@ -247,4 +283,3 @@ export default function StoreInventoryPage() {
     </div>
   );
 }
-
