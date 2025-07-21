@@ -27,7 +27,7 @@ import { DateRange } from "react-day-picker";
 import { addDays, parseISO, startOfDay, endOfDay, format } from "date-fns";
 import { SalesByPharmacistChart } from "@/components/sales/SalesByPharmacistChart";
 import { TopSellingMedicinesChart } from "@/components/sales/TopSellingMedicinesChart";
-import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 
 const salesData = [
@@ -52,9 +52,23 @@ const pharmacists = [
     { id: "Admin User", name: "Admin User" },
 ];
 
-const chartConfig = {
+const salesOverTimeChartConfig = {
   total: {
     label: "Total Sales",
+    color: "hsl(var(--primary))",
+  },
+} satisfies ChartConfig;
+
+const highSellingChartConfig = {
+  quantity: {
+    label: "Quantity",
+    color: "hsl(var(--primary))",
+  },
+} satisfies ChartConfig;
+
+const pharmacistSalesChartConfig = {
+  salesValue: {
+    label: "Sales Value",
     color: "hsl(var(--primary))",
   },
 } satisfies ChartConfig;
@@ -343,7 +357,7 @@ export default function SalesReportPage() {
                             <CardDescription>Total sales value in the selected period.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                             <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
+                             <ChartContainer config={salesOverTimeChartConfig} className="min-h-[200px] w-full">
                                 <AreaChart
                                   accessibilityLayer
                                   data={analytics.salesOverTime}
@@ -398,8 +412,8 @@ export default function SalesReportPage() {
                     </Card>
 
                     <div className="grid gap-8 md:grid-cols-2">
-                        <TopSellingMedicinesChart data={analytics.highSellingMedicines} />
-                        <SalesByPharmacistChart data={analytics.pharmacistSales} />
+                        <TopSellingMedicinesChart data={analytics.highSellingMedicines} config={highSellingChartConfig} />
+                        <SalesByPharmacistChart data={analytics.pharmacistSales} config={pharmacistSalesChartConfig} />
                     </div>
 
                      <div className="mt-6 flex justify-end items-center">
