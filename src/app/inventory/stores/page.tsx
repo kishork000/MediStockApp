@@ -25,6 +25,8 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { DateRangePicker } from "@/components/dashboard/DateRangePicker";
 import { DateRange } from "react-day-picker";
 import { Input } from "@/components/ui/input";
+import { isWithinInterval, startOfDay, endOfDay } from "date-fns";
+
 
 const allStores = [
     { id: "STR002", name: "Downtown Pharmacy" },
@@ -33,14 +35,14 @@ const allStores = [
 
 const storeInventory = {
     "STR002": [
-        { name: "Aspirin", value: "aspirin", opening: 100, received: 70, sales: 20, quantity: 150, minStockLevel: 50, status: "In Stock" },
-        { name: "Ibuprofen", value: "ibuprofen", opening: 50, received: 0, sales: 30, quantity: 20, minStockLevel: 25, status: "Low Stock" },
-        { name: "Paracetamol", value: "paracetamol", opening: 80, received: 50, sales: 30, quantity: 100, minStockLevel: 100, status: "In Stock" },
+        { name: "Aspirin", value: "aspirin", opening: 100, received: 70, sales: 20, quantity: 150, minStockLevel: 50, status: "In Stock", date: new Date(2024, 6, 28) },
+        { name: "Ibuprofen", value: "ibuprofen", opening: 50, received: 0, sales: 30, quantity: 20, minStockLevel: 25, status: "Low Stock", date: new Date(2024, 6, 27) },
+        { name: "Paracetamol", value: "paracetamol", opening: 80, received: 50, sales: 30, quantity: 100, minStockLevel: 100, status: "In Stock", date: new Date(2024, 6, 26) },
     ],
     "STR003": [
-        { name: "Amoxicillin", value: "amoxicillin", opening: 50, received: 50, sales: 20, quantity: 80, minStockLevel: 40, status: "In Stock" },
-        { name: "Lisinopril", value: "lisinopril", opening: 100, received: 40, sales: 20, quantity: 120, minStockLevel: 60, status: "In Stock" },
-        { name: "Metformin", value: "metformin", opening: 25, received: 0, sales: 25, quantity: 0, minStockLevel: 30, status: "Out of Stock" },
+        { name: "Amoxicillin", value: "amoxicillin", opening: 50, received: 50, sales: 20, quantity: 80, minStockLevel: 40, status: "In Stock", date: new Date(2024, 6, 28) },
+        { name: "Lisinopril", value: "lisinopril", opening: 100, received: 40, sales: 20, quantity: 120, minStockLevel: 60, status: "In Stock", date: new Date(2024, 6, 27) },
+        { name: "Metformin", value: "metformin", opening: 25, received: 0, sales: 25, quantity: 0, minStockLevel: 30, status: "Out of Stock", date: new Date(2024, 6, 25) },
     ],
 };
 
@@ -66,7 +68,10 @@ export default function StoreInventoryPage() {
     const pathname = usePathname();
     const [selectedStore, setSelectedStore] = useState("");
     const [selectedMedicine, setSelectedMedicine] = useState("all");
-    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+    const [dateRange, setDateRange] = useState<DateRange | undefined>({
+        from: new Date(2024, 6, 1),
+        to: new Date(),
+    });
 
     const availableStores = useMemo(() => {
         if (user?.role === 'Admin') {
@@ -92,8 +97,10 @@ export default function StoreInventoryPage() {
             inventory = inventory.filter(item => item.value === selectedMedicine);
         }
 
-        // Note: Date range filtering is not applied as the mock data doesn't contain dates.
-        // In a real application, you would filter the data based on the dateRange state.
+        if (dateRange?.from && dateRange?.to) {
+            const interval = { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to) };
+            inventory = inventory.filter(item => isWithinInterval(item.date, interval));
+        }
 
         return inventory;
 
@@ -105,7 +112,7 @@ export default function StoreInventoryPage() {
     }, []);
 
      const stockManagementRoutes = useMemo(() => {
-        return allAppRoutes.filter(route => route.path.startsWith('/inventory/') && route.inSidebar && hasPermission(route.path));
+        return allAppRoutes.filter(route => route.path.startsWith('/inventory') && hasPermission(route.path));
     }, [hasPermission]);
 
     useEffect(() => {
@@ -234,13 +241,13 @@ export default function StoreInventoryPage() {
                             <CardTitle>View Store Inventory</CardTitle>
                             <CardDescription>Select a store to view its current stock levels.</CardDescription>
                         </div>
-                        <div className="grid w-full gap-2 sm:grid-cols-2 md:w-auto md:flex md:flex-row">
+                        <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:flex-row sm:flex-wrap">
                              <Select 
                                 value={selectedStore} 
                                 onValueChange={setSelectedStore}
                                 disabled={user?.role === 'Pharmacist' && availableStores.length === 1}
                              >
-                                <SelectTrigger className="w-full md:w-[200px]">
+                                <SelectTrigger className="w-full sm:w-[200px]">
                                     <SelectValue placeholder="Select a store" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -253,7 +260,7 @@ export default function StoreInventoryPage() {
                                 value={selectedMedicine}
                                 onValueChange={setSelectedMedicine}
                             >
-                                <SelectTrigger className="w-full md:w-[200px]">
+                                <SelectTrigger className="w-full sm:w-[200px]">
                                     <SelectValue placeholder="Select Medicine" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -262,7 +269,7 @@ export default function StoreInventoryPage() {
                                     ))}
                                 </SelectContent>
                             </Select>
-                             <DateRangePicker date={dateRange} setDate={setDateRange} className="w-full md:w-auto" />
+                             <DateRangePicker date={dateRange} setDate={setDateRange} className="w-full sm:w-auto" />
                         </div>
                     </div>
                 </CardHeader>
@@ -312,4 +319,3 @@ export default function StoreInventoryPage() {
     </div>
   );
 }
-
