@@ -30,14 +30,14 @@ const allStores = [
 
 const storeInventory = {
     store1: [
-        { name: "Aspirin", quantity: 150, status: "In Stock" },
-        { name: "Ibuprofen", quantity: 20, status: "Low Stock" },
-        { name: "Paracetamol", quantity: 100, status: "In Stock" },
+        { name: "Aspirin", opening: 100, received: 70, sales: 20, quantity: 150, status: "In Stock" },
+        { name: "Ibuprofen", opening: 50, received: 0, sales: 30, quantity: 20, status: "Low Stock" },
+        { name: "Paracetamol", opening: 80, received: 50, sales: 30, quantity: 100, status: "In Stock" },
     ],
     store2: [
-        { name: "Amoxicillin", quantity: 80, status: "In Stock" },
-        { name: "Lisinopril", quantity: 120, status: "In Stock" },
-        { name: "Metformin", quantity: 0, status: "Out of Stock" },
+        { name: "Amoxicillin", opening: 50, received: 50, sales: 20, quantity: 80, status: "In Stock" },
+        { name: "Lisinopril", opening: 100, received: 40, sales: 20, quantity: 120, status: "In Stock" },
+        { name: "Metformin", opening: 25, received: 0, sales: 25, quantity: 0, status: "Out of Stock" },
     ],
 };
 
@@ -215,7 +215,10 @@ export default function StoreInventoryPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Medicine</TableHead>
-                                <TableHead className="text-right">Stock</TableHead>
+                                <TableHead className="text-right">Open</TableHead>
+                                <TableHead className="text-right">Rcvd</TableHead>
+                                <TableHead className="text-right">Sold</TableHead>
+                                <TableHead className="text-right font-bold">Avail</TableHead>
                                 <TableHead className="text-right">Status</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -223,7 +226,10 @@ export default function StoreInventoryPage() {
                             {storeInventory[selectedStore as keyof typeof storeInventory]?.map((item) => (
                                 <TableRow key={item.name}>
                                     <TableCell className="font-medium">{item.name}</TableCell>
-                                    <TableCell className="text-right">{item.quantity}</TableCell>
+                                    <TableCell className="text-right">{item.opening}</TableCell>
+                                    <TableCell className="text-right">{item.received}</TableCell>
+                                    <TableCell className="text-right">{item.sales}</TableCell>
+                                    <TableCell className="text-right font-bold">{item.quantity}</TableCell>
                                     <TableCell className="text-right">
                                         <Badge variant={item.status === 'In Stock' ? 'default' : item.status === 'Low Stock' ? 'secondary' : 'destructive'}>
                                             {item.status}
@@ -240,3 +246,5 @@ export default function StoreInventoryPage() {
     </div>
   );
 }
+
+    
