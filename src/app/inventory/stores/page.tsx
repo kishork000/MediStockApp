@@ -138,15 +138,13 @@ export default function StoreInventoryPage() {
                 {hasPermission('/inventory') && (
                     <Collapsible className="w-full" defaultOpen={pathname.startsWith('/inventory')}>
                         <CollapsibleTrigger asChild>
-                           <SidebarMenuItem>
-                                <SidebarMenuButton className="justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <Package />
-                                        <span>Stock Management</span>
-                                    </div>
-                                    <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
+                           <SidebarMenuButton className="justify-between">
+                                <div className="flex items-center gap-3">
+                                    <Package />
+                                    <span>Stock Management</span>
+                                </div>
+                                <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                            </SidebarMenuButton>
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                              <SidebarMenu className="ml-7 mt-2 border-l pl-3">
@@ -246,5 +244,3 @@ export default function StoreInventoryPage() {
     </div>
   );
 }
-
-    

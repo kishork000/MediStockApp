@@ -327,7 +327,14 @@ export default function SalesPage() {
                 {sidebarRoutes.filter(r => !r.path.startsWith('/inventory') && r.inSidebar).map((route) => ( <SidebarMenuItem key={route.path}> <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}> {getIcon(route.name)} <span>{route.name}</span> </SidebarMenuButton> </SidebarMenuItem> ))}
                 {hasPermission('/inventory') && (
                     <Collapsible className="w-full" defaultOpen={pathname.startsWith('/inventory')}>
-                        <CollapsibleTrigger asChild> <SidebarMenuItem> <SidebarMenuButton className="justify-between"> <div className="flex items-center gap-3"> <Package /> <span>Stock Management</span> </div> <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" /> </SidebarMenuButton> </SidebarMenuItem> </CollapsibleTrigger>
+                        <CollapsibleTrigger asChild> 
+                            <SidebarMenuButton className="justify-between"> 
+                                <div className="flex items-center gap-3"> 
+                                    <Package /> <span>Stock Management</span> 
+                                </div> 
+                                <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                             </SidebarMenuButton> 
+                        </CollapsibleTrigger>
                         <CollapsibleContent> <SidebarMenu className="ml-7 mt-2 border-l pl-3"> {stockManagementRoutes.map((route) => ( <SidebarMenuItem key={route.path}> <SidebarMenuButton href={route.path} tooltip={route.name} size="sm" isActive={pathname === route.path}> {getIcon(route.name)} <span>{route.name}</span> </SidebarMenuButton> </SidebarMenuItem> ))} </SidebarMenu> </CollapsibleContent>
                     </Collapsible>
                 )}
@@ -367,25 +374,27 @@ export default function SalesPage() {
                                 </div>
                                 <div className="space-y-2"> <Label htmlFor="address">Address</Label> <Textarea id="address" placeholder="123 Main St, Anytown..." value={patientForm.address} onChange={handlePatientFormChange}/> </div>
                                 <div className="space-y-2">
-                                    <Label>Disease(s)</Label>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button variant="outline" className="w-full justify-start font-normal">
-                                                <span>{diseaseButtonText}</span>
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-56 p-0">
-                                            <div className="space-y-2 p-2">
-                                                {diseaseOptions.map(disease => (
-                                                <div key={disease.id} className="flex items-center space-x-2">
-                                                    <Checkbox id={disease.id} checked={selectedDiseases.includes(disease.id)} onCheckedChange={() => handleDiseaseSelection(disease.id)} />
-                                                    <Label htmlFor={disease.id} className="font-normal">{disease.label}</Label>
-                                                </div>
-                                                ))}
+                                     <Label>Disease(s)</Label>
+                                     <Popover>
+                                         <PopoverTrigger asChild>
+                                            <div className={cn(
+                                                "w-full justify-start font-normal flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                            )}>
+                                                 <span>{diseaseButtonText}</span>
                                             </div>
-                                        </PopoverContent>
-                                    </Popover>
-                                </div>
+                                         </PopoverTrigger>
+                                         <PopoverContent className="w-56 p-0">
+                                             <div className="space-y-2 p-2">
+                                                 {diseaseOptions.map(disease => (
+                                                 <div key={disease.id} className="flex items-center space-x-2">
+                                                     <Checkbox id={disease.id} checked={selectedDiseases.includes(disease.id)} onCheckedChange={() => handleDiseaseSelection(disease.id)} />
+                                                     <Label htmlFor={disease.id} className="font-normal">{disease.label}</Label>
+                                                 </div>
+                                                 ))}
+                                             </div>
+                                         </PopoverContent>
+                                     </Popover>
+                                 </div>
                             </CardContent>
                         </Card>
                         
