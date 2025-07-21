@@ -135,6 +135,13 @@ export default function AddStockPage() {
             toast({ variant: 'destructive', title: 'Error', description: 'Please add at least one medicine to the list.' });
             return;
         }
+        for (const item of purchaseItems) {
+            if (!item.medicineId || item.quantity <= 0 || item.pricePerUnit <= 0) {
+                toast({ variant: 'destructive', title: 'Error', description: `Please complete all required fields for ${item.medicineName || 'a new row'}. Medicine, Quantity and Price are required.` });
+                return;
+            }
+        }
+        
         // In a real app, you would send this data to your backend
         console.log({ invoiceNumber, manufacturer, destination, items: purchaseItems, totalInvoiceValue });
         toast({ title: 'Success', description: 'Stock added to inventory successfully.' });
@@ -345,7 +352,7 @@ export default function AddStockPage() {
                                                 {purchaseItems.map(item => (
                                                     <TableRow key={item.id}>
                                                         <TableCell>
-                                                            <Select value={item.medicineId} onValueChange={value => handleMedicineSelect(item.id, value)}>
+                                                            <Select value={item.medicineId} onValueChange={value => handleMedicineSelect(item.id, value)} required>
                                                                 <SelectTrigger><SelectValue placeholder="Select Medicine" /></SelectTrigger>
                                                                 <SelectContent>
                                                                     {medicineMasterData.map(med => (
@@ -355,10 +362,10 @@ export default function AddStockPage() {
                                                             </Select>
                                                         </TableCell>
                                                         <TableCell>
-                                                            <Input type="number" value={item.quantity} onChange={e => handleItemChange(item.id, 'quantity', parseInt(e.target.value, 10))} min="1" required/>
+                                                            <Input type="number" value={item.quantity} onChange={e => handleItemChange(item.id, 'quantity', parseInt(e.target.value, 10) || 0)} min="1" required/>
                                                         </TableCell>
                                                         <TableCell>
-                                                            <Input type="number" value={item.pricePerUnit} onChange={e => handleItemChange(item.id, 'pricePerUnit', parseFloat(e.target.value))} step="0.01" required/>
+                                                            <Input type="number" value={item.pricePerUnit} onChange={e => handleItemChange(item.id, 'pricePerUnit', parseFloat(e.target.value) || 0)} step="0.01" min="0.01" required/>
                                                         </TableCell>
                                                         <TableCell>
                                                             <Input type="date" value={item.expiryDate} onChange={e => handleItemChange(item.id, 'expiryDate', e.target.value)} />
@@ -397,7 +404,7 @@ export default function AddStockPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle>Import Stock from CSV File</CardTitle>
-                            <CardDescription>Upload a CSV file to add multiple medicines to your inventory at once.</CardDescription>
+                            <CardDescription>Upload a CSV file to add multiple medicines to your inventory at once. MedicineID, Quantity, and PricePerUnit are required.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -442,5 +449,5 @@ export default function AddStockPage() {
       </div>
     </div>
   );
-
+  
     
