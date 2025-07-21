@@ -192,6 +192,10 @@ export default function SalesReportPage() {
         return allAppRoutes.filter(route => route.path !== '/');
     }, []);
 
+    const stockManagementRoutes = useMemo(() => {
+        return allAppRoutes.filter(route => route.path.startsWith('/inventory/') && hasPermission(route.path));
+    }, [hasPermission]);
+
      useEffect(() => {
         if (!loading && !user) {
             router.push('/login');
@@ -223,8 +227,6 @@ export default function SalesReportPage() {
             default: return <LayoutGrid />;
         }
     };
-    
-    const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory') && r.inSidebar);
 
     const handleSalesCardClick = () => {
         setModalView('summary');
@@ -252,7 +254,7 @@ export default function SalesReportPage() {
                     </SidebarMenuItem>
                 )}
                 
-                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory') && r.inSidebar && hasPermission(r.path)).map((route) => (
+                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path)).map((route) => (
                     <SidebarMenuItem key={route.path}>
                         <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}>
                             {getIcon(route.name)}
@@ -274,7 +276,7 @@ export default function SalesReportPage() {
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                             <SidebarMenu className="ml-7 mt-2 border-l pl-3">
-                                {stockManagementRoutes.filter(route => hasPermission(route.path)).map((route) => (
+                                {stockManagementRoutes.map((route) => (
                                     <SidebarMenuItem key={route.path}>
                                         <SidebarMenuButton href={route.path} tooltip={route.name} size="sm" isActive={pathname === route.path}>
                                             {getIcon(route.name)}
@@ -303,7 +305,7 @@ export default function SalesReportPage() {
                       <SidebarMenuButton onClick={logout} tooltip="Logout">
                           <LogOut />
                           <span>Logout</span>
-                      SidebarMenuButton>
+                      </SidebarMenuButton>
                   </SidebarMenuItem>
               </SidebarMenu>
           </SidebarFooter>
@@ -504,4 +506,3 @@ export default function SalesReportPage() {
     </>
   );
 }
-
