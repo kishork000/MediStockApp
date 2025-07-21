@@ -16,13 +16,13 @@ const prompt = ai.definePrompt({
   prompt: `You are a business analyst. Summarize the following dashboard data in a short, easy-to-read paragraph. Highlight the most important changes and trends.
 
 Total Revenue: {{{totalRevenue}}} ({{{revenueChange}}})
-Subscriptions: {{{subscriptions}}} ({{{subscriptionsChange}}})
-Sales: {{{sales}}} ({{{salesChange}}})
+Total Sales: {{{sales}}} ({{{salesChange}}})
+New Prescriptions: {{{subscriptions}}} ({{{subscriptionsChange}}})
 Stock Availability: {{{stockAvailability}}} ({{{stockChange}}})
 
-Monthly Overview Data:
+Monthly Sales Overview:
 {{#each overview}}
-- {{name}}: \${{total}}
+- {{name}}: {{{total}}}
 {{/each}}
 `,
 });
