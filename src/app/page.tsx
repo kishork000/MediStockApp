@@ -16,7 +16,7 @@ import type { DashboardData } from "./dashboard/types";
 import StatCard from "@/components/dashboard/StatCard";
 import OverviewChart from "@/components/dashboard/OverviewChart";
 import AiSummary from "@/components/dashboard/AiSummary";
-import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -78,6 +78,10 @@ export default function Home() {
     setData(generateData());
   }, []);
 
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+  }
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <Sidebar>
@@ -90,7 +94,7 @@ export default function Home() {
           <SidebarContent>
             <SidebarMenu>
                 <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => setActiveTab("dashboard")} isActive={activeTab === "dashboard"} tooltip="Dashboard">
+                  <SidebarMenuButton onClick={() => handleTabChange("dashboard")} isActive={activeTab === "dashboard"} tooltip="Dashboard">
                     <HomeIcon />
                     <span>Dashboard</span>
                   </SidebarMenuButton>
@@ -108,7 +112,7 @@ export default function Home() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => setActiveTab("inventory")} isActive={activeTab === "inventory"} tooltip="Inventory">
+                  <SidebarMenuButton onClick={() => handleTabChange("inventory")} isActive={activeTab === "inventory"} tooltip="Inventory">
                     <Package />
                     <span>Inventory</span>
                   </SidebarMenuButton>
@@ -132,7 +136,7 @@ export default function Home() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => setActiveTab("reports")} isActive={activeTab === "reports"} tooltip="Reports">
+                  <SidebarMenuButton onClick={() => handleTabChange("reports")} isActive={activeTab === "reports"} tooltip="Reports">
                     <BarChart />
                     <span>Reports</span>
                   </SidebarMenuButton>
@@ -149,12 +153,30 @@ export default function Home() {
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
            <SidebarTrigger className="sm:hidden" />
-           <h1 className="text-xl font-semibold">
-            {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
-           </h1>
+           <div className="flex w-full items-center justify-between">
+                <h1 className="text-xl font-semibold">
+                {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+                </h1>
+                <div className="sm:hidden">
+                    <Tabs value={activeTab} onValueChange={handleTabChange}>
+                        <TabsList>
+                            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+                            <TabsTrigger value="inventory">Inventory</TabsTrigger>
+                            <TabsTrigger value="reports">Reports</TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+                </div>
+           </div>
         </header>
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+                <div className="hidden sm:block">
+                    <TabsList>
+                        <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+                        <TabsTrigger value="inventory">Inventory</TabsTrigger>
+                        <TabsTrigger value="reports">Reports</TabsTrigger>
+                    </TabsList>
+                </div>
               <TabsContent value="dashboard">
                 <div className="grid auto-rows-max items-start gap-4 md:gap-8 lg:grid-cols-2">
                   <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 lg:col-span-2">
@@ -204,8 +226,8 @@ export default function Home() {
                                         <TableHead className="hidden sm:table-cell">ID</TableHead>
                                         <TableHead>Customer</TableHead>
                                         <TableHead className="hidden md:table-cell">Date</TableHead>
-                                        <TableHead>Amount</TableHead>
-                                        <TableHead>Status</TableHead>
+                                        <TableHead className="text-right">Amount</TableHead>
+                                        <TableHead className="text-right">Status</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -214,8 +236,8 @@ export default function Home() {
                                             <TableCell className="hidden sm:table-cell font-medium">{sale.id}</TableCell>
                                             <TableCell>{sale.customer}</TableCell>
                                             <TableCell className="hidden md:table-cell">{sale.date}</TableCell>
-                                            <TableCell>{sale.amount}</TableCell>
-                                            <TableCell>
+                                            <TableCell className="text-right">{sale.amount}</TableCell>
+                                            <TableCell className="text-right">
                                                 <Badge variant={sale.status === 'Paid' ? 'default' : 'secondary'}>
                                                     {sale.status}
                                                 </Badge>
@@ -233,15 +255,15 @@ export default function Home() {
                 <Card>
                   <CardHeader>
                     <CardTitle>Inventory</CardTitle>
-                    <CardDescription>Manage your medicine inventory.</CardDescription>
+                    <CardDescription>Manage your medicine inventory in the main warehouse.</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <Table>
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Medicine</TableHead>
-                                <TableHead>Stock</TableHead>
-                                <TableHead>Status</TableHead>
+                                <TableHead className="text-right">Stock</TableHead>
+                                <TableHead className="text-right">Status</TableHead>
                                 <TableHead>
                                     <span className="sr-only">Actions</span>
                                 </TableHead>
@@ -251,13 +273,13 @@ export default function Home() {
                             {inventoryData.map((item) => (
                                 <TableRow key={item.name}>
                                     <TableCell className="font-medium">{item.name}</TableCell>
-                                    <TableCell>{item.quantity}</TableCell>
-                                    <TableCell>
+                                    <TableCell className="text-right">{item.quantity}</TableCell>
+                                    <TableCell className="text-right">
                                         <Badge variant={item.status === 'In Stock' ? 'default' : item.status === 'Low Stock' ? 'secondary' : 'destructive'}>
                                             {item.status}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell className="text-right">
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
                                                 <Button aria-haspopup="true" size="icon" variant="ghost">
@@ -308,3 +330,5 @@ export default function Home() {
     </div>
   );
 }
+
+    

@@ -21,7 +21,13 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
-const initialDiseases = [
+interface Disease {
+    id: string;
+    name: string;
+    description: string;
+}
+
+const initialDiseases: Disease[] = [
     { id: "DIS001", name: "Fever", description: "Characterized by a body temperature higher than normal." },
     { id: "DIS002", name: "Headache", description: "Pain in any part of the head, ranging from sharp to dull." },
     { id: "DIS003", name: "Diabetes", description: "A chronic disease related to high blood sugar levels." },
@@ -34,6 +40,26 @@ export default function DiseasesPage() {
 
     const handleDelete = (id: string) => {
         setDiseases(diseases.filter(d => d.id !== id));
+    };
+
+    const handleAddDisease = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+        const name = formData.get("disease-name") as string;
+        const description = formData.get("disease-description") as string;
+
+        if (name && description) {
+            const newDisease: Disease = {
+                id: `DIS${(diseases.length + 1).toString().padStart(3, '0')}`,
+                name,
+                description,
+            };
+            setDiseases([...diseases, newDisease]);
+            alert("Disease added successfully!");
+            e.currentTarget.reset();
+        } else {
+            alert("Please fill all fields.");
+        }
     };
 
   return (
@@ -172,14 +198,14 @@ export default function DiseasesPage() {
                             <CardDescription>Fill in the details to add a new disease to the master list.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <form className="space-y-4">
+                            <form className="space-y-4" onSubmit={handleAddDisease}>
                                 <div className="space-y-2">
                                     <Label htmlFor="disease-name">Disease Name</Label>
-                                    <Input id="disease-name" placeholder="e.g., Influenza" />
+                                    <Input id="disease-name" name="disease-name" placeholder="e.g., Influenza" required />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="disease-description">Description</Label>
-                                    <Textarea id="disease-description" placeholder="Describe the disease, its symptoms, etc." />
+                                    <Textarea id="disease-description" name="disease-description" placeholder="Describe the disease, its symptoms, etc." required />
                                 </div>
                                 <Button type="submit">Add Disease</Button>
                             </form>
@@ -192,3 +218,5 @@ export default function DiseasesPage() {
     </div>
   );
 }
+
+    

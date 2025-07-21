@@ -25,7 +25,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 
 
-const usersData = [
+interface User {
+    name: string;
+    email: string;
+    role: "Admin" | "Pharmacist" | "Technician";
+}
+
+const initialUsers: User[] = [
     { name: "Admin User", email: "admin@medistock.com", role: "Admin" },
     { name: "Pharmacist One", email: "pharmacist1@medistock.com", role: "Pharmacist" },
     { name: "Pharmacist Two", email: "pharmacist2@medistock.com", role: "Pharmacist" },
@@ -51,10 +57,11 @@ export default function AdminPage() {
     const [gstin, setGstin] = useState("22AAAAA0000A1Z5");
     const [stores, setStores] = useState<Store[]>(initialStores);
     const [isAddStoreModalOpen, setIsAddStoreModalOpen] = useState(false);
+    const [users, setUsers] = useState<User[]>(initialUsers);
 
-    const handleSaveSettings = (e: React.FormEvent) => {
+    const handleSaveSettings = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        const formData = new FormData(e.currentTarget as HTMLFormElement);
+        const formData = new FormData(e.currentTarget);
         setCompanyName(formData.get("company-name") as string);
         setCompanyAddress(formData.get("company-address") as string);
         setGstin(formData.get("gstin") as string);
@@ -72,10 +79,32 @@ export default function AdminPage() {
         };
         setStores([...stores, newStore]);
         setIsAddStoreModalOpen(false);
+        e.currentTarget.reset();
     };
 
     const handleDeleteStore = (id: string) => {
         setStores(stores.filter(s => s.id !== id));
+    };
+
+    const handleAddUser = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+        const newUser: User = {
+            name: formData.get("name") as string,
+            email: formData.get("email") as string,
+            role: formData.get("role") as User['role'],
+        };
+        if (newUser.name && newUser.email && newUser.role) {
+            setUsers([...users, newUser]);
+            alert("User created successfully!");
+            e.currentTarget.reset();
+        } else {
+            alert("Please fill all user details.");
+        }
+    };
+
+    const handleDeleteUser = (email: string) => {
+        setUsers(users.filter(u => u.email !== email));
     };
 
 
@@ -181,7 +210,7 @@ export default function AdminPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {usersData.map((user) => (
+                                    {users.map((user) => (
                                         <TableRow key={user.email}>
                                             <TableCell className="font-medium">{user.name}</TableCell>
                                             <TableCell className="hidden sm:table-cell">{user.email}</TableCell>
@@ -201,7 +230,7 @@ export default function AdminPage() {
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                         <DropdownMenuItem>Edit</DropdownMenuItem>
-                                                        <DropdownMenuItem>Delete</DropdownMenuItem>
+                                                        <DropdownMenuItem onSelect={() => handleDeleteUser(user.email)} className="text-destructive">Delete</DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </TableCell>
@@ -273,25 +302,25 @@ export default function AdminPage() {
                             <CardDescription>Fill in the details to add a new staff member.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <form className="space-y-4">
+                            <form className="space-y-4" onSubmit={handleAddUser}>
                                 <div className="space-y-2">
                                     <Label htmlFor="name">Name</Label>
-                                    <Input id="name" placeholder="Full Name" />
+                                    <Input id="name" name="name" placeholder="Full Name" required />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="email">Email</Label>
-                                    <Input id="email" type="email" placeholder="user@medistock.com" />
+                                    <Input id="email" name="email" type="email" placeholder="user@medistock.com" required />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="role">Role</Label>
-                                    <Select>
+                                    <Select name="role" required>
                                         <SelectTrigger id="role">
                                             <SelectValue placeholder="Select a role" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="pharmacist">Pharmacist</SelectItem>
-                                            <SelectItem value="technician">Technician</SelectItem>
-                                            <SelectItem value="admin">Admin</SelectItem>
+                                            <SelectItem value="Pharmacist">Pharmacist</SelectItem>
+                                            <SelectItem value="Technician">Technician</SelectItem>
+                                            <SelectItem value="Admin">Admin</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -303,22 +332,22 @@ export default function AdminPage() {
                 <TabsContent value="settings">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Company & GST Settings</CardTitle>
+                            <CardTitle>Company &amp; GST Settings</CardTitle>
                             <CardDescription>Manage your company information and tax details.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <form className="space-y-4" onSubmit={handleSaveSettings}>
                                 <div className="space-y-2">
                                     <Label htmlFor="company-name">Company Name</Label>
-                                    <Input id="company-name" name="company-name" defaultValue={companyName} />
+                                    <Input id="company-name" name="company-name" value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="company-address">Company Address</Label>
-                                    <Textarea id="company-address" name="company-address" defaultValue={companyAddress} />
+                                    <Textarea id="company-address" name="company-address" value={companyAddress} onChange={(e) => setCompanyAddress(e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="gstin">GSTIN</Label>
-                                    <Input id="gstin" name="gstin" defaultValue={gstin} />
+                                    <Input id="gstin" name="gstin" value={gstin} onChange={(e) => setGstin(e.target.value)} />
                                 </div>
                                 <Button type="submit">Save Settings</Button>
                             </form>
@@ -364,3 +393,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
