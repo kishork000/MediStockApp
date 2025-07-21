@@ -30,6 +30,16 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 
 interface Patient {
@@ -86,6 +96,8 @@ export default function PatientsPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPatientIds, setSelectedPatientIds] = useState<string[]>([]);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [patientToDelete, setPatientToDelete] = useState<string | null>(null);
 
 
   const sidebarRoutes = useMemo(() => {
@@ -110,6 +122,8 @@ export default function PatientsPage() {
 
   const handleDelete = (id: string) => {
     setPatients(patients.filter(p => p.id !== id));
+    setIsDeleteConfirmOpen(false);
+    setPatientToDelete(null);
   };
   
   const handleViewDetails = (patient: Patient) => {
@@ -121,6 +135,11 @@ export default function PatientsPage() {
     setSelectedPatient(patient);
     setIsEditModalOpen(true);
   }
+  
+  const handleDeleteClick = (patientId: string) => {
+    setPatientToDelete(patientId);
+    setIsDeleteConfirmOpen(true);
+  };
 
   const handleUpdatePatient = (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
@@ -357,9 +376,11 @@ export default function PatientsPage() {
                                                 <DropdownMenuItem onSelect={() => handleEdit(patient)}>
                                                     <FilePenLine className="mr-2 h-4 w-4" /> Edit
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem onSelect={() => handleDelete(patient.id)} className="text-destructive">
-                                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                                </DropdownMenuItem>
+                                                {user?.role === 'Admin' && (
+                                                    <DropdownMenuItem onSelect={() => handleDeleteClick(patient.id)} className="text-destructive">
+                                                        <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                                    </DropdownMenuItem>
+                                                )}
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </TableCell>
@@ -534,6 +555,30 @@ export default function PatientsPage() {
                 </Dialog>
             </>
         )}
+
+        <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the
+                        patient record from your system.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setPatientToDelete(null)}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                        onClick={() => {
+                            if (patientToDelete) {
+                                handleDelete(patientToDelete);
+                            }
+                        }}
+                    >
+                        Continue
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 }
