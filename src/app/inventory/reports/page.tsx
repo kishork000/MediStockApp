@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, Download, TrendingUp, Filter } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, Download, TrendingUp, Undo } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -23,6 +23,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 
 const allStores = [
     { id: "all", name: "All Stores" },
@@ -45,6 +46,14 @@ const allTransferData = {
         { id: "CNR-2024-001", from: "Downtown Pharmacy", to: "Main Warehouse", date: "2024-07-26", items: 1, status: "Returned" },
     ]
 };
+
+const allPurchaseData = {
+    "all": [
+        { id: "INV-2024-123", date: "2024-07-25", items: 5, amount: "₹15,450.00", type: "Purchase" },
+        { id: "DN-2024-015", date: "2024-07-22", items: 1, amount: "₹2,300.00", type: "Return" },
+    ]
+};
+
 
 const allStockLevelData = {
     "STR002": [
@@ -103,6 +112,10 @@ export default function StockReportsPage() {
     const sidebarRoutes = useMemo(() => {
         return allAppRoutes.filter(route => route.path !== '/');
     }, []);
+    
+    const stockManagementRoutes = useMemo(() => {
+        return allAppRoutes.filter(route => route.path.startsWith('/inventory/') && route.inSidebar && hasPermission(route.path));
+    }, [hasPermission]);
 
      useEffect(() => {
         if (!loading && !user) {
@@ -127,6 +140,7 @@ export default function StockReportsPage() {
             case 'Warehouse Stock': return <Warehouse />;
             case 'Store Stock': return <Package />;
             case 'Add Medicine': return <PlusSquare />;
+            case 'Return to Manufacturer': return <Undo />;
             case 'Stock Transfer': return <GitBranch />;
             case 'Inventory Reports': return <BarChart />;
             case 'Valuation Report': return <TrendingUp />;
@@ -135,8 +149,6 @@ export default function StockReportsPage() {
             default: return <LayoutGrid />;
         }
     };
-    
-    const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory/') && r.inSidebar);
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -180,7 +192,7 @@ export default function StockReportsPage() {
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                             <SidebarMenu className="ml-7 mt-2 border-l pl-3">
-                                {stockManagementRoutes.filter(route => hasPermission(route.path)).map((route) => (
+                                {stockManagementRoutes.map((route) => (
                                     <SidebarMenuItem key={route.path}>
                                         <SidebarMenuButton href={route.path} tooltip={route.name} size="sm" isActive={pathname === route.path}>
                                             {getIcon(route.name)}
@@ -239,48 +251,12 @@ export default function StockReportsPage() {
            </div>
         </header>
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
-            <Tabs defaultValue="transfers">
+            <Tabs defaultValue="levels">
                 <TabsList>
-                    <TabsTrigger value="transfers">Transfer &amp; Return History</TabsTrigger>
                     <TabsTrigger value="levels">Overall Stock Levels</TabsTrigger>
+                    <TabsTrigger value="transfers">Inter-Store Transfers</TabsTrigger>
+                    <TabsTrigger value="purchase">Purchase & Returns</TabsTrigger>
                 </TabsList>
-                <TabsContent value="transfers">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between">
-                            <div>
-                                <CardTitle>Transfer &amp; Return Report</CardTitle>
-                                <CardDescription>History of all stock movements between warehouse and stores.</CardDescription>
-                            </div>
-                            <Button size="sm" variant="outline"><Download className="mr-2" /> Download Report</Button>
-                        </CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Invoice/CNR ID</TableHead>
-                                        <TableHead>From</TableHead>
-                                        <TableHead>To</TableHead>
-                                        <TableHead>Date</TableHead>
-                                        <TableHead className="text-center">No. of Items</TableHead>
-                                        <TableHead className="text-right">Status</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {transferReportData.map((report) => (
-                                        <TableRow key={report.id}>
-                                            <TableCell className="font-medium">{report.id}</TableCell>
-                                            <TableCell>{report.from}</TableCell>
-                                            <TableCell>{report.to}</TableCell>
-                                            <TableCell>{report.date}</TableCell>
-                                            <TableCell className="text-center">{report.items}</TableCell>
-                                            <TableCell className="text-right">{report.status}</TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
                 <TabsContent value="levels">
                      <Card>
                         <CardHeader className="flex flex-row items-center justify-between">
@@ -327,6 +303,80 @@ export default function StockReportsPage() {
                                                 </>
                                             )}
                                             <TableCell className="text-right font-bold">{item.total}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                <TabsContent value="transfers">
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <div>
+                                <CardTitle>Transfer &amp; Return Report</CardTitle>
+                                <CardDescription>History of all stock movements between warehouse and stores.</CardDescription>
+                            </div>
+                            <Button size="sm" variant="outline"><Download className="mr-2" /> Download Report</Button>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Invoice/CNR ID</TableHead>
+                                        <TableHead>From</TableHead>
+                                        <TableHead>To</TableHead>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead className="text-center">No. of Items</TableHead>
+                                        <TableHead className="text-right">Status</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {transferReportData.map((report) => (
+                                        <TableRow key={report.id}>
+                                            <TableCell className="font-medium">{report.id}</TableCell>
+                                            <TableCell>{report.from}</TableCell>
+                                            <TableCell>{report.to}</TableCell>
+                                            <TableCell>{report.date}</TableCell>
+                                            <TableCell className="text-center">{report.items}</TableCell>
+                                            <TableCell className="text-right">{report.status}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                <TabsContent value="purchase">
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <div>
+                                <CardTitle>Purchase &amp; Manufacturer Return History</CardTitle>
+                                <CardDescription>History of all stock purchases and returns to manufacturers.</CardDescription>
+                            </div>
+                            <Button size="sm" variant="outline"><Download className="mr-2" /> Download Report</Button>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>ID</TableHead>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Type</TableHead>
+                                        <TableHead className="text-center">No. of Items</TableHead>
+                                        <TableHead className="text-right">Amount</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {allPurchaseData.all.map((report) => (
+                                        <TableRow key={report.id}>
+                                            <TableCell className="font-medium">{report.id}</TableCell>
+                                            <TableCell>{report.date}</TableCell>
+                                            <TableCell>
+                                                <Badge variant={report.type === 'Purchase' ? 'default' : 'secondary'}>{report.type}</Badge>
+                                            </TableCell>
+                                            <TableCell className="text-center">{report.items}</TableCell>
+                                            <TableCell className="text-right">{report.amount}</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>

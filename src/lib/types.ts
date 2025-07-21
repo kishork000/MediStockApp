@@ -26,11 +26,10 @@ export const allAppRoutes: AppRoute[] = [
     { path: "/inventory/warehouse", name: "Warehouse Stock", inSidebar: true },
     { path: "/inventory/stores", name: "Store Stock", inSidebar: true },
     { path: "/inventory/add", name: "Add Medicine", inSidebar: true },
+    { path: "/inventory/returns", name: "Return to Manufacturer", inSidebar: true },
     { path: "/inventory/transfer", name: "Stock Transfer", inSidebar: true },
     { path: "/inventory/reports", name: "Inventory Reports", inSidebar: true },
     { path: "/inventory/valuation", name: "Valuation Report", inSidebar: false },
     { path: "/diseases", name: "Diseases", inSidebar: true },
     { path: "/admin", name: "Admin", inSidebar: true },
 ];
-
-    
