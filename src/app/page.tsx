@@ -31,21 +31,64 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ChevronDown } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 
-
-const generateData = () => [
-  { name: "Jan", total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: "Feb", total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: "Mar", total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: "Apr", total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: "May", total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: "Jun", total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: "Jul", total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: "Aug", total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: "Sep", total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: "Oct", total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: "Nov", total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: "Dec", total: Math.floor(Math.random() * 5000) + 1000 },
+const generateData = (factor = 1) => [
+  { name: "Jan", total: Math.floor(Math.random() * 5000 * factor) + 1000 },
+  { name: "Feb", total: Math.floor(Math.random() * 5000 * factor) + 1000 },
+  { name: "Mar", total: Math.floor(Math.random() * 5000 * factor) + 1000 },
+  { name: "Apr", total: Math.floor(Math.random() * 5000 * factor) + 1000 },
+  { name: "May", total: Math.floor(Math.random() * 5000 * factor) + 1000 },
+  { name: "Jun", total: Math.floor(Math.random() * 5000 * factor) + 1000 },
+  { name: "Jul", total: Math.floor(Math.random() * 5000 * factor) + 1000 },
+  { name: "Aug", total: Math.floor(Math.random() * 5000 * factor) + 1000 },
+  { name: "Sep", total: Math.floor(Math.random() * 5000 * factor) + 1000 },
+  { name: "Oct", total: Math.floor(Math.random() * 5000 * factor) + 1000 },
+  { name: "Nov", total: Math.floor(Math.random() * 5000 * factor) + 1000 },
+  { name: "Dec", total: Math.floor(Math.random() * 5000 * factor) + 1000 },
 ];
+
+const companyWideData: DashboardData = {
+    totalRevenue: "₹3,45,231.89",
+    revenueChange: "+20.1% from last month",
+    sales: "+12,234",
+    salesChange: "+19% from last month",
+    stockAvailability: "8,340",
+    stockChange: "+5% from yesterday",
+    subscriptions: "+2350",
+    subscriptionsChange: "+180.1% from last month",
+    overview: generateData(),
+};
+
+const downtownPharmacyData: DashboardData = {
+    totalRevenue: "₹1,12,890.45",
+    revenueChange: "+15.2% from last month",
+    sales: "+4,812",
+    salesChange: "+22% from last month",
+    stockAvailability: "1,450",
+    stockChange: "-2% from yesterday",
+    subscriptions: "+980",
+    subscriptionsChange: "+150% from last month",
+    overview: generateData(0.4),
+};
+
+const uptownHealthData: DashboardData = {
+    totalRevenue: "₹98,540.10",
+    revenueChange: "+25.8% from last month",
+    sales: "+3,990",
+    salesChange: "+15% from last month",
+    stockAvailability: "1,820",
+    stockChange: "+8% from yesterday",
+    subscriptions: "+750",
+    subscriptionsChange: "+210% from last month",
+    overview: generateData(0.3),
+};
+
+const getDashboardData = (user: { role: string, assignedStore?: string } | null): DashboardData => {
+    if (!user) return companyWideData;
+    if (user.role === 'Admin') return companyWideData;
+    if (user.assignedStore === 'STR002') return downtownPharmacyData;
+    if (user.assignedStore === 'STR003') return uptownHealthData;
+    return companyWideData; // Default to company wide
+};
 
 
 const salesData = [
@@ -58,7 +101,6 @@ const salesData = [
 
 
 export default function Home() {
-  const [data, setData] = useState<any[]>([]);
   const { user, logout, loading, hasPermission } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -72,23 +114,15 @@ export default function Home() {
       router.push('/login');
     }
   }, [user, loading, router]);
+  
+  const dashboardData = useMemo(() => getDashboardData(user), [user]);
+  const dashboardTitle = useMemo(() => {
+      if(user?.role === 'Admin') return 'Company Dashboard';
+      if(user?.assignedStore === 'STR002') return 'Downtown Pharmacy Dashboard';
+      if(user?.assignedStore === 'STR003') return 'Uptown Health Dashboard';
+      return 'Dashboard'
+  }, [user]);
 
-
-  const dashboardData: DashboardData = {
-    totalRevenue: "₹3,45,231.89",
-    revenueChange: "+20.1% from last month",
-    subscriptions: "+2350",
-    subscriptionsChange: "+180.1% from last month",
-    sales: "+12,234",
-    salesChange: "+19% from last month",
-    stockAvailability: "8,340",
-    stockChange: "+5% from yesterday",
-    overview: data,
-  }
-
-  useEffect(() => {
-    setData(generateData());
-  }, []);
 
   if (loading || !user) {
     return (
@@ -116,7 +150,7 @@ export default function Home() {
     }
   };
 
-  const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory') && r.inSidebar);
+  const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory/') && r.inSidebar);
 
 
   return (
@@ -139,7 +173,7 @@ export default function Home() {
                     </SidebarMenuItem>
                 )}
                 
-                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory') && r.inSidebar && hasPermission(r.path)).map((route) => (
+                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path)).map((route) => (
                     <SidebarMenuItem key={route.path}>
                         <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}>
                             {getIcon(route.name)}
@@ -197,9 +231,9 @@ export default function Home() {
       </Sidebar>
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
-           <SidebarTrigger className="sm:hidden" />
+           <SidebarTrigger className="sm-hidden" />
            <div className="flex w-full items-center justify-between">
-                <h1 className="text-xl font-semibold">Dashboard</h1>
+                <h1 className="text-xl font-semibold">{dashboardTitle}</h1>
                 <ThemeToggle />
            </div>
         </header>
@@ -240,7 +274,7 @@ export default function Home() {
                   </div>
                   <div className="grid gap-4 md:gap-8 lg:grid-cols-2 lg:col-span-2">
                       <div className="lg:col-span-1">
-                          <OverviewChart data={data} />
+                          <OverviewChart data={dashboardData.overview} />
                       </div>
                       <div className="lg:col-span-1">
                           <AiSummary dashboardData={dashboardData} />
@@ -312,4 +346,3 @@ export default function Home() {
     </div>
   );
 }
-

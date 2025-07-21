@@ -127,7 +127,7 @@ const companyInfo = {
 
 const storeOptions = [
     { value: "downtown-pharmacy", label: "Downtown Pharmacy", id: "STR002" },
-    { value: "uptown-health", label: "Uptown Health", id: "STR003" }, // Assuming a new store
+    { value: "uptown-health", label: "Uptown Health", id: "STR003" },
 ];
 
 
@@ -311,7 +311,7 @@ export default function SalesPage() {
         }
     };
     
-    const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory') && r.inSidebar);
+    const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory/') && r.inSidebar);
 
     const diseaseButtonText = selectedDiseases.length > 0 ? selectedDiseases.map(id => diseaseOptions.find(d => d.id === id)?.label).join(', ') : "Select diseases";
 
@@ -332,7 +332,7 @@ export default function SalesPage() {
                     </SidebarMenuItem>
                 )}
                 
-                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory') && r.inSidebar && hasPermission(r.path)).map((route) => ( 
+                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path)).map((route) => ( 
                     <SidebarMenuItem key={route.path}> 
                         <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}> 
                             {getIcon(route.name)} 
@@ -343,13 +343,13 @@ export default function SalesPage() {
                 
                 {hasPermission('/inventory') && (
                     <Collapsible className="w-full" defaultOpen={pathname.startsWith('/inventory')}>
-                        <CollapsibleTrigger asChild> 
-                            <SidebarMenuButton className="justify-between"> 
-                                <div className="flex items-center gap-3"> 
-                                    <Package /> <span>Stock Management</span> 
-                                </div> 
+                        <CollapsibleTrigger asChild>
+                            <SidebarMenuButton className="justify-between">
+                                <div className="flex items-center gap-3">
+                                    <Package /> <span>Stock Management</span>
+                                </div>
                                 <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                             </SidebarMenuButton> 
+                             </SidebarMenuButton>
                         </CollapsibleTrigger>
                         <CollapsibleContent> 
                             <SidebarMenu className="ml-7 mt-2 border-l pl-3"> 
@@ -576,7 +576,7 @@ export default function SalesPage() {
                         <TabsContent value="cash">
                            <div className="py-4 text-center space-y-4">
                                 <p className="text-sm text-muted-foreground">Confirm cash payment and print the invoice.</p>
-                                <div className="flex justify-center items-center gap-4"> <Label htmlFor="print-size-cash">Paper Size</Label> <Select value={printSize} onValueChange={setPrintSize}> <SelectTrigger id="print-size-cash" className="w-[120px]"> <SelectValue /> </SelectTrigger> <SelectContent> <SelectItem value="57mm">57mm</SelectItem> <SelectItem value="80mm">80mm</SelectItem> <SelectItem value="112mm">112mm</SelectItem> </SelectContent> </Select> </div>
+                                <div className="flex justify-center items-center gap-4"> <Label htmlFor="print-size-cash">Paper Size</Label> <Select value={printSize} onValueChange={setPrintSize}> <SelectTrigger id="print-size-cash" className="w-[120px]"> <SelectValue /> </SelectTrigger> <SelectContent> <SelectItem value="57mm">57mm</SelectItem> <SelectItem value="80mm">80mm</SelectItem> <SelectItem value="112mm">112mm"></SelectItem> </SelectContent> </Select> </div>
                                 <Button onClick={handlePrint}> <Printer className="mr-2 h-4 w-4" /> Print Invoice </Button>
                            </div>
                         </TabsContent>
@@ -584,7 +584,7 @@ export default function SalesPage() {
                             <div className="py-4 text-center space-y-4">
                                 <p className="text-sm text-muted-foreground">Scan the QR code to complete the payment.</p>
                                 <div className="flex justify-center"> <Image src="https://placehold.co/200x200.png" alt="QR Code" width={150} height={150} data-ai-hint="qr code" /> </div>
-                                 <div className="flex justify-center items-center gap-4"> <Label htmlFor="print-size-online">Paper Size</Label> <Select value={printSize} onValueChange={setPrintSize}> <SelectTrigger id="print-size-online" className="w-[120px]"> <SelectValue /> </SelectTrigger> <SelectContent> <SelectItem value="57mm">57mm</SelectItem> <SelectItem value="80mm">80mm</SelectItem> <SelectItem value="112mm">112mm</SelectItem> </SelectContent> </Select> </div>
+                                 <div className="flex justify-center items-center gap-4"> <Label htmlFor="print-size-online">Paper Size</Label> <Select value={printSize} onValueChange={setPrintSize}> <SelectTrigger id="print-size-online" className="w-[120px]"> <SelectValue /> </SelectTrigger> <SelectContent> <SelectItem value="57mm">57mm</SelectItem> <SelectItem value="80mm">80mm</SelectItem> <SelectItem value="112mm">112mm"></SelectItem> </SelectContent> </Select> </div>
                                 <Button onClick={handlePrint}> <Printer className="mr-2 h-4 w-4" /> Confirm & Print </Button>
                            </div>
                         </TabsContent>
@@ -612,4 +612,3 @@ export default function SalesPage() {
     </>
   );
 }
-
