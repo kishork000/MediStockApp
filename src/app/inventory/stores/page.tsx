@@ -24,56 +24,49 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const allStores = [
-    { id: "store1", name: "Downtown Pharmacy" },
-    { id: "store2", name: "Uptown Health" },
+    { id: "STR002", name: "Downtown Pharmacy" },
+    { id: "STR003", name: "Uptown Health" },
 ];
 
 const storeInventory = {
-    store1: [
+    "STR002": [
         { name: "Aspirin", opening: 100, received: 70, sales: 20, quantity: 150, status: "In Stock" },
         { name: "Ibuprofen", opening: 50, received: 0, sales: 30, quantity: 20, status: "Low Stock" },
         { name: "Paracetamol", opening: 80, received: 50, sales: 30, quantity: 100, status: "In Stock" },
     ],
-    store2: [
+    "STR003": [
         { name: "Amoxicillin", opening: 50, received: 50, sales: 20, quantity: 80, status: "In Stock" },
         { name: "Lisinopril", opening: 100, received: 40, sales: 20, quantity: 120, status: "In Stock" },
         { name: "Metformin", opening: 25, received: 0, sales: 25, quantity: 0, status: "Out of Stock" },
     ],
 };
 
-// Mock mapping from store ID in AuthContext to store ID in this page's data
-const storeIdMapping: { [key: string]: string } = {
-    "STR002": "store1", // Pharmacist One assigned to Downtown Pharmacy
-};
-
 export default function StoreInventoryPage() {
     const { user, logout, loading, hasPermission } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
-    const [selectedStore, setSelectedStore] = useState(allStores[0].id);
+    const [selectedStore, setSelectedStore] = useState("");
 
     const availableStores = useMemo(() => {
         if (user?.role === 'Admin') {
             return allStores;
         }
         if (user?.role === 'Pharmacist' && user.assignedStore) {
-            const assignedStoreId = storeIdMapping[user.assignedStore];
-            return allStores.filter(s => s.id === assignedStoreId);
+            return allStores.filter(s => s.id === user.assignedStore);
         }
         return [];
     }, [user]);
 
     useEffect(() => {
-        // If the user is a pharmacist, default to their assigned store
-        if (user?.role === 'Pharmacist' && availableStores.length > 0) {
+        if (availableStores.length > 0 && !selectedStore) {
             setSelectedStore(availableStores[0].id);
         }
-    }, [user, availableStores]);
+    }, [availableStores, selectedStore]);
 
 
     const sidebarRoutes = useMemo(() => {
-        return allAppRoutes.filter(route => hasPermission(route.path) && route.path !== '/');
-    }, [hasPermission]);
+        return allAppRoutes.filter(route => route.path !== '/');
+    }, []);
 
     useEffect(() => {
         if (!loading && !user) {
@@ -119,14 +112,16 @@ export default function StoreInventoryPage() {
           </SidebarHeader>
           <SidebarContent>
              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton href="/" tooltip="Dashboard">
-                    <HomeIcon />
-                    <span>Dashboard</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                {hasPermission('/') && (
+                    <SidebarMenuItem>
+                        <SidebarMenuButton href="/" tooltip="Dashboard">
+                            <HomeIcon />
+                            <span>Dashboard</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                )}
                 
-                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory') && r.inSidebar).map((route) => (
+                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory') && r.inSidebar && hasPermission(r.path)).map((route) => (
                     <SidebarMenuItem key={route.path}>
                         <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}>
                             {getIcon(route.name)}
@@ -148,7 +143,7 @@ export default function StoreInventoryPage() {
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                              <SidebarMenu className="ml-7 mt-2 border-l pl-3">
-                                {stockManagementRoutes.map((route) => (
+                                {stockManagementRoutes.filter(route => hasPermission(route.path)).map((route) => (
                                     <SidebarMenuItem key={route.path}>
                                         <SidebarMenuButton href={route.path} tooltip={route.name} size="sm" isActive={pathname === route.path}>
                                             {getIcon(route.name)}
@@ -161,6 +156,14 @@ export default function StoreInventoryPage() {
                     </Collapsible>
                 )}
                  
+                 {hasPermission('/admin') && (
+                    <SidebarMenuItem>
+                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname === '/admin'}>
+                            {getIcon('Admin')}
+                            <span>Admin</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                 )}
             </SidebarMenu>
           </SidebarContent>
            <SidebarFooter>
@@ -244,3 +247,4 @@ export default function StoreInventoryPage() {
     </div>
   );
 }
+

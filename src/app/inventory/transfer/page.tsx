@@ -62,8 +62,8 @@ export default function StockTransferPage() {
 
 
     const sidebarRoutes = useMemo(() => {
-        return allAppRoutes.filter(route => hasPermission(route.path) && route.path !== '/');
-    }, [hasPermission]);
+        return allAppRoutes.filter(route => route.path !== '/');
+    }, []);
 
     useEffect(() => {
         if (!loading && !user) {
@@ -149,14 +149,16 @@ export default function StockTransferPage() {
           </SidebarHeader>
           <SidebarContent>
              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton href="/" tooltip="Dashboard">
-                    <HomeIcon />
-                    <span>Dashboard</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                {hasPermission('/') && (
+                    <SidebarMenuItem>
+                        <SidebarMenuButton href="/" tooltip="Dashboard">
+                            <HomeIcon />
+                            <span>Dashboard</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                )}
                 
-                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory') && r.inSidebar).map((route) => (
+                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory') && r.inSidebar && hasPermission(r.path)).map((route) => (
                     <SidebarMenuItem key={route.path}>
                         <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}>
                             {getIcon(route.name)}
@@ -178,7 +180,7 @@ export default function StockTransferPage() {
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                              <SidebarMenu className="ml-7 mt-2 border-l pl-3">
-                                {stockManagementRoutes.map((route) => (
+                                {stockManagementRoutes.filter(route => hasPermission(route.path)).map((route) => (
                                     <SidebarMenuItem key={route.path}>
                                         <SidebarMenuButton href={route.path} tooltip={route.name} size="sm" isActive={pathname === route.path}>
                                             {getIcon(route.name)}
@@ -191,6 +193,14 @@ export default function StockTransferPage() {
                     </Collapsible>
                 )}
                  
+                 {hasPermission('/admin') && (
+                    <SidebarMenuItem>
+                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname === '/admin'}>
+                            {getIcon('Admin')}
+                            <span>Admin</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                 )}
             </SidebarMenu>
           </SidebarContent>
            <SidebarFooter>
@@ -380,3 +390,4 @@ export default function StockTransferPage() {
     </div>
   );
 }
+

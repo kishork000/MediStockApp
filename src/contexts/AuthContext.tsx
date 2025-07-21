@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { User, UserRole, RolePermissions, allAppRoutes } from '@/lib/types';
 
@@ -59,14 +59,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         const userPermissions = permissions[user.role] || [];
         
-        // Special case for grouped routes like /inventory
-        // If a user has permission for ANY route starting with a base path (e.g., /inventory/add)
-        // they should also have access to the base path itself (for the collapsible trigger).
+        // Special case for the collapsible trigger parent
+        // It should be visible if any child route is permitted
         if (path === '/inventory') {
             return userPermissions.some(p => p.startsWith('/inventory/'));
         }
         
-        // For all other routes, require an exact match.
+        // For all other routes, require an exact match in the permissions array.
         return userPermissions.includes(path);
 
     }, [user, permissions]);
@@ -80,9 +79,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return;
         }
 
-        // Allow access to the root page for all logged-in users, but check others
-        if (user && pathname !== '/' && pathname !== '/login' && !hasPermission(pathname)) {
-            // If user is on a page they don't have permission for, redirect to dashboard
+        if (user && pathname !== '/login' && !hasPermission(pathname)) {
             router.push('/');
         }
 
@@ -96,12 +93,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setUser(userToStore);
             localStorage.setItem('medi-stock-user', JSON.stringify(userToStore));
             
-            // CRITICAL FIX: Reload permissions from storage on login to get the latest for that role.
+            // Reload permissions from storage on login to get the latest.
             const storedPermissions = localStorage.getItem('medi-stock-permissions');
             if (storedPermissions) {
                 setPermissionsState(JSON.parse(storedPermissions));
             } else {
                 setPermissionsState(initialPermissions);
+                 localStorage.setItem('medi-stock-permissions', JSON.stringify(initialPermissions));
             }
             
             return true;
@@ -136,3 +134,4 @@ export const useAuth = (): AuthContextType => {
     }
     return context;
 };
+

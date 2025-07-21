@@ -161,8 +161,8 @@ export default function SalesPage() {
 
 
   const sidebarRoutes = useMemo(() => {
-    return allAppRoutes.filter(route => hasPermission(route.path) && route.path !== '/');
-  }, [hasPermission]);
+    return allAppRoutes.filter(route => route.path !== '/');
+  }, []);
   
   const availableStores = useMemo(() => {
     if (user?.role === 'Admin') { return storeOptions; }
@@ -323,8 +323,24 @@ export default function SalesPage() {
           <SidebarHeader> <SidebarMenuButton className="pointer-events-none"> <LayoutGrid className="size-6" /> <span className="text-lg font-semibold">MediStock</span> </SidebarMenuButton> </SidebarHeader>
           <SidebarContent>
             <SidebarMenu>
-                <SidebarMenuItem> <SidebarMenuButton href="/" tooltip="Dashboard"> <HomeIcon /> <span>Dashboard</span> </SidebarMenuButton> </SidebarMenuItem>
-                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory') && r.inSidebar).map((route) => ( <SidebarMenuItem key={route.path}> <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}> {getIcon(route.name)} <span>{route.name}</span> </SidebarMenuButton> </SidebarMenuItem> ))}
+                {hasPermission('/') && (
+                    <SidebarMenuItem>
+                        <SidebarMenuButton href="/" tooltip="Dashboard" isActive={pathname === '/'}>
+                            <HomeIcon />
+                            <span>Dashboard</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                )}
+                
+                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory') && r.inSidebar && hasPermission(r.path)).map((route) => ( 
+                    <SidebarMenuItem key={route.path}> 
+                        <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}> 
+                            {getIcon(route.name)} 
+                            <span>{route.name}</span> 
+                        </SidebarMenuButton> 
+                    </SidebarMenuItem> 
+                ))}
+                
                 {hasPermission('/inventory') && (
                     <Collapsible className="w-full" defaultOpen={pathname.startsWith('/inventory')}>
                         <CollapsibleTrigger asChild> 
@@ -335,9 +351,29 @@ export default function SalesPage() {
                                 <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                              </SidebarMenuButton> 
                         </CollapsibleTrigger>
-                        <CollapsibleContent> <SidebarMenu className="ml-7 mt-2 border-l pl-3"> {stockManagementRoutes.map((route) => ( <SidebarMenuItem key={route.path}> <SidebarMenuButton href={route.path} tooltip={route.name} size="sm" isActive={pathname === route.path}> {getIcon(route.name)} <span>{route.name}</span> </SidebarMenuButton> </SidebarMenuItem> ))} </SidebarMenu> </CollapsibleContent>
+                        <CollapsibleContent> 
+                            <SidebarMenu className="ml-7 mt-2 border-l pl-3"> 
+                                {stockManagementRoutes.filter(route => hasPermission(route.path)).map((route) => ( 
+                                    <SidebarMenuItem key={route.path}> 
+                                        <SidebarMenuButton href={route.path} tooltip={route.name} size="sm" isActive={pathname === route.path}> 
+                                            {getIcon(route.name)} 
+                                            <span>{route.name}</span> 
+                                        </SidebarMenuButton> 
+                                    </SidebarMenuItem> 
+                                ))} 
+                            </SidebarMenu> 
+                        </CollapsibleContent>
                     </Collapsible>
                 )}
+                 
+                 {hasPermission('/admin') && (
+                    <SidebarMenuItem>
+                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname === '/admin'}>
+                            {getIcon('Admin')}
+                            <span>Admin</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                 )}
             </SidebarMenu>
           </SidebarContent>
            <SidebarFooter> <SidebarMenu> <SidebarMenuItem> <SidebarMenuButton onClick={logout} tooltip="Logout"> <LogOut /> <span>Logout</span> </SidebarMenuButton> </SidebarMenuItem> </SidebarMenu> </SidebarFooter>
@@ -376,13 +412,15 @@ export default function SalesPage() {
                                 <div className="space-y-2">
                                      <Label>Disease(s)</Label>
                                      <Popover>
-                                         <PopoverTrigger asChild>
-                                            <div className={cn(
-                                                "w-full justify-start font-normal flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                            )}>
-                                                 <span>{diseaseButtonText}</span>
+                                        <PopoverTrigger asChild>
+                                            <div
+                                                className={cn(
+                                                    "w-full justify-start font-normal flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                )}
+                                            >
+                                                <span>{diseaseButtonText}</span>
                                             </div>
-                                         </PopoverTrigger>
+                                        </PopoverTrigger>
                                          <PopoverContent className="w-56 p-0">
                                              <div className="space-y-2 p-2">
                                                  {diseaseOptions.map(disease => (
@@ -574,3 +612,4 @@ export default function SalesPage() {
     </>
   );
 }
+
