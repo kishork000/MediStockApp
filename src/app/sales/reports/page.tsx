@@ -28,7 +28,7 @@ import { addDays, parseISO, startOfDay, endOfDay, format } from "date-fns";
 import { SalesByPharmacistChart } from "@/components/sales/SalesByPharmacistChart";
 import { TopSellingMedicinesChart } from "@/components/sales/TopSellingMedicinesChart";
 import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { ChartTooltipContent } from "@/components/ui/chart";
+import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 
 const salesData = [
     { pharmacist: "Pharmacist One", store: "Downtown Pharmacy", medicine: "Aspirin", quantity: 5, total: 50.00, date: "2024-07-28" },
@@ -51,6 +51,13 @@ const pharmacists = [
     { id: "Pharmacist Two", name: "Pharmacist Two" },
     { id: "Admin User", name: "Admin User" },
 ];
+
+const chartConfig = {
+  total: {
+    label: "Total Sales",
+    color: "hsl(var(--primary))",
+  },
+} satisfies ChartConfig;
 
 export default function SalesReportPage() {
     const { user, logout, loading, hasPermission } = useAuth();
@@ -336,21 +343,57 @@ export default function SalesReportPage() {
                             <CardDescription>Total sales value in the selected period.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <ResponsiveContainer width="100%" height={300}>
-                                <AreaChart data={analytics.salesOverTime}>
+                             <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
+                                <AreaChart
+                                  accessibilityLayer
+                                  data={analytics.salesOverTime}
+                                  margin={{
+                                    left: 12,
+                                    right: 12,
+                                  }}
+                                >
+                                    <CartesianGrid vertical={false} />
+                                    <XAxis
+                                        dataKey="date"
+                                        tickLine={false}
+                                        axisLine={false}
+                                        tickMargin={8}
+                                        tickFormatter={(value) => value.slice(0, 6)}
+                                    />
+                                    <YAxis
+                                      tickLine={false}
+                                      axisLine={false}
+                                      tickMargin={8}
+                                      tickFormatter={(value) => `₹${value}`}
+                                    />
+                                    <ChartTooltip
+                                      cursor={false}
+                                      content={<ChartTooltipContent formatter={(value) => `₹${Number(value).toFixed(2)}`} />}
+                                    />
                                     <defs>
-                                        <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
-                                            <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                                        <linearGradient id="fillTotal" x1="0" y1="0" x2="0" y2="1">
+                                            <stop
+                                            offset="5%"
+                                            stopColor="var(--color-total)"
+                                            stopOpacity={0.8}
+                                            />
+                                            <stop
+                                            offset="95%"
+                                            stopColor="var(--color-total)"
+                                            stopOpacity={0.1}
+                                            />
                                         </linearGradient>
                                     </defs>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="date" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                                    <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `₹${value}`} />
-                                    <Tooltip content={<ChartTooltipContent formatter={(value) => `₹${Number(value).toFixed(2)}`} />} />
-                                    <Area type="monotone" dataKey="total" stroke="hsl(var(--primary))" fill="url(#colorTotal)" />
+                                    <Area
+                                        dataKey="total"
+                                        type="natural"
+                                        fill="url(#fillTotal)"
+                                        fillOpacity={0.4}
+                                        stroke="var(--color-total)"
+                                        stackId="a"
+                                    />
                                 </AreaChart>
-                            </ResponsiveContainer>
+                            </ChartContainer>
                         </CardContent>
                     </Card>
 
