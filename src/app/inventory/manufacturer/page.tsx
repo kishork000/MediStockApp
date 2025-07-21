@@ -35,13 +35,14 @@ interface Manufacturer {
     email: string;
     phone: string;
     address: string;
+    gstin: string;
 }
 
 const initialManufacturers: Manufacturer[] = [
-    { id: "MAN001", name: "Bayer Pharmaceuticals", contactPerson: "Anil Kapoor", email: "anil.k@bayer.com", phone: "9876543210", address: "Bayer House, Hiranandani Estate, Mumbai" },
-    { id: "MAN002", name: "Pfizer India", contactPerson: "Sunita Reddy", email: "s.reddy@pfizer.co.in", phone: "9876543211", address: "The Capital, Bandra Kurla Complex, Mumbai" },
-    { id: "MAN003", name: "Sun Pharmaceutical Industries", contactPerson: "Rajesh Sharma", email: "rajesh.s@sunpharma.com", phone: "9876543212", address: "Sun House, Western Express Highway, Mumbai" },
-    { id: "MAN004", name: "Cipla Ltd", contactPerson: "Priya Singh", email: "priya.singh@cipla.com", phone: "9876543213", address: "Cipla House, Peninsula Business Park, Mumbai" },
+    { id: "MAN001", name: "Bayer Pharmaceuticals", contactPerson: "Anil Kapoor", email: "anil.k@bayer.com", phone: "9876543210", address: "Bayer House, Hiranandani Estate, Mumbai", gstin: "27AAFCT6913H1Z3" },
+    { id: "MAN002", name: "Pfizer India", contactPerson: "Sunita Reddy", email: "s.reddy@pfizer.co.in", phone: "9876543211", address: "The Capital, Bandra Kurla Complex, Mumbai", gstin: "27AABCP5871N1Z5" },
+    { id: "MAN003", name: "Sun Pharmaceutical Industries", contactPerson: "Rajesh Sharma", email: "rajesh.s@sunpharma.com", phone: "9876543212", address: "Sun House, Western Express Highway, Mumbai", gstin: "27AAACS1116L1ZG" },
+    { id: "MAN004", name: "Cipla Ltd", contactPerson: "Priya Singh", email: "priya.singh@cipla.com", phone: "9876543213", address: "Cipla House, Peninsula Business Park, Mumbai", gstin: "27AAACC2728D1Z2" },
 ];
 
 export default function ManufacturerMasterPage() {
@@ -74,8 +75,9 @@ export default function ManufacturerMasterPage() {
         const email = formData.get("email") as string;
         const phone = formData.get("phone") as string;
         const address = formData.get("address") as string;
+        const gstin = formData.get("gstin") as string;
 
-        if (name && contactPerson && email && phone && address) {
+        if (name && contactPerson && email && phone && address && gstin) {
             const newManufacturer: Manufacturer = {
                 id: `MAN${(manufacturers.length + 1).toString().padStart(3, '0')}`,
                 name,
@@ -83,6 +85,7 @@ export default function ManufacturerMasterPage() {
                 email,
                 phone,
                 address,
+                gstin,
             };
             setManufacturers([...manufacturers, newManufacturer]);
             toast({ title: "Success", description: "Manufacturer added to master list." });
@@ -204,7 +207,7 @@ export default function ManufacturerMasterPage() {
            <div className="flex w-full items-center justify-between">
                 <h1 className="text-xl font-semibold">Manufacturer Master</h1>
                 <div className="flex items-center gap-2">
-                    <Button onClick={() => setIsAddModalOpen(true)} size="sm" className="sm:hidden">
+                    <Button onClick={() => setIsAddModalOpen(true)} size="icon" className="sm:hidden">
                         <PlusSquare className="h-4 w-4"/>
                     </Button>
                      <Button onClick={() => setIsAddModalOpen(true)} size="sm" className="hidden sm:flex">
@@ -227,8 +230,8 @@ export default function ManufacturerMasterPage() {
                             <TableRow>
                                 <TableHead>Name</TableHead>
                                 <TableHead className="hidden sm:table-cell">Contact Person</TableHead>
-                                <TableHead className="hidden md:table-cell">Email</TableHead>
-                                <TableHead className="hidden lg:table-cell">Phone</TableHead>
+                                <TableHead className="hidden md:table-cell">GSTIN</TableHead>
+                                <TableHead className="hidden lg:table-cell">Email</TableHead>
                                 <TableHead>
                                     <span className="sr-only">Actions</span>
                                 </TableHead>
@@ -239,8 +242,8 @@ export default function ManufacturerMasterPage() {
                                 <TableRow key={man.id}>
                                     <TableCell className="font-medium">{man.name}</TableCell>
                                     <TableCell className="hidden sm:table-cell">{man.contactPerson}</TableCell>
-                                    <TableCell className="hidden md:table-cell">{man.email}</TableCell>
-                                    <TableCell className="hidden lg:table-cell">{man.phone}</TableCell>
+                                    <TableCell className="hidden md:table-cell">{man.gstin}</TableCell>
+                                    <TableCell className="hidden lg:table-cell">{man.email}</TableCell>
                                     <TableCell>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
@@ -291,9 +294,15 @@ export default function ManufacturerMasterPage() {
                                 <Input id="phone" name="phone" type="tel" placeholder="e.g., 9876543210" required />
                             </div>
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="email">Email Address</Label>
-                            <Input id="email" name="email" type="email" placeholder="e.g., priya.singh@cipla.com" required />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="email">Email Address</Label>
+                                <Input id="email" name="email" type="email" placeholder="e.g., priya.singh@cipla.com" required />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="gstin">GSTIN</Label>
+                                <Input id="gstin" name="gstin" placeholder="15-digit GSTIN" required />
+                            </div>
                         </div>
                          <div className="space-y-2">
                             <Label htmlFor="address">Address</Label>
