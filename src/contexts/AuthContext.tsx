@@ -14,7 +14,7 @@ const initialUsers = [
 
 const initialPermissions: RolePermissions = {
     Admin: allAppRoutes.map(r => r.path), // Admin has all permissions
-    Pharmacist: ['/', '/patients', '/sales', '/inventory/transfer'],
+    Pharmacist: ['/', '/patients', '/sales', '/inventory', '/inventory/stores', '/inventory/transfer'],
     Technician: ['/', '/sales']
 };
 
@@ -52,11 +52,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const hasPermission = useCallback((path: string): boolean => {
         if (!user) return false;
-        // Allow access to the root page for all logged-in users
+        
+        // Admins can access everything
+        if (user.role === 'Admin') return true;
+
+        // All logged-in users can access the dashboard
         if (path === '/') return true;
         
         const userPermissions = permissions[user.role];
-        return userPermissions?.includes(path) ?? false;
+        
+        // Check for direct path match
+        if (userPermissions?.includes(path)) return true;
+
+        // Check for parent path match (e.g., /inventory for /inventory/add)
+        const parentPath = path.substring(0, path.lastIndexOf('/'));
+        if (parentPath && userPermissions?.includes(parentPath)) return true;
+
+        return false;
     }, [user, permissions]);
 
 

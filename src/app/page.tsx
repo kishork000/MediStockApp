@@ -27,6 +27,9 @@ import { MoreHorizontal } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { allAppRoutes, AppRoute } from "@/lib/types";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
+
 
 const generateData = () => [
   { name: "Jan", total: Math.floor(Math.random() * 5000) + 1000 },
@@ -43,15 +46,6 @@ const generateData = () => [
   { name: "Dec", total: Math.floor(Math.random() * 5000) + 1000 },
 ];
 
-const inventoryData = [
-    { name: "Aspirin", quantity: 150, status: "In Stock" },
-    { name: "Ibuprofen", quantity: 200, status: "In Stock" },
-    { name: "Paracetamol", quantity: 45, status: "Low Stock" },
-    { name: "Amoxicillin", quantity: 80, status: "In Stock" },
-    { name: "Lisinopril", quantity: 120, status: "In Stock" },
-    { name: "Metformin", quantity: 0, status: "Out of Stock" },
-    { name: "Atorvastatin", quantity: 90, status: "In Stock" },
-];
 
 const salesData = [
     { id: "SALE001", customer: "John Doe", date: "2024-07-20", amount: "₹1245.50", status: "Paid" },
@@ -69,7 +63,7 @@ export default function Home() {
   const router = useRouter();
 
   const sidebarRoutes = useMemo(() => {
-    return allAppRoutes.filter(route => hasPermission(route.path));
+    return allAppRoutes.filter(route => hasPermission(route.path) && route.path !== '/');
   }, [hasPermission]);
 
   useEffect(() => {
@@ -112,15 +106,20 @@ export default function Home() {
         case 'Dashboard': return <HomeIcon />;
         case 'Patients': return <Users2 />;
         case 'Sales': return <ShoppingCart />;
-        case 'Inventory': return <Package />;
+        case 'Stock Management': return <Package />;
+        case 'Warehouse Stock': return <Package />;
+        case 'Store Stock': return <Package />;
         case 'Add Medicine': return <PlusSquare />;
         case 'Stock Transfer': return <GitBranch />;
+        case 'Stock Reports': return <BarChart />;
         case 'Diseases': return <Activity />;
         case 'Reports': return <BarChart />;
         case 'Admin': return <Settings />;
         default: return <LayoutGrid />;
     }
   };
+
+  const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory'));
 
 
   return (
@@ -135,31 +134,49 @@ export default function Home() {
           <SidebarContent>
             <SidebarMenu>
                <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => handleTabChange("dashboard")} isActive={activeTab === "dashboard"} tooltip="Dashboard">
+                  <SidebarMenuButton href="/" isActive={activeTab === "dashboard"} tooltip="Dashboard">
                     <HomeIcon />
                     <span>Dashboard</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                {sidebarRoutes.map((route) => {
-                  if (route.path === '/') return null; // handled separately
-                  if (route.inSidebar) {
-                    return (
-                       <SidebarMenuItem key={route.path}>
-                          <SidebarMenuButton href={route.path} tooltip={route.name}>
-                              {getIcon(route.name)}
-                              <span>{route.name}</span>
-                          </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    )
-                  }
-                  return null;
-                })}
-                 <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => handleTabChange("inventory")} isActive={activeTab === "inventory"} tooltip="Inventory">
-                    <Package />
-                    <span>Inventory</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                
+                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory') && r.inSidebar).map((route) => (
+                    <SidebarMenuItem key={route.path}>
+                        <SidebarMenuButton href={route.path} tooltip={route.name}>
+                            {getIcon(route.name)}
+                            <span>{route.name}</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                ))}
+
+                {hasPermission('/inventory') && (
+                    <Collapsible className="w-full">
+                        <CollapsibleTrigger asChild>
+                            <SidebarMenuItem>
+                                <SidebarMenuButton className="justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <Package />
+                                        <span>Stock Management</span>
+                                    </div>
+                                    <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                            <SidebarMenu className="ml-7 mt-2 border-l pl-3">
+                                {stockManagementRoutes.map((route) => (
+                                    <SidebarMenuItem key={route.path}>
+                                        <SidebarMenuButton href={route.path} tooltip={route.name} size="sm">
+                                            {getIcon(route.name)}
+                                            <span>{route.name}</span>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                ))}
+                            </SidebarMenu>
+                        </CollapsibleContent>
+                    </Collapsible>
+                )}
+                 
                  <SidebarMenuItem>
                   <SidebarMenuButton onClick={() => handleTabChange("reports")} isActive={activeTab === "reports"} tooltip="Reports">
                     <BarChart />
@@ -183,29 +200,16 @@ export default function Home() {
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
            <SidebarTrigger className="sm:hidden" />
            <div className="flex w-full items-center justify-between">
-                <h1 className="text-xl font-semibold">
-                {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
-                </h1>
-                <div className="sm:hidden">
-                    <Tabs value={activeTab} onValueChange={handleTabChange}>
-                        <TabsList>
-                            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-                            <TabsTrigger value="inventory">Inventory</TabsTrigger>
-                            <TabsTrigger value="reports">Reports</TabsTrigger>
-                        </TabsList>
-                    </Tabs>
-                </div>
+                <h1 className="text-xl font-semibold">Dashboard</h1>
            </div>
         </header>
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
-            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-                <div className="hidden sm:block">
-                    <TabsList>
-                        <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-                        <TabsTrigger value="inventory">Inventory</TabsTrigger>
-                        <TabsTrigger value="reports">Reports</TabsTrigger>
-                    </TabsList>
-                </div>
+            <Tabs defaultValue="dashboard" className="w-full">
+                <TabsList>
+                    <TabsTrigger value="dashboard">Overview</TabsTrigger>
+                    <TabsTrigger value="sales">Recent Sales</TabsTrigger>
+                    <TabsTrigger value="reports">Generate Reports</TabsTrigger>
+                </TabsList>
               <TabsContent value="dashboard">
                 <div className="grid auto-rows-max items-start gap-4 md:gap-8 lg:grid-cols-2">
                   <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 lg:col-span-2">
@@ -242,7 +246,9 @@ export default function Home() {
                           <AiSummary dashboardData={dashboardData} />
                       </div>
                   </div>
-                   <div className="lg:col-span-2">
+                </div>
+              </TabsContent>
+              <TabsContent value="sales">
                     <Card>
                         <CardHeader>
                             <CardTitle>Recent Sales</CardTitle>
@@ -277,59 +283,6 @@ export default function Home() {
                             </Table>
                         </CardContent>
                     </Card>
-                  </div>
-                </div>
-              </TabsContent>
-              <TabsContent value="inventory">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Inventory</CardTitle>
-                    <CardDescription>Manage your medicine inventory in the main warehouse.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Medicine</TableHead>
-                                <TableHead className="text-right">Stock</TableHead>
-                                <TableHead className="text-right">Status</TableHead>
-                                <TableHead>
-                                    <span className="sr-only">Actions</span>
-                                </TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {inventoryData.map((item) => (
-                                <TableRow key={item.name}>
-                                    <TableCell className="font-medium">{item.name}</TableCell>
-                                    <TableCell className="text-right">{item.quantity}</TableCell>
-                                    <TableCell className="text-right">
-                                        <Badge variant={item.status === 'In Stock' ? 'default' : item.status === 'Low Stock' ? 'secondary' : 'destructive'}>
-                                            {item.status}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button aria-haspopup="true" size="icon" variant="ghost">
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                    <span className="sr-only">Toggle menu</span>
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                <DropdownMenuItem>Edit</DropdownMenuItem>
-                                                <DropdownMenuItem>Restock</DropdownMenuItem>
-                                                <DropdownMenuItem>Delete</DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
               </TabsContent>
                <TabsContent value="reports">
                 <Card>

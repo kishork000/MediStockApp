@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Activity, Settings, Store, MoreHorizontal, Trash2, GitBranch, LogOut, ShieldCheck } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Activity, Settings, Store, MoreHorizontal, Trash2, GitBranch, LogOut, ShieldCheck, ChevronDown, Warehouse } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -28,6 +28,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { allAppRoutes, AppRoute, UserRole } from "@/lib/types";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 
 interface User {
@@ -59,7 +60,7 @@ const initialUsers: User[] = [
 
 
 export default function AdminPage() {
-    const { user, logout, loading, permissions, setPermissions } = useAuth();
+    const { user, logout, loading, permissions, setPermissions, hasPermission } = useAuth();
     const router = useRouter();
 
     const [companyName, setCompanyName] = useState("MediStock Pharmacy");
@@ -68,6 +69,10 @@ export default function AdminPage() {
     const [stores, setStores] = useState<Store[]>(initialStores);
     const [isAddStoreModalOpen, setIsAddStoreModalOpen] = useState(false);
     const [users, setUsers] = useState<User[]>(initialUsers);
+
+    const sidebarRoutes = useMemo(() => {
+        return allAppRoutes.filter(route => hasPermission(route.path) && route.path !== '/');
+    }, [hasPermission]);
 
      useEffect(() => {
         if (!loading && (!user || user.role !== 'Admin')) {
@@ -155,6 +160,23 @@ export default function AdminPage() {
         );
     }
 
+    const getIcon = (name: string) => {
+        switch (name) {
+            case 'Dashboard': return <HomeIcon />;
+            case 'Patients': return <Users2 />;
+            case 'Sales': return <ShoppingCart />;
+            case 'Warehouse Stock': return <Warehouse />;
+            case 'Store Stock': return <Package />;
+            case 'Add Medicine': return <PlusSquare />;
+            case 'Stock Transfer': return <GitBranch />;
+            case 'Stock Reports': return <BarChart />;
+            case 'Diseases': return <Activity />;
+            case 'Admin': return <Settings />;
+            default: return <LayoutGrid />;
+        }
+    };
+
+    const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory'));
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -173,52 +195,48 @@ export default function AdminPage() {
                     <span>Dashboard</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+
+                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory') && r.inSidebar).map((route) => (
+                    <SidebarMenuItem key={route.path}>
+                        <SidebarMenuButton href={route.path} tooltip={route.name} isActive={router.pathname === route.path}>
+                            {getIcon(route.name)}
+                            <span>{route.name}</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                ))}
+
+                {hasPermission('/inventory') && (
+                    <Collapsible className="w-full">
+                        <CollapsibleTrigger asChild>
+                            <SidebarMenuItem>
+                                <SidebarMenuButton className="justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <Package />
+                                        <span>Stock Management</span>
+                                    </div>
+                                    <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                            <SidebarMenu className="ml-7 mt-2 border-l pl-3">
+                                {stockManagementRoutes.map((route) => (
+                                    <SidebarMenuItem key={route.path}>
+                                        <SidebarMenuButton href={route.path} tooltip={route.name} size="sm" isActive={router.pathname === route.path}>
+                                            {getIcon(route.name)}
+                                            <span>{route.name}</span>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                ))}
+                            </SidebarMenu>
+                        </CollapsibleContent>
+                    </Collapsible>
+                )}
+                 
                  <SidebarMenuItem>
-                  <SidebarMenuButton href="/patients" tooltip="Patients">
-                    <Users2 />
-                    <span>Patients</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton href="/sales" tooltip="Sales">
-                    <ShoppingCart />
-                    <span>Sales</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton href="/" tooltip="Inventory">
-                    <Package />
-                    <span>Inventory</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                 <SidebarMenuItem>
-                  <SidebarMenuButton href="/inventory/add" tooltip="Add Medicine">
-                    <PlusSquare />
-                    <span>Add Medicine</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                 <SidebarMenuItem>
-                  <SidebarMenuButton href="/inventory/transfer" tooltip="Stock Transfer">
-                    <GitBranch />
-                    <span>Stock Transfer</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                 <SidebarMenuItem>
-                  <SidebarMenuButton href="/diseases" tooltip="Diseases">
-                    <Activity />
-                    <span>Diseases</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
                   <SidebarMenuButton href="/" tooltip="Reports">
                     <BarChart />
                     <span>Reports</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                 <SidebarMenuItem>
-                  <SidebarMenuButton href="/admin" isActive={true} tooltip="Admin">
-                    <Settings />
-                    <span>Admin</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
             </SidebarMenu>
