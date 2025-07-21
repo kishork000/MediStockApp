@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, MoreHorizontal, Trash2, Pill, Undo, Building, Search } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, MoreHorizontal, Trash2, Pill, Undo, Building, Search, Eye } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
@@ -46,7 +46,7 @@ const initialManufacturers: Manufacturer[] = [
     { id: "MAN004", name: "Cipla Ltd", contactPerson: "Priya Singh", email: "priya.singh@cipla.com", phone: "9876543213", address: "Cipla House, Peninsula Business Park, Mumbai", gstin: "27AAACC2728D1Z2" },
 ];
 
-const defaultFormState = {
+const defaultFormState: Omit<Manufacturer, 'id'> = {
     name: "",
     contactPerson: "",
     email: "",
@@ -63,8 +63,11 @@ export default function ManufacturerMasterPage() {
     const { toast } = useToast();
     const [manufacturers, setManufacturers] = useState<Manufacturer[]>(initialManufacturers);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [selectedManufacturer, setSelectedManufacturer] = useState<Manufacturer | null>(null);
     
-    const [newManufacturerForm, setNewManufacturerForm] = useState(defaultFormState);
+    const [formState, setFormState] = useState(defaultFormState);
     const [isFetchingGst, startFetchingGst] = useTransition();
 
     const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
@@ -78,7 +81,23 @@ export default function ManufacturerMasterPage() {
     
     const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
-        setNewManufacturerForm(prev => ({ ...prev, [name]: value }));
+        setFormState(prev => ({ ...prev, [name]: value }));
+    };
+    
+    const openAddModal = () => {
+        setFormState(defaultFormState);
+        setIsAddModalOpen(true);
+    };
+
+    const openViewModal = (man: Manufacturer) => {
+        setSelectedManufacturer(man);
+        setIsViewModalOpen(true);
+    };
+
+    const openEditModal = (man: Manufacturer) => {
+        setSelectedManufacturer(man);
+        setFormState(man);
+        setIsEditModalOpen(true);
     };
 
     const handleDelete = (id: string) => {
@@ -86,41 +105,46 @@ export default function ManufacturerMasterPage() {
         toast({ title: "Success", description: "Manufacturer removed from master list." });
     };
 
-    const handleAddManufacturer = (e: React.FormEvent<HTMLFormElement>) => {
+    const handleAddOrUpdateManufacturer = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         
-        const { name, contactPerson, email, phone, address, gstin } = newManufacturerForm;
+        const { name, contactPerson, email, phone, address, gstin } = formState;
 
         if (name && contactPerson && email && phone && address && gstin) {
-            const newManufacturer: Manufacturer = {
-                id: `MAN${(manufacturers.length + 1).toString().padStart(3, '0')}`,
-                name,
-                contactPerson,
-                email,
-                phone,
-                address,
-                gstin,
-            };
-            setManufacturers([...manufacturers, newManufacturer]);
-            toast({ title: "Success", description: "Manufacturer added to master list." });
-            setIsAddModalOpen(false);
-            setNewManufacturerForm(defaultFormState);
+            if(selectedManufacturer && isEditModalOpen) {
+                // Update
+                const updatedManufacturer = { ...selectedManufacturer, ...formState };
+                setManufacturers(manufacturers.map(m => m.id === updatedManufacturer.id ? updatedManufacturer : m));
+                toast({ title: "Success", description: "Manufacturer details updated." });
+                setIsEditModalOpen(false);
+            } else {
+                // Add
+                const newManufacturer: Manufacturer = {
+                    id: `MAN${(manufacturers.length + 1).toString().padStart(3, '0')}`,
+                    ...formState
+                };
+                setManufacturers([...manufacturers, newManufacturer]);
+                toast({ title: "Success", description: "Manufacturer added to master list." });
+                setIsAddModalOpen(false);
+            }
+            setFormState(defaultFormState);
+            setSelectedManufacturer(null);
         } else {
             toast({ variant: "destructive", title: "Error", description: "Please fill all fields." });
         }
     };
     
     const handleFetchGstDetails = () => {
-        if (!newManufacturerForm.gstin) {
+        if (!formState.gstin) {
             toast({ variant: "destructive", title: "Error", description: "Please enter a GSTIN to fetch details." });
             return;
         }
 
         startFetchingGst(async () => {
-            const result = await fetchGstDetails(newManufacturerForm.gstin);
+            const result = await fetchGstDetails(formState.gstin);
             if (result) {
-                setNewManufacturerForm({
-                    ...newManufacturerForm,
+                setFormState({
+                    ...formState,
                     name: result.name,
                     address: result.address,
                 });
@@ -242,10 +266,10 @@ export default function ManufacturerMasterPage() {
            <div className="flex w-full items-center justify-between">
                 <h1 className="text-xl font-semibold">Manufacturer Master</h1>
                 <div className="flex items-center gap-2">
-                    <Button onClick={() => setIsAddModalOpen(true)} size="icon" className="sm:hidden">
+                    <Button onClick={openAddModal} size="icon" className="sm:hidden">
                         <PlusSquare className="h-4 w-4"/>
                     </Button>
-                     <Button onClick={() => setIsAddModalOpen(true)} size="sm" className="hidden sm:flex">
+                     <Button onClick={openAddModal} size="sm" className="hidden sm:flex">
                         <PlusSquare className="mr-2 h-4 w-4"/>
                         Add Manufacturer
                     </Button>
@@ -289,7 +313,10 @@ export default function ManufacturerMasterPage() {
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                <DropdownMenuItem>Edit</DropdownMenuItem>
+                                                <DropdownMenuItem onSelect={() => openViewModal(man)}>
+                                                    <Eye className="mr-2 h-4 w-4" /> View
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onSelect={() => openEditModal(man)}>Edit</DropdownMenuItem>
                                                 <DropdownMenuItem onSelect={() => handleDelete(man.id)} className="text-destructive">
                                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
                                                 </DropdownMenuItem>
@@ -305,20 +332,20 @@ export default function ManufacturerMasterPage() {
         </main>
       </div>
 
-       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+       <Dialog open={isAddModalOpen || isEditModalOpen} onOpenChange={isEditModalOpen ? setIsEditModalOpen : setIsAddModalOpen}>
             <DialogContent className="sm:max-w-lg">
-                 <form onSubmit={handleAddManufacturer}>
+                 <form onSubmit={handleAddOrUpdateManufacturer}>
                     <DialogHeader>
-                        <DialogTitle>Add New Manufacturer</DialogTitle>
+                        <DialogTitle>{isEditModalOpen ? "Edit Manufacturer" : "Add New Manufacturer"}</DialogTitle>
                         <DialogDescription>
-                            Define a new supplier. Enter GSTIN to fetch details automatically (simulated).
+                           {isEditModalOpen ? "Update the details for this supplier." : "Define a new supplier. Enter GSTIN to fetch details automatically (simulated)."}
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="space-y-2">
                              <Label htmlFor="gstin">GSTIN</Label>
                              <div className="flex gap-2">
-                                <Input id="gstin" name="gstin" value={newManufacturerForm.gstin} onChange={handleFormChange} placeholder="15-digit GSTIN" required />
+                                <Input id="gstin" name="gstin" value={formState.gstin} onChange={handleFormChange} placeholder="15-digit GSTIN" required />
                                 <Button type="button" variant="outline" size="icon" onClick={handleFetchGstDetails} disabled={isFetchingGst}>
                                     <Search className={isFetchingGst ? 'animate-spin' : ''} />
                                 </Button>
@@ -327,36 +354,76 @@ export default function ManufacturerMasterPage() {
                         </div>
                          <div className="space-y-2">
                             <Label htmlFor="name">Manufacturer Name</Label>
-                            <Input id="name" name="name" value={newManufacturerForm.name} onChange={handleFormChange} placeholder="e.g., Cipla Inc." required />
+                            <Input id="name" name="name" value={formState.name} onChange={handleFormChange} placeholder="e.g., Cipla Inc." required />
                         </div>
                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="contactPerson">Contact Person</Label>
-                                <Input id="contactPerson" name="contactPerson" value={newManufacturerForm.contactPerson} onChange={handleFormChange} placeholder="e.g., Priya Singh" required />
+                                <Input id="contactPerson" name="contactPerson" value={formState.contactPerson} onChange={handleFormChange} placeholder="e.g., Priya Singh" required />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="phone">Phone Number</Label>
-                                <Input id="phone" name="phone" value={newManufacturerForm.phone} onChange={handleFormChange} type="tel" placeholder="e.g., 9876543210" required />
+                                <Input id="phone" name="phone" value={formState.phone} onChange={handleFormChange} type="tel" placeholder="e.g., 9876543210" required />
                             </div>
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="email">Email Address</Label>
-                            <Input id="email" name="email" value={newManufacturerForm.email} onChange={handleFormChange} type="email" placeholder="e.g., priya.singh@cipla.com" required />
+                            <Input id="email" name="email" value={formState.email} onChange={handleFormChange} type="email" placeholder="e.g., priya.singh@cipla.com" required />
                         </div>
                          <div className="space-y-2">
                             <Label htmlFor="address">Address</Label>
-                            <Textarea id="address" name="address" value={newManufacturerForm.address} onChange={handleFormChange} placeholder="e.g., Cipla House, Peninsula Business Park, Mumbai" required />
+                            <Textarea id="address" name="address" value={formState.address} onChange={handleFormChange} placeholder="e.g., Cipla House, Peninsula Business Park, Mumbai" required />
                         </div>
                     </div>
                     <DialogFooter>
                         <DialogClose asChild>
-                            <Button type="button" variant="secondary" onClick={() => setNewManufacturerForm(defaultFormState)}>Cancel</Button>
+                            <Button type="button" variant="secondary" onClick={() => { setIsAddModalOpen(false); setIsEditModalOpen(false); setSelectedManufacturer(null); }}>Cancel</Button>
                         </DialogClose>
-                        <Button type="submit">Add to Master</Button>
+                        <Button type="submit">{isEditModalOpen ? "Save Changes" : "Add to Master"}</Button>
                     </DialogFooter>
                 </form>
             </DialogContent>
         </Dialog>
+        
+        {selectedManufacturer && (
+            <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>{selectedManufacturer.name}</DialogTitle>
+                        <DialogDescription>ID: {selectedManufacturer.id}</DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4 text-sm">
+                        <div className="grid grid-cols-[120px_1fr] items-center gap-2">
+                           <span className="font-semibold text-muted-foreground">GSTIN</span>
+                           <span>{selectedManufacturer.gstin}</span>
+                        </div>
+                        <div className="grid grid-cols-[120px_1fr] items-center gap-2">
+                           <span className="font-semibold text-muted-foreground">Contact Person</span>
+                           <span>{selectedManufacturer.contactPerson}</span>
+                        </div>
+                        <div className="grid grid-cols-[120px_1fr] items-center gap-2">
+                           <span className="font-semibold text-muted-foreground">Email</span>
+                           <span>{selectedManufacturer.email}</span>
+                        </div>
+                         <div className="grid grid-cols-[120px_1fr] items-center gap-2">
+                           <span className="font-semibold text-muted-foreground">Phone</span>
+                           <span>{selectedManufacturer.phone}</span>
+                        </div>
+                         <div className="grid grid-cols-[120px_1fr] items-start gap-2">
+                           <span className="font-semibold text-muted-foreground">Address</span>
+                           <span>{selectedManufacturer.address}</span>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button type="button" variant="secondary" onClick={() => setSelectedManufacturer(null)}>Close</Button>
+                        </DialogClose>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        )}
     </div>
   );
 }
+
+    
