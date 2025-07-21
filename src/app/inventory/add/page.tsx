@@ -142,6 +142,7 @@ export default function AddMedicinePage() {
             case 'Dashboard': return <HomeIcon />;
             case 'Patients': return <Users2 />;
             case 'Sales': return <ShoppingCart />;
+            case 'Sales Reports': return <BarChart />;
             case 'Warehouse Stock': return <Warehouse />;
             case 'Store Stock': return <Package />;
             case 'Add Medicine': return <PlusSquare />;
@@ -370,4 +371,5 @@ export default function AddMedicinePage() {
       </div>
     </div>
   );
-}
+
+    
