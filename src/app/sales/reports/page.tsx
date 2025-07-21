@@ -24,7 +24,7 @@ import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { DateRange } from "react-day-picker";
-import { addDays, parseISO } from "date-fns";
+import { addDays, parseISO, startOfDay, endOfDay } from "date-fns";
 
 const salesData = [
     { pharmacist: "Pharmacist One", store: "Downtown Pharmacy", medicine: "Aspirin", quantity: 5, total: 50.00, date: "2024-07-28" },
@@ -58,7 +58,7 @@ export default function SalesReportPage() {
     const [selectedPharmacist, setSelectedPharmacist] = useState("all");
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
       from: new Date(2024, 6, 20),
-      to: addDays(new Date(2024, 6, 20), 20),
+      to: addDays(new Date(), 0), // Set 'to' date to today
     });
 
     const handleApplyFilters = () => {
@@ -73,14 +73,22 @@ export default function SalesReportPage() {
         }
 
         if (dateRange?.from && dateRange?.to) {
+            const fromDate = startOfDay(dateRange.from);
+            const toDate = endOfDay(dateRange.to);
             data = data.filter(sale => {
                 const saleDate = parseISO(sale.date);
-                return saleDate >= dateRange.from! && saleDate <= dateRange.to!;
+                return saleDate >= fromDate && saleDate <= toDate;
             });
         }
         
         setFilteredData(data);
     };
+    
+    // Apply filters on initial load
+    useEffect(() => {
+        handleApplyFilters();
+    }, []);
+
 
     const analytics = useMemo(() => {
         const totalSalesValue = filteredData.reduce((acc, sale) => acc + sale.total, 0);
@@ -94,7 +102,7 @@ export default function SalesReportPage() {
                 acc.push({ name: sale.medicine, quantity: sale.quantity });
             }
             return acc;
-        }, [] as { name: string; quantity: number; }[]).sort((a, b) => b.quantity - a.quantity);
+        }, [] as { name: string; quantity: number; }[]).sort((a, b) => b.quantity - a.quantity).slice(0, 5); // show top 5
 
         const pharmacistSales = filteredData.reduce((acc, sale) => {
             const existing = acc.find(item => item.name === sale.pharmacist);
@@ -358,5 +366,7 @@ export default function SalesReportPage() {
       </div>
     </div>
   );
+
+    
 
     
