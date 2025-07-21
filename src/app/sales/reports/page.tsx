@@ -239,112 +239,276 @@ export default function SalesReportPage() {
     };
 
   return (
-    <>
-    
-      
-          
-            
-              
-  
-                
-                    
-                
+    <div className="flex min-h-screen w-full flex-col bg-muted/40">
+      <Sidebar>
+          <SidebarHeader>
+            <SidebarMenuButton className="pointer-events-none">
+              <LayoutGrid className="size-6" />
+              <span className="text-lg font-semibold">MediStock</span>
+            </SidebarMenuButton>
+          </SidebarHeader>
+          <SidebarContent>
+             <SidebarMenu>
+                {hasPermission('/') && (
+                    <SidebarMenuItem>
+                        <SidebarMenuButton href="/" tooltip="Dashboard">
+                            <HomeIcon />
+                            <span>Dashboard</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                )}
 
-                
-                     
-                    
-                     
-                    
-                
+                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path)).map((route) => (
+                    <SidebarMenuItem key={route.path}>
+                        <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}>
+                            {getIcon(route.name)}
+                            <span>{route.name}</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                ))}
+
+                {hasPermission('/inventory') && (
+                    <Collapsible className="w-full" defaultOpen={pathname.startsWith('/inventory')}>
+                        <CollapsibleTrigger asChild>
+                            <SidebarMenuButton className="justify-between">
+                                <div className="flex items-center gap-3">
+                                    <Package />
+                                    <span>Stock Management</span>
+                                </div>
+                                <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                            </SidebarMenuButton>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                            <SidebarMenu className="ml-7 mt-2 border-l pl-3">
+                                {stockManagementRoutes.map((route) => (
+                                    <SidebarMenuItem key={route.path}>
+                                        <SidebarMenuButton href={route.path} tooltip={route.name} size="sm" isActive={pathname === route.path}>
+                                            {getIcon(route.name)}
+                                            <span>{route.name}</span>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                ))}
+                            </SidebarMenu>
+                        </CollapsibleContent>
+                    </Collapsible>
+                )}
                  
+                 {hasPermission('/admin') && (
+                    <SidebarMenuItem>
+                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname === '/admin'}>
+                            {getIcon('Admin')}
+                            <span>Admin</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                 )}
+            </SidebarMenu>
+          </SidebarContent>
+           <SidebarFooter>
+              <SidebarMenu>
+                  <SidebarMenuItem>
+                      <SidebarMenuButton onClick={logout} tooltip="Logout">
+                          <LogOut />
+                          <span>Logout</span>
+                      </SidebarMenuButton>
+                  </SidebarMenuItem>
+              </SidebarMenu>
+          </SidebarFooter>
+      </Sidebar>
+      <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
+        <header className="sticky top-0 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+           <SidebarTrigger className="sm:hidden" />
+           <div className="flex w-full items-center justify-between">
+              <h1 className="text-xl font-semibold">Sales Reports</h1>
+              <ThemeToggle />
+           </div>
+        </header>
+        <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
+            <div className="space-y-4">
+                <Card>
+                    <CardHeader>
+                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                            <div>
+                                <CardTitle>Sales Performance</CardTitle>
+                                <CardDescription>Analyze sales data with powerful filters.</CardDescription>
+                            </div>
+                            <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+                                <Select 
+                                    value={selectedStore} 
+                                    onValueChange={setSelectedStore}
+                                    disabled={user?.role === 'Pharmacist'}
+                                >
+                                    <SelectTrigger className="w-full sm:w-[180px]">
+                                        <SelectValue placeholder="Select Store" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {availableStores.map(store => (
+                                            <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <Select value={selectedPharmacist} onValueChange={setSelectedPharmacist}>
+                                    <SelectTrigger className="w-full sm:w-[180px]">
+                                        <SelectValue placeholder="Select Pharmacist" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {pharmacists.map(p => (
+                                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <DateRangePicker date={dateRange} setDate={setDateRange} />
+                                <Button onClick={handleApplyFilters} className="w-full sm:w-auto"><Filter className="mr-2" /> Apply</Button>
+                            </div>
+                        </div>
+                    </CardHeader>
+                </Card>
+
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <Card className="cursor-pointer hover:bg-muted" onClick={handleSalesCardClick}>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Total Sales Value</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">₹{analytics.totalSalesValue.toFixed(2)}</div>
+                            <p className="text-xs text-muted-foreground">Click to see details</p>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Total Items Sold</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{analytics.totalItemsSold}</div>
+                        </CardContent>
+                    </Card>
+                </div>
                 
-               
+                <div className="grid gap-4 md:grid-cols-2">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Sales Over Time</CardTitle>
+                            <CardDescription>Total sales value in the selected period.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="h-[300px] w-full">
+                           <ChartContainer config={salesOverTimeChartConfig}>
+                               <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={analytics.salesOverTime} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis dataKey="date" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                                        <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `₹${value}`} />
+                                        <Tooltip content={<ChartTooltipContent formatter={(value) => `₹${Number(value).toFixed(2)}`} />} />
+                                        <Area type="monotone" dataKey="total" stroke="var(--color-total)" fill="var(--color-total)" fillOpacity={0.3} />
+                                    </AreaChart>
+                               </ResponsiveContainer>
+                           </ChartContainer>
+                        </CardContent>
+                    </Card>
+                     <TopSellingMedicinesChart data={analytics.highSellingMedicines} config={highSellingChartConfig} />
+                </div>
+                 <SalesByPharmacistChart data={analytics.pharmacistSales} config={pharmacistSalesChartConfig} />
                  
-
-              
-              
-                   
-                   
-                   
-               
-                
-                    Sales Performance
-                    Analyze sales data with powerful filters.
-                    
-                        
-                             
-                                Select Store
-                                   
-                                           
-                                                {availableStores.map(store => (
-                                               {store.name}
-                                            
-                                        
-                                     
-                               
-                                 
-                               
-                                Select Pharmacist
-                                   
-                                           
-                                       
-                                  
-
-                                          
-                                            {pharmacists.map(p => (
-                                               {p.name}
-                                           
-                                        
-                                     
-                                 
-                             
-                             
-                        
-                    
-                
-                
-                  
-                    
-                         
-                         Total Sales Value
-                           
-                        
-                         ₹{analytics.totalSalesValue.toFixed(2)}
-                         Click to see details
-                     
-                      
-                          Total Items Sold
-                           
-                        
-                        {analytics.totalItemsSold}
-                    
-
-                     
-                        Sales Over Time
-                         Total sales value in the selected period.
-                        
-                                   {  }
-                    
-
-                     
-                        
-                    
-                  
-                    
-                      
-                   
-
-        
-          
-            
-              
-                
-                    
-                        
-
-                
-            
-       
-    
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <div>
+                            <CardTitle>Detailed Sales Report</CardTitle>
+                            <CardDescription>A log of all sales transactions within the filtered period.</CardDescription>
+                        </div>
+                         <Button size="sm" variant="outline"><Download className="mr-2" /> Download Report</Button>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Invoice ID</TableHead>
+                                    <TableHead>Patient</TableHead>
+                                    <TableHead>Pharmacist</TableHead>
+                                    <TableHead>Medicine</TableHead>
+                                    <TableHead className="text-right">Qty</TableHead>
+                                    <TableHead className="text-right">Total (₹)</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredData.map(sale => (
+                                    <TableRow key={sale.invoiceId + sale.medicine}>
+                                        <TableCell>{sale.invoiceId}</TableCell>
+                                        <TableCell>{sale.patientName}</TableCell>
+                                        <TableCell>{sale.pharmacist}</TableCell>
+                                        <TableCell>{sale.medicine}</TableCell>
+                                        <TableCell className="text-right">{sale.quantity}</TableCell>
+                                        <TableCell className="text-right">{sale.total.toFixed(2)}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+            </div>
+        </main>
+      </div>
+      <Dialog open={isSalesDetailModalOpen} onOpenChange={setIsSalesDetailModalOpen}>
+        <DialogContent className="sm:max-w-4xl">
+            <DialogHeader>
+                <DialogTitle>Sales Breakdown</DialogTitle>
+                <DialogDescription>
+                    Detailed view of cash and online sales for the selected period.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Cash Sales Summary</CardTitle>
+                        <CardDescription>Total: ₹{analytics.cashSalesValue.toFixed(2)} from {analytics.cashInvoices.length} invoices.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="max-h-96 overflow-y-auto">
+                        <Table>
+                             <TableHeader>
+                                <TableRow>
+                                    <TableHead>Invoice ID</TableHead>
+                                    <TableHead>Patient</TableHead>
+                                    <TableHead className="text-right">Amount (₹)</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {analytics.cashInvoices.map(inv => (
+                                    <TableRow key={inv.invoiceId}>
+                                        <TableCell>{inv.invoiceId}</TableCell>
+                                        <TableCell>{inv.patientName}</TableCell>
+                                        <TableCell className="text-right">{inv.total.toFixed(2)}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                 </Card>
+                 <Card>
+                     <CardHeader>
+                        <CardTitle>Online Sales Summary</CardTitle>
+                        <CardDescription>Total: ₹{analytics.onlineSalesValue.toFixed(2)} from {analytics.onlineInvoices.length} invoices.</CardDescription>
+                    </CardHeader>
+                     <CardContent className="max-h-96 overflow-y-auto">
+                        <Table>
+                             <TableHeader>
+                                <TableRow>
+                                    <TableHead>Invoice ID</TableHead>
+                                    <TableHead>Patient</TableHead>
+                                    <TableHead className="text-right">Amount (₹)</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                 {analytics.onlineInvoices.map(inv => (
+                                    <TableRow key={inv.invoiceId}>
+                                        <TableCell>{inv.invoiceId}</TableCell>
+                                        <TableCell>{inv.patientName}</TableCell>
+                                        <TableCell className="text-right">{inv.total.toFixed(2)}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                 </Card>
+            </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
