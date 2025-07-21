@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -10,8 +10,9 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarTrigger,
+  SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Activity, Settings, Store, MoreHorizontal, Trash2, GitBranch } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Activity, Settings, Store, MoreHorizontal, Trash2, GitBranch, LogOut } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -23,6 +24,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 
 
 interface User {
@@ -30,6 +33,7 @@ interface User {
     email: string;
     role: "Admin" | "Pharmacist" | "Technician";
     assignedStore?: string;
+    password?: string;
 }
 
 interface Store {
@@ -45,20 +49,30 @@ const initialStores: Store[] = [
 ];
 
 const initialUsers: User[] = [
-    { name: "Admin User", email: "admin@medistock.com", role: "Admin", assignedStore: "STR001" },
-    { name: "Pharmacist One", email: "pharmacist1@medistock.com", role: "Pharmacist", assignedStore: "STR002" },
-    { name: "Pharmacist Two", email: "pharmacist2@medistock.com", role: "Pharmacist", assignedStore: "STR002" },
-    { name: "Technician One", email: "tech1@medistock.com", role: "Technician" },
+    { name: "Admin User", email: "admin@medistock.com", role: "Admin", assignedStore: "STR001", password: "password" },
+    { name: "Pharmacist One", email: "pharmacist1@medistock.com", role: "Pharmacist", assignedStore: "STR002", password: "password" },
+    { name: "Pharmacist Two", email: "pharmacist2@medistock.com", role: "Pharmacist", assignedStore: "STR002", password: "password" },
+    { name: "Technician One", email: "tech1@medistock.com", role: "Technician", password: "password" },
 ];
 
 
 export default function AdminPage() {
+    const { user, logout, loading } = useAuth();
+    const router = useRouter();
+
     const [companyName, setCompanyName] = useState("MediStock Pharmacy");
     const [companyAddress, setCompanyAddress] = useState("123 Health St, Wellness City, State 12345");
     const [gstin, setGstin] = useState("22AAAAA0000A1Z5");
     const [stores, setStores] = useState<Store[]>(initialStores);
     const [isAddStoreModalOpen, setIsAddStoreModalOpen] = useState(false);
     const [users, setUsers] = useState<User[]>(initialUsers);
+
+     useEffect(() => {
+        if (!loading && !user) {
+        router.push('/login');
+        }
+    }, [user, loading, router]);
+
 
     const handleSaveSettings = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -95,19 +109,28 @@ export default function AdminPage() {
             email: formData.get("email") as string,
             role: formData.get("role") as User['role'],
             assignedStore: formData.get("assignedStore") as string | undefined,
+            password: formData.get("password") as string,
         };
-        if (newUser.name && newUser.email && newUser.role) {
+        if (newUser.name && newUser.email && newUser.role && newUser.password) {
             setUsers([...users, newUser]);
             alert("User created successfully!");
             e.currentTarget.reset();
         } else {
-            alert("Please fill all user details.");
+            alert("Please fill all user details including password.");
         }
     };
 
     const handleDeleteUser = (email: string) => {
         setUsers(users.filter(u => u.email !== email));
     };
+
+    if (loading || !user) {
+        return (
+        <div className="flex items-center justify-center min-h-screen">
+            <div className="text-2xl">Loading...</div>
+        </div>
+        );
+    }
 
 
   return (
@@ -177,6 +200,16 @@ export default function AdminPage() {
                 </SidebarMenuItem>
             </SidebarMenu>
           </SidebarContent>
+            <SidebarFooter>
+              <SidebarMenu>
+                  <SidebarMenuItem>
+                      <SidebarMenuButton onClick={logout} tooltip="Logout">
+                          <LogOut />
+                          <span>Logout</span>
+                      </SidebarMenuButton>
+                  </SidebarMenuItem>
+              </SidebarMenu>
+          </SidebarFooter>
       </Sidebar>
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
@@ -314,6 +347,10 @@ export default function AdminPage() {
                                 <div className="space-y-2">
                                     <Label htmlFor="email">Email</Label>
                                     <Input id="email" name="email" type="email" placeholder="user@medistock.com" required />
+                                </div>
+                                 <div className="space-y-2">
+                                    <Label htmlFor="password">Password</Label>
+                                    <Input id="password" name="password" type="password" required />
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
