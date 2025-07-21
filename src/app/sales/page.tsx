@@ -30,15 +30,18 @@ import { useRouter, usePathname } from "next/navigation";
 import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { cn } from "@/lib/utils";
 
 
 interface SaleItem {
     id: number;
     medicine: string;
+    medicineValue: string;
     quantity: number;
     price: number;
     gst: number;
     total: number;
+    stock: number;
 }
 
 interface ReturnItem extends SaleItem {
@@ -46,12 +49,12 @@ interface ReturnItem extends SaleItem {
 }
 
 const medicineOptions = [
-    { value: "aspirin", label: "Aspirin", price: 10.00, gst: 5 },
-    { value: "ibuprofen", label: "Ibuprofen", price: 15.50, gst: 5 },
-    { value: "paracetamol", label: "Paracetamol", price: 5.75, gst: 5 },
-    { value: "amoxicillin", label: "Amoxicillin", price: 55.20, gst: 12 },
-    { value: "metformin", label: "Metformin", price: 25.00, gst: 12 },
-    { value: "atorvastatin", label: "Atorvastatin", price: 45.00, gst: 12 },
+    { value: "aspirin", label: "Aspirin", price: 10.00, gst: 5, stock: 150 },
+    { value: "ibuprofen", label: "Ibuprofen", price: 15.50, gst: 5, stock: 20 },
+    { value: "paracetamol", label: "Paracetamol", price: 5.75, gst: 5, stock: 100 },
+    { value: "amoxicillin", label: "Amoxicillin", price: 55.20, gst: 12, stock: 80 },
+    { value: "metformin", label: "Metformin", price: 25.00, gst: 12, stock: 0 },
+    { value: "atorvastatin", label: "Atorvastatin", price: 45.00, gst: 12, stock: 120 },
 ];
 
 const diseaseOptions = [
@@ -69,8 +72,8 @@ const pastSales = [
         customer: "John Doe",
         date: "2024-07-20",
         items: [
-            { id: 1, medicine: "Paracetamol", quantity: 2, price: 5.75, gst: 5, total: 11.50 },
-            { id: 2, medicine: "Amoxicillin", quantity: 1, price: 55.20, gst: 12, total: 55.20 },
+            { id: 1, medicine: "Paracetamol", quantity: 2, price: 5.75, gst: 5, total: 11.50, stock: 100 },
+            { id: 2, medicine: "Amoxicillin", quantity: 1, price: 55.20, gst: 12, total: 55.20, stock: 80 },
         ],
         store: "Downtown Pharmacy"
     }
@@ -116,10 +119,12 @@ export default function SalesPage() {
       const newItem: SaleItem = {
           id: Date.now(),
           medicine: selectedMedicine.label,
+          medicineValue: selectedMedicine.value,
           quantity: currentItem.quantity,
           price: selectedMedicine.price,
           gst: selectedMedicine.gst,
           total: selectedMedicine.price * currentItem.quantity,
+          stock: selectedMedicine.stock,
       };
 
       setSaleItems([...saleItems, newItem]);
@@ -148,11 +153,15 @@ export default function SalesPage() {
               : [...prev, diseaseId]
       );
   };
+  
+  const isSaleValid = useMemo(() => {
+    if (saleItems.length === 0) return false;
+    return saleItems.every(item => item.quantity <= item.stock);
+  }, [saleItems]);
 
   const handleRecordSale = (e: React.FormEvent) => {
       e.preventDefault();
-      // In a real app, you would save this data to a database.
-      if (saleItems.length > 0) {
+      if (isSaleValid) {
         setPaymentModalOpen(true);
       }
   }
@@ -434,7 +443,7 @@ export default function SalesPage() {
                                                     </SelectTrigger>
                                                     <SelectContent>
                                                         {medicineOptions.map(med => (
-                                                            <SelectItem key={med.value} value={med.value}>{med.label}</SelectItem>
+                                                            <SelectItem key={med.value} value={med.value}>{med.label} (Stock: {med.stock})</SelectItem>
                                                         ))}
                                                     </SelectContent>
                                                 </Select>
@@ -477,20 +486,26 @@ export default function SalesPage() {
                                                     </TableRow>
                                                 </TableHeader>
                                                 <TableBody>
-                                                    {saleItems.map(item => (
-                                                        <TableRow key={item.id}>
-                                                            <TableCell>{item.medicine}</TableCell>
-                                                            <TableCell className="text-center">{item.quantity}</TableCell>
-                                                            <TableCell className="text-right">{item.price.toFixed(2)}</TableCell>
-                                                            <TableCell className="text-center">{item.gst}%</TableCell>
-                                                            <TableCell className="text-right">{item.total.toFixed(2)}</TableCell>
-                                                            <TableCell className="print:hidden">
-                                                                <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}>
-                                                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                                                </Button>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))}
+                                                    {saleItems.map(item => {
+                                                        const hasInsufficientStock = item.quantity > item.stock;
+                                                        return (
+                                                            <TableRow key={item.id} className={cn(hasInsufficientStock && "bg-destructive/20")}>
+                                                                <TableCell>
+                                                                    {item.medicine}
+                                                                    {hasInsufficientStock && <p className="text-xs text-destructive">Stock: {item.stock}</p>}
+                                                                </TableCell>
+                                                                <TableCell className="text-center">{item.quantity}</TableCell>
+                                                                <TableCell className="text-right">{item.price.toFixed(2)}</TableCell>
+                                                                <TableCell className="text-center">{item.gst}%</TableCell>
+                                                                <TableCell className="text-right">{item.total.toFixed(2)}</TableCell>
+                                                                <TableCell className="print:hidden">
+                                                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}>
+                                                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                                                    </Button>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        )
+                                                    })}
                                                 </TableBody>
                                             </Table>
                                             <div className="mt-4 pt-4 border-t space-y-2 text-right">
@@ -503,7 +518,7 @@ export default function SalesPage() {
                                 )}
                                 
                                 <div className="flex justify-end gap-2 print:hidden">
-                                    <Button type="submit" disabled={saleItems.length === 0}>
+                                    <Button type="submit" disabled={!isSaleValid}>
                                         Record Sale & Proceed to Payment
                                     </Button>
                                 </div>
@@ -629,4 +644,3 @@ export default function SalesPage() {
     </div>
   );
 }
-

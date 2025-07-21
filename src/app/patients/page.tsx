@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, MoreHorizontal, FilePenLine, Trash2 } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, MoreHorizontal, FilePenLine, Trash2, Search } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
@@ -58,10 +58,22 @@ export default function PatientsPage() {
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
 
   const sidebarRoutes = useMemo(() => {
     return allAppRoutes.filter(route => hasPermission(route.path) && route.path !== '/');
   }, [hasPermission]);
+  
+  const filteredPatients = useMemo(() => {
+    if (!searchQuery) return patients;
+    const lowercasedQuery = searchQuery.toLowerCase();
+    return patients.filter(p => 
+        p.name.toLowerCase().includes(lowercasedQuery) ||
+        p.mobile.includes(lowercasedQuery) ||
+        p.id.toLowerCase().includes(lowercasedQuery)
+    );
+  }, [patients, searchQuery]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -216,8 +228,22 @@ export default function PatientsPage() {
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
             <Card>
                 <CardHeader>
-                    <CardTitle>Patient Directory</CardTitle>
-                    <CardDescription>View and manage patient records. New patients are added via the sales form.</CardDescription>
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                        <div>
+                            <CardTitle>Patient Directory</CardTitle>
+                            <CardDescription>View and manage patient records. New patients are added via the sales form.</CardDescription>
+                        </div>
+                        <div className="relative">
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                type="search"
+                                placeholder="Search by name, mobile, or ID..."
+                                className="w-full sm:w-[300px] pl-8"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <Table>
@@ -233,7 +259,7 @@ export default function PatientsPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {patients.map((patient) => (
+                            {filteredPatients.map((patient) => (
                                 <TableRow key={patient.id}>
                                     <TableCell className="font-medium">{patient.name}</TableCell>
                                     <TableCell className="hidden sm:table-cell">{patient.mobile}</TableCell>
@@ -368,4 +394,3 @@ export default function PatientsPage() {
     </div>
   );
 }
-
