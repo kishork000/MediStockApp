@@ -26,17 +26,22 @@ import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useToast } from "@/hooks/use-toast";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Manufacturer {
     id: string;
     name: string;
+    contactPerson: string;
+    email: string;
+    phone: string;
+    address: string;
 }
 
 const initialManufacturers: Manufacturer[] = [
-    { id: "MAN001", name: "Bayer" },
-    { id: "MAN002", name: "Pfizer" },
-    { id: "MAN003", name: "Sun Pharma" },
-    { id: "MAN004", name: "Cipla" },
+    { id: "MAN001", name: "Bayer Pharmaceuticals", contactPerson: "Anil Kapoor", email: "anil.k@bayer.com", phone: "9876543210", address: "Bayer House, Hiranandani Estate, Mumbai" },
+    { id: "MAN002", name: "Pfizer India", contactPerson: "Sunita Reddy", email: "s.reddy@pfizer.co.in", phone: "9876543211", address: "The Capital, Bandra Kurla Complex, Mumbai" },
+    { id: "MAN003", name: "Sun Pharmaceutical Industries", contactPerson: "Rajesh Sharma", email: "rajesh.s@sunpharma.com", phone: "9876543212", address: "Sun House, Western Express Highway, Mumbai" },
+    { id: "MAN004", name: "Cipla Ltd", contactPerson: "Priya Singh", email: "priya.singh@cipla.com", phone: "9876543213", address: "Cipla House, Peninsula Business Park, Mumbai" },
 ];
 
 export default function ManufacturerMasterPage() {
@@ -65,18 +70,26 @@ export default function ManufacturerMasterPage() {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
         const name = formData.get("manufacturer-name") as string;
+        const contactPerson = formData.get("contact-person") as string;
+        const email = formData.get("email") as string;
+        const phone = formData.get("phone") as string;
+        const address = formData.get("address") as string;
 
-        if (name) {
+        if (name && contactPerson && email && phone && address) {
             const newManufacturer: Manufacturer = {
                 id: `MAN${(manufacturers.length + 1).toString().padStart(3, '0')}`,
                 name,
+                contactPerson,
+                email,
+                phone,
+                address,
             };
             setManufacturers([...manufacturers, newManufacturer]);
             toast({ title: "Success", description: "Manufacturer added to master list." });
             setIsAddModalOpen(false);
             e.currentTarget.reset();
         } else {
-            toast({ variant: "destructive", title: "Error", description: "Please enter a manufacturer name." });
+            toast({ variant: "destructive", title: "Error", description: "Please fill all fields." });
         }
     };
     
@@ -186,12 +199,15 @@ export default function ManufacturerMasterPage() {
           </SidebarFooter>
       </Sidebar>
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
-        <header className="sticky top-0 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+        <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
            <SidebarTrigger className="sm:hidden" />
            <div className="flex w-full items-center justify-between">
                 <h1 className="text-xl font-semibold">Manufacturer Master</h1>
                 <div className="flex items-center gap-2">
-                    <Button onClick={() => setIsAddModalOpen(true)}>
+                    <Button onClick={() => setIsAddModalOpen(true)} size="sm" className="sm:hidden">
+                        <PlusSquare className="h-4 w-4"/>
+                    </Button>
+                     <Button onClick={() => setIsAddModalOpen(true)} size="sm" className="hidden sm:flex">
                         <PlusSquare className="mr-2 h-4 w-4"/>
                         Add Manufacturer
                     </Button>
@@ -209,8 +225,10 @@ export default function ManufacturerMasterPage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="hidden sm:table-cell">ID</TableHead>
                                 <TableHead>Name</TableHead>
+                                <TableHead className="hidden sm:table-cell">Contact Person</TableHead>
+                                <TableHead className="hidden md:table-cell">Email</TableHead>
+                                <TableHead className="hidden lg:table-cell">Phone</TableHead>
                                 <TableHead>
                                     <span className="sr-only">Actions</span>
                                 </TableHead>
@@ -219,8 +237,10 @@ export default function ManufacturerMasterPage() {
                         <TableBody>
                             {manufacturers.map((man) => (
                                 <TableRow key={man.id}>
-                                    <TableCell className="hidden sm:table-cell font-medium">{man.id}</TableCell>
-                                    <TableCell>{man.name}</TableCell>
+                                    <TableCell className="font-medium">{man.name}</TableCell>
+                                    <TableCell className="hidden sm:table-cell">{man.contactPerson}</TableCell>
+                                    <TableCell className="hidden md:table-cell">{man.email}</TableCell>
+                                    <TableCell className="hidden lg:table-cell">{man.phone}</TableCell>
                                     <TableCell>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
@@ -248,18 +268,36 @@ export default function ManufacturerMasterPage() {
       </div>
 
        <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-lg">
                  <form onSubmit={handleAddManufacturer}>
                     <DialogHeader>
                         <DialogTitle>Add New Manufacturer</DialogTitle>
                         <DialogDescription>
-                            Define a new supplier in the master list.
+                            Define a new supplier with their contact details in the master list.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="space-y-2">
                             <Label htmlFor="manufacturer-name">Manufacturer Name</Label>
                             <Input id="manufacturer-name" name="manufacturer-name" placeholder="e.g., Cipla Inc." required />
+                        </div>
+                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="contact-person">Contact Person</Label>
+                                <Input id="contact-person" name="contact-person" placeholder="e.g., Priya Singh" required />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="phone">Phone Number</Label>
+                                <Input id="phone" name="phone" type="tel" placeholder="e.g., 9876543210" required />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="email">Email Address</Label>
+                            <Input id="email" name="email" type="email" placeholder="e.g., priya.singh@cipla.com" required />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="address">Address</Label>
+                            <Textarea id="address" name="address" placeholder="e.g., Cipla House, Peninsula Business Park, Mumbai" required />
                         </div>
                     </div>
                     <DialogFooter>
