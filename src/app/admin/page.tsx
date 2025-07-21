@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Activity, Settings, Store, MoreHorizontal, Trash2, GitBranch, LogOut, ShieldCheck, ChevronDown, Warehouse } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Activity, Settings, Store, MoreHorizontal, Trash2, GitBranch, LogOut, ShieldCheck, ChevronDown, Warehouse, TrendingUp } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -172,6 +172,7 @@ export default function AdminPage() {
             case 'Add Medicine': return <PlusSquare />;
             case 'Stock Transfer': return <GitBranch />;
             case 'Stock Reports': return <BarChart />;
+            case 'Valuation Report': return <TrendingUp />;
             case 'Diseases': return <Activity />;
             case 'Admin': return <Settings />;
             default: return <LayoutGrid />;
@@ -208,7 +209,7 @@ export default function AdminPage() {
                 ))}
 
                 {hasPermission('/inventory') && (
-                    <Collapsible className="w-full">
+                    <Collapsible className="w-full" defaultOpen={pathname.startsWith('/inventory')}>
                         <CollapsibleTrigger asChild>
                             <SidebarMenuItem>
                                 <SidebarMenuButton className="justify-between">
@@ -236,7 +237,7 @@ export default function AdminPage() {
                 )}
                  
                  <SidebarMenuItem>
-                  <SidebarMenuButton href="/" tooltip="Reports">
+                  <SidebarMenuButton href="/inventory/reports" tooltip="Reports">
                     <BarChart />
                     <span>Reports</span>
                   </SidebarMenuButton>
@@ -533,4 +534,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
 

@@ -12,46 +12,43 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, Download, TrendingUp, Filter } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DateRangePicker } from "@/components/dashboard/DateRangePicker";
+
+const valuationData = [
+    { medicine: "Aspirin", price: 10, opening: 100, received: 50, sales: 30, balance: 120 },
+    { medicine: "Ibuprofen", price: 15.5, opening: 50, received: 10, sales: 40, balance: 20 },
+    { medicine: "Paracetamol", price: 5.75, opening: 200, received: 0, sales: 100, balance: 100 },
+    { medicine: "Amoxicillin", price: 55.2, opening: 60, received: 20, sales: 0, balance: 80 },
+    { medicine: "Atorvastatin", price: 45, opening: 150, received: 0, sales: 30, balance: 120 },
+];
 
 const stores = [
     { id: "store1", name: "Downtown Pharmacy" },
     { id: "store2", name: "Uptown Health" },
+    { id: "warehouse", name: "Main Warehouse" },
 ];
 
-const storeInventory = {
-    store1: [
-        { name: "Aspirin", quantity: 150, status: "In Stock" },
-        { name: "Ibuprofen", quantity: 20, status: "Low Stock" },
-        { name: "Paracetamol", quantity: 100, status: "In Stock" },
-    ],
-    store2: [
-        { name: "Amoxicillin", quantity: 80, status: "In Stock" },
-        { name: "Lisinopril", quantity: 120, status: "In Stock" },
-        { name: "Metformin", quantity: 0, status: "Out of Stock" },
-    ],
-};
 
-export default function StoreInventoryPage() {
+export default function ValuationReportPage() {
     const { user, logout, loading, hasPermission } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
-    const [selectedStore, setSelectedStore] = useState(stores[0].id);
 
     const sidebarRoutes = useMemo(() => {
         return allAppRoutes.filter(route => hasPermission(route.path) && route.path !== '/');
     }, [hasPermission]);
 
-    useEffect(() => {
+     useEffect(() => {
         if (!loading && !user) {
             router.push('/login');
         }
@@ -64,7 +61,7 @@ export default function StoreInventoryPage() {
             </div>
         );
     }
-    
+
     const getIcon = (name: string) => {
         switch (name) {
             case 'Dashboard': return <HomeIcon />;
@@ -81,8 +78,9 @@ export default function StoreInventoryPage() {
             default: return <LayoutGrid />;
         }
     };
-
+    
     const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory'));
+    const totalValuation = valuationData.reduce((acc, item) => acc + (item.balance * item.price), 0);
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -112,7 +110,7 @@ export default function StoreInventoryPage() {
                 ))}
 
                 {hasPermission('/inventory') && (
-                    <Collapsible className="w-full" defaultOpen={pathname.startsWith('/inventory')}>
+                    <Collapsible className="w-full" defaultOpen={true}>
                         <CollapsibleTrigger asChild>
                            <SidebarMenuItem>
                                 <SidebarMenuButton className="justify-between">
@@ -125,7 +123,7 @@ export default function StoreInventoryPage() {
                             </SidebarMenuItem>
                         </CollapsibleTrigger>
                         <CollapsibleContent>
-                             <SidebarMenu className="ml-7 mt-2 border-l pl-3">
+                            <SidebarMenu className="ml-7 mt-2 border-l pl-3">
                                 {stockManagementRoutes.map((route) => (
                                     <SidebarMenuItem key={route.path}>
                                         <SidebarMenuButton href={route.path} tooltip={route.name} size="sm" isActive={pathname === route.path}>
@@ -140,7 +138,7 @@ export default function StoreInventoryPage() {
                 )}
                  
                  <SidebarMenuItem>
-                  <SidebarMenuButton href="/inventory/reports" tooltip="Reports">
+                  <SidebarMenuButton href="/" tooltip="Reports">
                     <BarChart />
                     <span>Reports</span>
                   </SidebarMenuButton>
@@ -162,22 +160,22 @@ export default function StoreInventoryPage() {
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
            <SidebarTrigger className="sm:hidden" />
            <div className="flex w-full items-center justify-between">
-              <h1 className="text-xl font-semibold">Store Stock Status</h1>
+              <h1 className="text-xl font-semibold">Stock Valuation Report</h1>
               <ThemeToggle />
            </div>
         </header>
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
             <Card>
                 <CardHeader>
-                    <div className="flex justify-between items-center">
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                         <div>
-                            <CardTitle>View Store Inventory</CardTitle>
-                            <CardDescription>Select a store to view its current stock levels.</CardDescription>
+                            <CardTitle>Inventory Valuation</CardTitle>
+                            <CardDescription>Detailed report of stock movement and valuation.</CardDescription>
                         </div>
-                        <div className="w-64">
-                             <Select value={selectedStore} onValueChange={setSelectedStore}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select a store" />
+                         <div className="flex flex-wrap items-center gap-4">
+                            <Select defaultValue="store1">
+                                <SelectTrigger className="w-full sm:w-[200px]">
+                                    <SelectValue placeholder="Select Store" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {stores.map(store => (
@@ -185,6 +183,8 @@ export default function StoreInventoryPage() {
                                     ))}
                                 </SelectContent>
                             </Select>
+                            <DateRangePicker />
+                             <Button variant="outline"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
                         </div>
                     </div>
                 </CardHeader>
@@ -193,24 +193,32 @@ export default function StoreInventoryPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Medicine</TableHead>
-                                <TableHead className="text-right">Stock</TableHead>
-                                <TableHead className="text-right">Status</TableHead>
+                                <TableHead className="text-right">Opening Stock</TableHead>
+                                <TableHead className="text-right">Received</TableHead>
+                                <TableHead className="text-right">Sales</TableHead>
+                                <TableHead className="text-right font-semibold">Balance Stock</TableHead>
+                                <TableHead className="text-right font-bold">Valuation (₹)</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {storeInventory[selectedStore as keyof typeof storeInventory].map((item) => (
-                                <TableRow key={item.name}>
-                                    <TableCell className="font-medium">{item.name}</TableCell>
-                                    <TableCell className="text-right">{item.quantity}</TableCell>
-                                    <TableCell className="text-right">
-                                        <Badge variant={item.status === 'In Stock' ? 'default' : item.status === 'Low Stock' ? 'secondary' : 'destructive'}>
-                                            {item.status}
-                                        </Badge>
-                                    </TableCell>
+                            {valuationData.map((item) => (
+                                <TableRow key={item.medicine}>
+                                    <TableCell className="font-medium">{item.medicine}</TableCell>
+                                    <TableCell className="text-right">{item.opening}</TableCell>
+                                    <TableCell className="text-right">{item.received}</TableCell>
+                                    <TableCell className="text-right">{item.sales}</TableCell>
+                                    <TableCell className="text-right font-semibold">{item.balance}</TableCell>
+                                    <TableCell className="text-right font-bold">{(item.balance * item.price).toFixed(2)}</TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
                     </Table>
+                     <div className="mt-6 flex justify-between items-center">
+                        <Button size="sm" variant="outline"><Download className="mr-2" /> Download Report</Button>
+                        <div className="text-right">
+                            <p className="text-lg font-bold">Total Stock Valuation: ₹{totalValuation.toFixed(2)}</p>
+                        </div>
+                    </div>
                 </CardContent>
             </Card>
         </main>
@@ -219,4 +227,3 @@ export default function StoreInventoryPage() {
   );
 }
 
-    

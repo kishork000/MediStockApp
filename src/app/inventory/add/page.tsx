@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, Warehouse, GitBranch, LogOut, ChevronDown } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, Warehouse, GitBranch, LogOut, ChevronDown, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -28,6 +28,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 export default function AddMedicinePage() {
   const { user, logout, loading, hasPermission } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   const sidebarRoutes = useMemo(() => {
       return allAppRoutes.filter(route => hasPermission(route.path) && route.path !== '/');
@@ -57,6 +58,7 @@ export default function AddMedicinePage() {
           case 'Add Medicine': return <PlusSquare />;
           case 'Stock Transfer': return <GitBranch />;
           case 'Stock Reports': return <BarChart />;
+          case 'Valuation Report': return <TrendingUp />;
           case 'Diseases': return <Activity />;
           case 'Admin': return <Settings />;
           default: return <LayoutGrid />;
@@ -85,7 +87,7 @@ export default function AddMedicinePage() {
                 
                 {sidebarRoutes.filter(r => !r.path.startsWith('/inventory') && r.inSidebar).map((route) => (
                     <SidebarMenuItem key={route.path}>
-                        <SidebarMenuButton href={route.path} tooltip={route.name}>
+                        <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}>
                             {getIcon(route.name)}
                             <span>{route.name}</span>
                         </SidebarMenuButton>
@@ -93,7 +95,7 @@ export default function AddMedicinePage() {
                 ))}
 
                 {hasPermission('/inventory') && (
-                    <Collapsible className="w-full" defaultOpen={true}>
+                    <Collapsible className="w-full" defaultOpen={pathname.startsWith('/inventory')}>
                         <CollapsibleTrigger asChild>
                            <SidebarMenuItem>
                                 <SidebarMenuButton className="justify-between">
@@ -109,7 +111,7 @@ export default function AddMedicinePage() {
                              <SidebarMenu className="ml-7 mt-2 border-l pl-3">
                                 {stockManagementRoutes.map((route) => (
                                     <SidebarMenuItem key={route.path}>
-                                        <SidebarMenuButton href={route.path} tooltip={route.name} size="sm" isActive={router.pathname === route.path}>
+                                        <SidebarMenuButton href={route.path} tooltip={route.name} size="sm" isActive={pathname === route.path}>
                                             {getIcon(route.name)}
                                             <span>{route.name}</span>
                                         </SidebarMenuButton>
@@ -121,7 +123,7 @@ export default function AddMedicinePage() {
                 )}
                  
                  <SidebarMenuItem>
-                  <SidebarMenuButton href="/" tooltip="Reports">
+                  <SidebarMenuButton href="/inventory/reports" tooltip="Reports">
                     <BarChart />
                     <span>Reports</span>
                   </SidebarMenuButton>

@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Trash2, PlusCircle, Activity, Printer, Settings, GitBranch, Search, Undo, LogOut, ChevronDown, Warehouse } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Trash2, PlusCircle, Activity, Printer, Settings, GitBranch, Search, Undo, LogOut, ChevronDown, Warehouse, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -312,6 +312,7 @@ export default function SalesPage() {
             case 'Add Medicine': return <PlusSquare />;
             case 'Stock Transfer': return <GitBranch />;
             case 'Stock Reports': return <BarChart />;
+            case 'Valuation Report': return <TrendingUp />;
             case 'Diseases': return <Activity />;
             case 'Admin': return <Settings />;
             default: return <LayoutGrid />;
@@ -349,7 +350,7 @@ export default function SalesPage() {
                 ))}
 
                 {hasPermission('/inventory') && (
-                    <Collapsible className="w-full">
+                    <Collapsible className="w-full" defaultOpen={pathname.startsWith('/inventory')}>
                         <CollapsibleTrigger asChild>
                            <SidebarMenuItem>
                                 <SidebarMenuButton className="justify-between">
@@ -377,7 +378,7 @@ export default function SalesPage() {
                 )}
                  
                  <SidebarMenuItem>
-                  <SidebarMenuButton href="/" tooltip="Reports">
+                  <SidebarMenuButton href="/inventory/reports" tooltip="Reports">
                     <BarChart />
                     <span>Reports</span>
                   </SidebarMenuButton>
@@ -727,3 +728,4 @@ export default function SalesPage() {
     </div>
   );
 }
+

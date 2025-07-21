@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, ArrowRightLeft, Undo2, PlusCircle, Trash2, LogOut, ChevronDown, Warehouse } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, ArrowRightLeft, Undo2, PlusCircle, Trash2, LogOut, ChevronDown, Warehouse, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -49,6 +49,7 @@ const storeOptions = [
 export default function StockTransferPage() {
     const { user, logout, loading, hasPermission } = useAuth();
     const router = useRouter();
+    const pathname = usePathname();
     const [activeTab, setActiveTab] = useState("transfer");
     
     // State for Transfer
@@ -128,6 +129,7 @@ export default function StockTransferPage() {
             case 'Add Medicine': return <PlusSquare />;
             case 'Stock Transfer': return <GitBranch />;
             case 'Stock Reports': return <BarChart />;
+            case 'Valuation Report': return <TrendingUp />;
             case 'Diseases': return <Activity />;
             case 'Admin': return <Settings />;
             default: return <LayoutGrid />;
@@ -156,7 +158,7 @@ export default function StockTransferPage() {
                 
                 {sidebarRoutes.filter(r => !r.path.startsWith('/inventory') && r.inSidebar).map((route) => (
                     <SidebarMenuItem key={route.path}>
-                        <SidebarMenuButton href={route.path} tooltip={route.name}>
+                        <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}>
                             {getIcon(route.name)}
                             <span>{route.name}</span>
                         </SidebarMenuButton>
@@ -164,7 +166,7 @@ export default function StockTransferPage() {
                 ))}
 
                 {hasPermission('/inventory') && (
-                    <Collapsible className="w-full" defaultOpen={true}>
+                    <Collapsible className="w-full" defaultOpen={pathname.startsWith('/inventory')}>
                         <CollapsibleTrigger asChild>
                            <SidebarMenuItem>
                                 <SidebarMenuButton className="justify-between">
@@ -180,7 +182,7 @@ export default function StockTransferPage() {
                              <SidebarMenu className="ml-7 mt-2 border-l pl-3">
                                 {stockManagementRoutes.map((route) => (
                                     <SidebarMenuItem key={route.path}>
-                                        <SidebarMenuButton href={route.path} tooltip={route.name} size="sm" isActive={router.pathname === route.path}>
+                                        <SidebarMenuButton href={route.path} tooltip={route.name} size="sm" isActive={pathname === route.path}>
                                             {getIcon(route.name)}
                                             <span>{route.name}</span>
                                         </SidebarMenuButton>
@@ -192,7 +194,7 @@ export default function StockTransferPage() {
                 )}
                  
                  <SidebarMenuItem>
-                  <SidebarMenuButton href="/" tooltip="Reports">
+                  <SidebarMenuButton href="/inventory/reports" tooltip="Reports">
                     <BarChart />
                     <span>Reports</span>
                   </SidebarMenuButton>

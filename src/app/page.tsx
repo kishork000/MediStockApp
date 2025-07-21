@@ -11,7 +11,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { DollarSign, Home as HomeIcon, LayoutGrid, Package, Users, CreditCard, ShoppingCart, BarChart, Pill, Download, PlusSquare, Users2, Activity, Settings, GitBranch, LogOut } from "lucide-react";
+import { DollarSign, Home as HomeIcon, LayoutGrid, Package, Users, CreditCard, ShoppingCart, BarChart, Pill, Download, PlusSquare, Users2, Activity, Settings, GitBranch, LogOut, TrendingUp, Warehouse } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import type { DashboardData } from "./dashboard/types";
 import StatCard from "@/components/dashboard/StatCard";
@@ -25,7 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MoreHorizontal } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { allAppRoutes, AppRoute } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
@@ -61,6 +61,7 @@ export default function Home() {
   const [data, setData] = useState<any[]>([]);
   const { user, logout, loading, hasPermission } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   const sidebarRoutes = useMemo(() => {
     return allAppRoutes.filter(route => hasPermission(route.path) && route.path !== '/');
@@ -102,11 +103,12 @@ export default function Home() {
         case 'Dashboard': return <HomeIcon />;
         case 'Patients': return <Users2 />;
         case 'Sales': return <ShoppingCart />;
-        case 'Warehouse Stock': return <Package />;
+        case 'Warehouse Stock': return <Warehouse />;
         case 'Store Stock': return <Package />;
         case 'Add Medicine': return <PlusSquare />;
         case 'Stock Transfer': return <GitBranch />;
         case 'Stock Reports': return <BarChart />;
+        case 'Valuation Report': return <TrendingUp />;
         case 'Diseases': return <Activity />;
         case 'Admin': return <Settings />;
         default: return <LayoutGrid />;
@@ -136,7 +138,7 @@ export default function Home() {
                 
                 {sidebarRoutes.filter(r => !r.path.startsWith('/inventory') && r.inSidebar).map((route) => (
                     <SidebarMenuItem key={route.path}>
-                        <SidebarMenuButton href={route.path} tooltip={route.name}>
+                        <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}>
                             {getIcon(route.name)}
                             <span>{route.name}</span>
                         </SidebarMenuButton>
@@ -144,7 +146,7 @@ export default function Home() {
                 ))}
 
                 {hasPermission('/inventory') && (
-                    <Collapsible className="w-full">
+                    <Collapsible className="w-full" defaultOpen={pathname.startsWith('/inventory')}>
                         <CollapsibleTrigger asChild>
                             <SidebarMenuItem>
                                 <SidebarMenuButton className="justify-between">
@@ -160,7 +162,7 @@ export default function Home() {
                             <SidebarMenu className="ml-7 mt-2 border-l pl-3">
                                 {stockManagementRoutes.map((route) => (
                                     <SidebarMenuItem key={route.path}>
-                                        <SidebarMenuButton href={route.path} tooltip={route.name} size="sm">
+                                        <SidebarMenuButton href={route.path} tooltip={route.name} size="sm" isActive={pathname === route.path}>
                                             {getIcon(route.name)}
                                             <span>{route.name}</span>
                                         </SidebarMenuButton>
@@ -172,7 +174,7 @@ export default function Home() {
                 )}
                  
                  <SidebarMenuItem>
-                  <SidebarMenuButton href="/" tooltip="Reports">
+                  <SidebarMenuButton href="/inventory/reports" tooltip="Reports">
                     <BarChart />
                     <span>Reports</span>
                   </SidebarMenuButton>
