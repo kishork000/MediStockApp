@@ -349,81 +349,76 @@ export default function SalesPage() {
                  <TabsList> <TabsTrigger value="new-sale">New Sale</TabsTrigger> <TabsTrigger value="return-refund">Return & Refund</TabsTrigger> <TabsTrigger value="blind-return">Blind Return</TabsTrigger> </TabsList>
 
                 <TabsContent value="new-sale">
-                    <Card>
-                        <CardHeader> <CardTitle>New Sale</CardTitle> <CardDescription>Add patient and medicine details to record a new sale.</CardDescription> </CardHeader>
-                        <CardContent>
-                            <form onSubmit={handleRecordSale} className="space-y-6">
-                                <Card>
-                                    <CardHeader> <CardTitle>Patient Information</CardTitle> </CardHeader>
-                                    <CardContent className="space-y-4">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="space-y-2"> <Label htmlFor="name">Patient Name</Label> <Input id="name" placeholder="John Doe" value={patientForm.name} onChange={handlePatientFormChange} required /> </div>
-                                            <div className="space-y-2"> <Label htmlFor="mobile">Mobile Number</Label> <div className="flex gap-2"> <Input id="mobile" type="tel" placeholder="9876543210" value={patientForm.mobile} onChange={handlePatientFormChange} required /> <Button type="button" variant="outline" onClick={handleSearchPatient}> <Search className="h-4 w-4" /> <span className="sr-only">Search</span> </Button> </div> </div>
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="space-y-2"> <Label htmlFor="age">Age</Label> <Input id="age" type="number" placeholder="42" value={patientForm.age} onChange={handlePatientFormChange} /> </div>
-                                            <div className="space-y-2"> <Label htmlFor="gender">Gender</Label> <Select value={patientForm.gender} onValueChange={handlePatientSelectChange}> <SelectTrigger id="gender"> <SelectValue placeholder="Select gender" /> </SelectTrigger> <SelectContent> <SelectItem value="Male">Male</SelectItem> <SelectItem value="Female">Female</SelectItem> <SelectItem value="Other">Other</SelectItem> </SelectContent> </Select> </div>
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="space-y-2"> <Label htmlFor="bp">Blood Pressure (BP)</Label> <Input id="bp" placeholder="e.g., 120/80" value={patientForm.bp} onChange={handlePatientFormChange}/> </div>
-                                            <div className="space-y-2"> <Label htmlFor="sugar">Blood Sugar</Label> <Input id="sugar" placeholder="e.g., 98 mg/dL" value={patientForm.sugar} onChange={handlePatientFormChange}/> </div>
-                                        </div>
-                                        <div className="space-y-2"> <Label htmlFor="address">Address</Label> <Textarea id="address" placeholder="123 Main St, Anytown..." value={patientForm.address} onChange={handlePatientFormChange}/> </div>
-                                        <div className="space-y-2">
-                                            <Label>Disease(s)</Label>
-                                            <Popover>
-                                                <PopoverTrigger className="w-full">
-                                                    <Button variant="outline" className="w-full justify-start font-normal">
-                                                        <span>{diseaseButtonText}</span>
-                                                    </Button>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-56 p-0">
-                                                    <div className="space-y-2 p-2">
-                                                        {diseaseOptions.map(disease => (
-                                                        <div key={disease.id} className="flex items-center space-x-2">
-                                                            <Checkbox id={disease.id} checked={selectedDiseases.includes(disease.id)} onCheckedChange={() => handleDiseaseSelection(disease.id)} />
-                                                            <Label htmlFor={disease.id} className="font-normal">{disease.label}</Label>
-                                                        </div>
-                                                        ))}
-                                                    </div>
-                                                </PopoverContent>
-                                            </Popover>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                                
-                                <div className="p-4 border rounded-lg space-y-4">
-                                    <h3 className="font-semibold">Add Medicine to Sale</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <div className="space-y-2"> <Label htmlFor="medicine">Medicine</Label> <Select value={currentItem.medicine} onValueChange={(value) => setCurrentItem({...currentItem, medicine: value})}> <SelectTrigger id="medicine"> <SelectValue placeholder="Select a medicine" /> </SelectTrigger> <SelectContent> {medicineOptions.map(med => ( <SelectItem key={med.value} value={med.value} disabled={med.stock <= 0}>{med.label} (Stock: {med.stock})</SelectItem> ))} </SelectContent> </Select> </div>
-                                            <div className="space-y-2"> <Label htmlFor="quantity">Quantity</Label> <Input id="quantity" type="number" placeholder="1" value={currentItem.quantity} onChange={(e) => setCurrentItem({...currentItem, quantity: parseInt(e.target.value, 10) || 1})} min="1"/> </div>
-                                        </div>
-                                        <div className="flex items-end"> <Button type="button" onClick={handleAddItem} className="w-full"> <PlusCircle className="mr-2" /> Add Item </Button> </div>
-                                    </div>
+                    <form onSubmit={handleRecordSale} className="space-y-6">
+                        <Card>
+                            <CardHeader> <CardTitle>Patient Information</CardTitle> </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2"> <Label htmlFor="name">Patient Name</Label> <Input id="name" placeholder="John Doe" value={patientForm.name} onChange={handlePatientFormChange} required /> </div>
+                                    <div className="space-y-2"> <Label htmlFor="mobile">Mobile Number</Label> <div className="flex gap-2"> <Input id="mobile" type="tel" placeholder="9876543210" value={patientForm.mobile} onChange={handlePatientFormChange} required /> <Button type="button" variant="outline" onClick={handleSearchPatient}> <Search className="h-4 w-4" /> <span className="sr-only">Search</span> </Button> </div> </div>
                                 </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2"> <Label htmlFor="age">Age</Label> <Input id="age" type="number" placeholder="42" value={patientForm.age} onChange={handlePatientFormChange} /> </div>
+                                    <div className="space-y-2"> <Label htmlFor="gender">Gender</Label> <Select value={patientForm.gender} onValueChange={handlePatientSelectChange}> <SelectTrigger id="gender"> <SelectValue placeholder="Select gender" /> </SelectTrigger> <SelectContent> <SelectItem value="Male">Male</SelectItem> <SelectItem value="Female">Female</SelectItem> <SelectItem value="Other">Other</SelectItem> </SelectContent> </Select> </div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2"> <Label htmlFor="bp">Blood Pressure (BP)</Label> <Input id="bp" placeholder="e.g., 120/80" value={patientForm.bp} onChange={handlePatientFormChange}/> </div>
+                                    <div className="space-y-2"> <Label htmlFor="sugar">Blood Sugar</Label> <Input id="sugar" placeholder="e.g., 98 mg/dL" value={patientForm.sugar} onChange={handlePatientFormChange}/> </div>
+                                </div>
+                                <div className="space-y-2"> <Label htmlFor="address">Address</Label> <Textarea id="address" placeholder="123 Main St, Anytown..." value={patientForm.address} onChange={handlePatientFormChange}/> </div>
+                                <div className="space-y-2">
+                                    <Label>Disease(s)</Label>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant="outline" className="w-full justify-start font-normal">
+                                                <span>{diseaseButtonText}</span>
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-56 p-0">
+                                            <div className="space-y-2 p-2">
+                                                {diseaseOptions.map(disease => (
+                                                <div key={disease.id} className="flex items-center space-x-2">
+                                                    <Checkbox id={disease.id} checked={selectedDiseases.includes(disease.id)} onCheckedChange={() => handleDiseaseSelection(disease.id)} />
+                                                    <Label htmlFor={disease.id} className="font-normal">{disease.label}</Label>
+                                                </div>
+                                                ))}
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
+                                </div>
+                            </CardContent>
+                        </Card>
+                        
+                        <div className="p-4 border rounded-lg space-y-4">
+                            <h3 className="font-semibold">Add Medicine to Sale</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="space-y-2"> <Label htmlFor="medicine">Medicine</Label> <Select value={currentItem.medicine} onValueChange={(value) => setCurrentItem({...currentItem, medicine: value})}> <SelectTrigger id="medicine"> <SelectValue placeholder="Select a medicine" /> </SelectTrigger> <SelectContent> {medicineOptions.map(med => ( <SelectItem key={med.value} value={med.value} disabled={med.stock <= 0}>{med.label} (Stock: {med.stock})</SelectItem> ))} </SelectContent> </Select> </div>
+                                    <div className="space-y-2"> <Label htmlFor="quantity">Quantity</Label> <Input id="quantity" type="number" placeholder="1" value={currentItem.quantity} onChange={(e) => setCurrentItem({...currentItem, quantity: parseInt(e.target.value, 10) || 1})} min="1"/> </div>
+                                </div>
+                                <div className="flex items-end"> <Button type="button" onClick={handleAddItem} className="w-full"> <PlusCircle className="mr-2" /> Add Item </Button> </div>
+                            </div>
+                        </div>
 
-                                {saleItems.length > 0 && (
-                                    <Card>
-                                        <CardHeader> <CardTitle>Current Sale Items</CardTitle> </CardHeader>
-                                        <CardContent>
-                                            <Table>
-                                                <TableHeader> <TableRow> <TableHead>Medicine</TableHead> <TableHead className="text-center">Quantity</TableHead> <TableHead className="text-right">Price (₹)</TableHead> <TableHead className="text-center">GST (%)</TableHead> <TableHead className="text-right">Total (₹)</TableHead> <TableHead>Action</TableHead> </TableRow> </TableHeader>
-                                                <TableBody>
-                                                    {saleItems.map(item => { const hasInsufficientStock = item.quantity > item.stock;
-                                                        return ( <TableRow key={item.id} className={cn(hasInsufficientStock && "bg-destructive/20")}> <TableCell> {item.medicine} {hasInsufficientStock && <p className="text-xs text-destructive">Stock: {item.stock}</p>} </TableCell> <TableCell className="text-center">{item.quantity}</TableCell> <TableCell className="text-right">{item.price.toFixed(2)}</TableCell> <TableCell className="text-center">{item.gst}%</TableCell> <TableCell className="text-right">{item.total.toFixed(2)}</TableCell> <TableCell> <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}> <Trash2 className="h-4 w-4 text-destructive" /> </Button> </TableCell> </TableRow> )
-                                                    })}
-                                                </TableBody>
-                                            </Table>
-                                            <div className="mt-4 pt-4 border-t space-y-2 text-right"> <p className="font-semibold">Subtotal: <span className="font-normal">₹{subtotal.toFixed(2)}</span></p> <p className="font-semibold">Total GST: <span className="font-normal">₹{totalGst.toFixed(2)}</span></p> <p className="text-lg font-bold">Grand Total: <span className="font-bold">₹{grandTotal.toFixed(2)}</span></p> </div>
-                                        </CardContent>
-                                    </Card>
-                                )}
-                                
-                                <div className="flex justify-end gap-2"> <Button type="submit" disabled={!isSaleValid}> Record Sale & Proceed to Payment </Button> </div>
-                            </form>
-                        </CardContent>
-                    </Card>
+                        {saleItems.length > 0 && (
+                            <Card>
+                                <CardHeader> <CardTitle>Current Sale Items</CardTitle> </CardHeader>
+                                <CardContent>
+                                    <Table>
+                                        <TableHeader> <TableRow> <TableHead>Medicine</TableHead> <TableHead className="text-center">Quantity</TableHead> <TableHead className="text-right">Price (₹)</TableHead> <TableHead className="text-center">GST (%)</TableHead> <TableHead className="text-right">Total (₹)</TableHead> <TableHead>Action</TableHead> </TableRow> </TableHeader>
+                                        <TableBody>
+                                            {saleItems.map(item => { const hasInsufficientStock = item.quantity > item.stock;
+                                                return ( <TableRow key={item.id} className={cn(hasInsufficientStock && "bg-destructive/20")}> <TableCell> {item.medicine} {hasInsufficientStock && <p className="text-xs text-destructive">Stock: {item.stock}</p>} </TableCell> <TableCell className="text-center">{item.quantity}</TableCell> <TableCell className="text-right">{item.price.toFixed(2)}</TableCell> <TableCell className="text-center">{item.gst}%</TableCell> <TableCell className="text-right">{item.total.toFixed(2)}</TableCell> <TableCell> <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}> <Trash2 className="h-4 w-4 text-destructive" /> </Button> </TableCell> </TableRow> )
+                                            })}
+                                        </TableBody>
+                                    </Table>
+                                    <div className="mt-4 pt-4 border-t space-y-2 text-right"> <p className="font-semibold">Subtotal: <span className="font-normal">₹{subtotal.toFixed(2)}</span></p> <p className="font-semibold">Total GST: <span className="font-normal">₹{totalGst.toFixed(2)}</span></p> <p className="text-lg font-bold">Grand Total: <span className="font-bold">₹{grandTotal.toFixed(2)}</span></p> </div>
+                                </CardContent>
+                            </Card>
+                        )}
+                        
+                        <div className="flex justify-end gap-2"> <Button type="submit" disabled={!isSaleValid}> Record Sale & Proceed to Payment </Button> </div>
+                    </form>
                 </TabsContent>
 
                 <TabsContent value="return-refund">
