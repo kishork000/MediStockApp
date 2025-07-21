@@ -229,18 +229,18 @@ export default function StoreInventoryPage() {
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
             <Card>
                 <CardHeader>
-                     <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                        <div>
+                     <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
+                        <div className="flex-shrink-0">
                             <CardTitle>View Store Inventory</CardTitle>
                             <CardDescription>Select a store to view its current stock levels.</CardDescription>
                         </div>
-                        <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+                        <div className="grid w-full gap-2 sm:grid-cols-2 md:w-auto md:flex md:flex-row">
                              <Select 
                                 value={selectedStore} 
                                 onValueChange={setSelectedStore}
                                 disabled={user?.role === 'Pharmacist' && availableStores.length === 1}
                              >
-                                <SelectTrigger className="w-full sm:w-[200px]">
+                                <SelectTrigger className="w-full md:w-[200px]">
                                     <SelectValue placeholder="Select a store" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -253,7 +253,7 @@ export default function StoreInventoryPage() {
                                 value={selectedMedicine}
                                 onValueChange={setSelectedMedicine}
                             >
-                                <SelectTrigger className="w-full sm:w-[200px]">
+                                <SelectTrigger className="w-full md:w-[200px]">
                                     <SelectValue placeholder="Select Medicine" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -262,7 +262,7 @@ export default function StoreInventoryPage() {
                                     ))}
                                 </SelectContent>
                             </Select>
-                             <DateRangePicker date={dateRange} setDate={setDateRange} />
+                             <DateRangePicker date={dateRange} setDate={setDateRange} className="w-full md:w-auto" />
                         </div>
                     </div>
                 </CardHeader>
@@ -272,9 +272,9 @@ export default function StoreInventoryPage() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Medicine</TableHead>
-                                    <TableHead className="text-right">Open</TableHead>
-                                    <TableHead className="text-right">Rcvd</TableHead>
-                                    <TableHead className="text-right">Sold</TableHead>
+                                    <TableHead className="text-right hidden sm:table-cell">Open</TableHead>
+                                    <TableHead className="text-right hidden sm:table-cell">Rcvd</TableHead>
+                                    <TableHead className="text-right hidden sm:table-cell">Sold</TableHead>
                                     <TableHead className="text-right font-bold">Avail</TableHead>
                                     <TableHead className="text-right">Status</TableHead>
                                 </TableRow>
@@ -285,9 +285,9 @@ export default function StoreInventoryPage() {
                                     return (
                                     <TableRow key={item.name}>
                                         <TableCell className="font-medium">{item.name}</TableCell>
-                                        <TableCell className="text-right">{item.opening}</TableCell>
-                                        <TableCell className="text-right">{item.received}</TableCell>
-                                        <TableCell className="text-right">{item.sales}</TableCell>
+                                        <TableCell className="text-right hidden sm:table-cell">{item.opening}</TableCell>
+                                        <TableCell className="text-right hidden sm:table-cell">{item.received}</TableCell>
+                                        <TableCell className="text-right hidden sm:table-cell">{item.sales}</TableCell>
                                         <TableCell className="text-right font-bold">{item.quantity}</TableCell>
                                         <TableCell className="text-right">
                                             <Badge variant={status === 'In Stock' ? 'default' : status === 'Low Stock' ? 'secondary' : 'destructive'}>
@@ -312,3 +312,4 @@ export default function StoreInventoryPage() {
     </div>
   );
 }
+
