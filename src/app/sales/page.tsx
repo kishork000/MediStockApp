@@ -116,6 +116,7 @@ export default function SalesPage() {
   const [currentItem, setCurrentItem] = useState({ medicine: "", quantity: 1 });
   const [selectedDiseases, setSelectedDiseases] = useState<string[]>([]);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [printSize, setPrintSize] = useState("80mm");
   
   // Patient form state
   const [patientForm, setPatientForm] = useState({
@@ -323,7 +324,8 @@ export default function SalesPage() {
 
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-muted/40">
+    <>
+    <div className="flex min-h-screen w-full flex-col bg-muted/40 print:hidden">
       <Sidebar>
           <SidebarHeader>
             <SidebarMenuButton className="pointer-events-none">
@@ -397,7 +399,7 @@ export default function SalesPage() {
           </SidebarFooter>
       </Sidebar>
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 print:hidden">
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
            <SidebarTrigger className="sm:hidden" />
            <div className="flex-1">
              <h1 className="text-xl font-semibold">Sales & Returns</h1>
@@ -418,23 +420,23 @@ export default function SalesPage() {
                 <ThemeToggle />
            </div>
         </header>
-        <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 print:p-0">
+        <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                 <TabsList className="print:hidden">
+                 <TabsList>
                     <TabsTrigger value="new-sale">New Sale</TabsTrigger>
                     <TabsTrigger value="return-refund">Return & Refund</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="new-sale">
-                    <Card className="print:shadow-none print:border-none">
-                        <CardHeader className="print:hidden">
+                    <Card>
+                        <CardHeader>
                             <CardTitle>New Sale</CardTitle>
                             <CardDescription>Add patient and medicine details to record a new sale.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <form onSubmit={handleRecordSale} className="space-y-6">
                                 
-                                <Card className="print:hidden">
+                                <Card>
                                     <CardHeader>
                                         <CardTitle>Patient Information</CardTitle>
                                     </CardHeader>
@@ -515,7 +517,7 @@ export default function SalesPage() {
                                     </CardContent>
                                 </Card>
                                 
-                                <div className="p-4 border rounded-lg space-y-4 print:hidden">
+                                <div className="p-4 border rounded-lg space-y-4">
                                     <h3 className="font-semibold">Add Medicine to Sale</h3>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                         <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -548,14 +550,7 @@ export default function SalesPage() {
                                 {saleItems.length > 0 && (
                                     <Card>
                                         <CardHeader>
-                                            <div className="hidden print:block text-center mb-4">
-                                                <h2 className="text-xl font-bold">{companyInfo.name}</h2>
-                                                <p className="text-sm">{companyInfo.address}</p>
-                                                <p className="text-sm font-semibold">GSTIN: {companyInfo.gstin}</p>
-                                                <hr className="my-2" />
-                                                <h3 className="text-lg font-semibold">Tax Invoice</h3>
-                                            </div>
-                                            <CardTitle className="print:hidden">Current Sale Items</CardTitle>
+                                            <CardTitle>Current Sale Items</CardTitle>
                                         </CardHeader>
                                         <CardContent>
                                             <Table>
@@ -566,7 +561,7 @@ export default function SalesPage() {
                                                         <TableHead className="text-right">Price (₹)</TableHead>
                                                         <TableHead className="text-center">GST (%)</TableHead>
                                                         <TableHead className="text-right">Total (₹)</TableHead>
-                                                        <TableHead className="print:hidden">Action</TableHead>
+                                                        <TableHead>Action</TableHead>
                                                     </TableRow>
                                                 </TableHeader>
                                                 <TableBody>
@@ -582,7 +577,7 @@ export default function SalesPage() {
                                                                 <TableCell className="text-right">{item.price.toFixed(2)}</TableCell>
                                                                 <TableCell className="text-center">{item.gst}%</TableCell>
                                                                 <TableCell className="text-right">{item.total.toFixed(2)}</TableCell>
-                                                                <TableCell className="print:hidden">
+                                                                <TableCell>
                                                                     <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}>
                                                                         <Trash2 className="h-4 w-4 text-destructive" />
                                                                     </Button>
@@ -601,7 +596,7 @@ export default function SalesPage() {
                                     </Card>
                                 )}
                                 
-                                <div className="flex justify-end gap-2 print:hidden">
+                                <div className="flex justify-end gap-2">
                                     <Button type="submit" disabled={!isSaleValid}>
                                         Record Sale & Proceed to Payment
                                     </Button>
@@ -683,7 +678,7 @@ export default function SalesPage() {
             </Tabs>
 
             <Dialog open={paymentModalOpen} onOpenChange={setPaymentModalOpen}>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle>Complete Payment</DialogTitle>
                         <DialogDescription>
@@ -696,21 +691,47 @@ export default function SalesPage() {
                             <TabsTrigger value="online">Online</TabsTrigger>
                         </TabsList>
                         <TabsContent value="cash">
-                           <div className="py-4 text-center">
-                                <p className="text-sm text-muted-foreground mb-4">Confirm cash payment and print the invoice.</p>
+                           <div className="py-4 text-center space-y-4">
+                                <p className="text-sm text-muted-foreground">Confirm cash payment and print the invoice.</p>
+                                <div className="flex justify-center items-center gap-4">
+                                     <Label htmlFor="print-size-cash">Paper Size</Label>
+                                    <Select value={printSize} onValueChange={setPrintSize}>
+                                        <SelectTrigger id="print-size-cash" className="w-[120px]">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="57mm">57mm</SelectItem>
+                                            <SelectItem value="80mm">80mm</SelectItem>
+                                            <SelectItem value="112mm">112mm</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                                 <Button onClick={handlePrint}>
                                     <Printer className="mr-2 h-4 w-4" /> Print Invoice
                                 </Button>
                            </div>
                         </TabsContent>
                         <TabsContent value="online">
-                            <div className="py-4 text-center">
-                                <p className="text-sm text-muted-foreground mb-4">Scan the QR code to complete the payment.</p>
-                                <div className="flex justify-center mb-4">
-                                     <Image src="https://placehold.co/200x200.png" alt="QR Code" width={200} height={200} data-ai-hint="qr code" />
+                            <div className="py-4 text-center space-y-4">
+                                <p className="text-sm text-muted-foreground">Scan the QR code to complete the payment.</p>
+                                <div className="flex justify-center">
+                                     <Image src="https://placehold.co/200x200.png" alt="QR Code" width={150} height={150} data-ai-hint="qr code" />
+                                </div>
+                                 <div className="flex justify-center items-center gap-4">
+                                     <Label htmlFor="print-size-online">Paper Size</Label>
+                                    <Select value={printSize} onValueChange={setPrintSize}>
+                                        <SelectTrigger id="print-size-online" className="w-[120px]">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="57mm">57mm</SelectItem>
+                                            <SelectItem value="80mm">80mm</SelectItem>
+                                            <SelectItem value="112mm">112mm</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                                 <Button onClick={handlePrint}>
-                                    <Printer className="mr-2 h-4 w-4" /> Confirm Payment & Print
+                                    <Printer className="mr-2 h-4 w-4" /> Confirm & Print
                                 </Button>
                            </div>
                         </TabsContent>
@@ -726,6 +747,53 @@ export default function SalesPage() {
         </main>
       </div>
     </div>
+    <div id="invoice-print-area" className={cn("hidden print:block p-2", `print-${printSize}`)}>
+        <div className="text-center mb-2">
+            <h2 className="font-bold text-sm">{companyInfo.name}</h2>
+            <p className="text-xs">{companyInfo.address}</p>
+            <p className="text-xs font-semibold">GSTIN: {companyInfo.gstin}</p>
+            <hr className="my-1 border-dashed border-black" />
+            <h3 className="font-semibold">Tax Invoice</h3>
+        </div>
+        <div className="text-xs mb-2">
+            <p><strong>Patient:</strong> {patientForm.name}</p>
+            <p><strong>Mobile:</strong> {patientForm.mobile}</p>
+            <p><strong>Invoice No:</strong> SALE-{(Math.random() * 10000).toFixed(0)}</p>
+            <p><strong>Date:</strong> {new Date().toLocaleString()}</p>
+        </div>
+        <table className="w-full text-xs">
+            <thead>
+                <tr className="border-t border-b border-dashed border-black">
+                    <th className="text-left py-1">Item</th>
+                    <th className="text-center">Qty</th>
+                    <th className="text-right">Price</th>
+                    <th className="text-right">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {saleItems.map(item => (
+                    <tr key={item.id}>
+                        <td className="py-0.5">{item.medicine}</td>
+                        <td className="text-center">{item.quantity}</td>
+                        <td className="text-right">{item.price.toFixed(2)}</td>
+                        <td className="text-right">{item.total.toFixed(2)}</td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+        <hr className="my-1 border-dashed border-black" />
+        <div className="text-xs text-right space-y-0.5">
+            <p>Subtotal: {subtotal.toFixed(2)}</p>
+            <p>Total GST: {totalGst.toFixed(2)}</p>
+            <p className="font-bold text-sm">Grand Total: {grandTotal.toFixed(2)}</p>
+        </div>
+         <div className="text-center mt-2 text-xs">
+            <p>Thank you for your visit!</p>
+            <p>Get well soon.</p>
+        </div>
+    </div>
+    </>
   );
 }
+
 
