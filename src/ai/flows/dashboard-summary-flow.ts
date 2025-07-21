@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A flow for generating a dashboard summary.
@@ -22,7 +23,7 @@ Stock Availability: {{{stockAvailability}}} ({{{stockChange}}})
 
 Monthly Sales Overview:
 {{#each overview}}
-- {{name}}: {{{total}}}
+- {{this.name}}: {{{this.total}}}
 {{/each}}
 `,
 });
