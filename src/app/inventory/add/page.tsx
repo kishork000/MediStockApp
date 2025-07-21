@@ -344,7 +344,7 @@ export default function AddStockPage() {
                                                     <TableHead className="min-w-[250px]">Medicine</TableHead>
                                                     <TableHead className="w-[100px]">Quantity</TableHead>
                                                     <TableHead className="w-[150px]">Price/Unit (₹)</TableHead>
-                                                    <TableHead className="w-[150px]">Expiry (Optional)</TableHead>
+                                                    <TableHead className="w-[150px]">Expiry</TableHead>
                                                     <TableHead className="w-[50px]"></TableHead>
                                                 </TableRow>
                                             </TableHeader>
@@ -380,21 +380,23 @@ export default function AddStockPage() {
                                     </div>
                                 )}
                                 
-                                {purchaseItems.length > 0 && (
-                                    <div className="text-right">
-                                        <p className="text-lg font-bold">Total Invoice Amount: ₹{totalInvoiceValue.toFixed(2)}</p>
+                                <div className="space-y-4">
+                                    {purchaseItems.length > 0 && (
+                                        <div className="text-right">
+                                            <p className="text-lg font-bold">Total Invoice Amount: ₹{totalInvoiceValue.toFixed(2)}</p>
+                                        </div>
+                                    )}
+                                    
+                                    <div className="flex justify-between items-center">
+                                        <Button type="button" variant="outline" onClick={handleAddItem}>
+                                            <PlusCircle className="mr-2 h-4 w-4" />
+                                            Add Row
+                                        </Button>
+                                        <Button type="submit">
+                                            <PlusSquare className="mr-2 h-4 w-4"/>
+                                            Add All to Inventory
+                                        </Button>
                                     </div>
-                                )}
-                                
-                                <div className="flex justify-between items-center">
-                                    <Button type="button" variant="outline" onClick={handleAddItem}>
-                                        <PlusCircle className="mr-2 h-4 w-4" />
-                                        Add Row
-                                    </Button>
-                                    <Button type="submit">
-                                        <PlusSquare className="mr-2 h-4 w-4"/>
-                                        Add All to Inventory
-                                    </Button>
                                 </div>
                             </form>
                         </CardContent>
@@ -450,4 +452,5 @@ export default function AddStockPage() {
     </div>
   );
   
+    
     
