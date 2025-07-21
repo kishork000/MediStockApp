@@ -29,6 +29,7 @@ import { useRouter } from "next/navigation";
 import { allAppRoutes, AppRoute } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 
 const generateData = () => [
@@ -201,6 +202,7 @@ export default function Home() {
            <SidebarTrigger className="sm:hidden" />
            <div className="flex w-full items-center justify-between">
                 <h1 className="text-xl font-semibold">Dashboard</h1>
+                <ThemeToggle />
            </div>
         </header>
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
@@ -312,5 +314,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
