@@ -369,7 +369,26 @@ export default function SalesPage() {
                                             <div className="space-y-2"> <Label htmlFor="sugar">Blood Sugar</Label> <Input id="sugar" placeholder="e.g., 98 mg/dL" value={patientForm.sugar} onChange={handlePatientFormChange}/> </div>
                                         </div>
                                         <div className="space-y-2"> <Label htmlFor="address">Address</Label> <Textarea id="address" placeholder="123 Main St, Anytown..." value={patientForm.address} onChange={handlePatientFormChange}/> </div>
-                                        <div className="space-y-2"> <Label>Disease(s)</Label> <Popover> <PopoverTrigger asChild> <Button variant="outline" className="w-full justify-start font-normal"> <span>{diseaseButtonText}</span> </Button> </PopoverTrigger> <PopoverContent className="w-56 p-0"> <div className="space-y-2 p-2"> {diseaseOptions.map(disease => ( <div key={disease.id} className="flex items-center space-x-2"> <Checkbox id={disease.id} checked={selectedDiseases.includes(disease.id)} onCheckedChange={() => handleDiseaseSelection(disease.id)} /> <Label htmlFor={disease.id} className="font-normal">{disease.label}</Label> </div> ))} </div> </PopoverContent> </Popover> </div>
+                                        <div className="space-y-2">
+                                            <Label>Disease(s)</Label>
+                                            <Popover>
+                                                <PopoverTrigger className="w-full">
+                                                    <Button variant="outline" className="w-full justify-start font-normal">
+                                                        <span>{diseaseButtonText}</span>
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-56 p-0">
+                                                    <div className="space-y-2 p-2">
+                                                        {diseaseOptions.map(disease => (
+                                                        <div key={disease.id} className="flex items-center space-x-2">
+                                                            <Checkbox id={disease.id} checked={selectedDiseases.includes(disease.id)} onCheckedChange={() => handleDiseaseSelection(disease.id)} />
+                                                            <Label htmlFor={disease.id} className="font-normal">{disease.label}</Label>
+                                                        </div>
+                                                        ))}
+                                                    </div>
+                                                </PopoverContent>
+                                            </Popover>
+                                        </div>
                                     </CardContent>
                                 </Card>
                                 
@@ -542,7 +561,7 @@ export default function SalesPage() {
             <thead>
                 <tr className="border-t border-b border-dashed border-black"><th className="text-left py-1">Item</th><th className="text-center">Qty</th><th className="text-right">Price</th><th className="text-right">Total</th></tr>
             </thead>
-            <tbody> {saleItems.map(item => ( <tr key={item.id}> <td className="py-0.5">{item.medicine}</td> <td className="text-center">{item.quantity}</td> <td className="text-right">{item.price.toFixed(2)}</td> <td className="text-right">{item.total.toFixed(2)}</td> </tr> ))} </tbody>
+            <tbody>{saleItems.map(item => ( <tr key={item.id}> <td className="py-0.5">{item.medicine}</td> <td className="text-center">{item.quantity}</td> <td className="text-right">{item.price.toFixed(2)}</td> <td className="text-right">{item.total.toFixed(2)}</td> </tr> ))}</tbody>
         </table>
         <hr className="my-1 border-dashed border-black" />
         <div className="text-xs text-right space-y-0.5"> <p>Subtotal: {subtotal.toFixed(2)}</p> <p>Total GST: {totalGst.toFixed(2)}</p> <p className="font-bold text-sm">Grand Total: {grandTotal.toFixed(2)}</p> </div>
@@ -551,4 +570,3 @@ export default function SalesPage() {
     </>
   );
 }
-
