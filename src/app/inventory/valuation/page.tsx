@@ -25,11 +25,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DateRangePicker } from "@/components/dashboard/DateRangePicker";
 
 const valuationData = [
-    { medicine: "Aspirin", price: 10, opening: 100, received: 50, sales: 30, balance: 120 },
-    { medicine: "Ibuprofen", price: 15.5, opening: 50, received: 10, sales: 40, balance: 20 },
-    { medicine: "Paracetamol", price: 5.75, opening: 200, received: 0, sales: 100, balance: 100 },
-    { medicine: "Amoxicillin", price: 55.2, opening: 60, received: 20, sales: 0, balance: 80 },
-    { medicine: "Atorvastatin", price: 45, opening: 150, received: 0, sales: 30, balance: 120 },
+    { medicine: "Aspirin 100mg Tablet", price: 10, opening: 100, received: 50, sales: 30, balance: 120 },
+    { medicine: "Ibuprofen 200mg Capsule", price: 15.5, opening: 50, received: 10, sales: 40, balance: 20 },
+    { medicine: "Paracetamol 500mg Tablet", price: 5.75, opening: 200, received: 0, sales: 100, balance: 100 },
+    { medicine: "Amoxicillin 250mg Syrup", price: 55.2, opening: 60, received: 20, sales: 0, balance: 80 },
+    { medicine: "Atorvastatin 20mg Tablet", price: 45, opening: 150, received: 0, sales: 30, balance: 120 },
 ];
 
 const stores = [
@@ -110,7 +110,7 @@ export default function ValuationReportPage() {
                 ))}
 
                 {hasPermission('/inventory') && (
-                    <Collapsible className="w-full" defaultOpen={true}>
+                    <Collapsible className="w-full" defaultOpen={pathname.startsWith('/inventory')}>
                         <CollapsibleTrigger asChild>
                            <SidebarMenuItem>
                                 <SidebarMenuButton className="justify-between">
@@ -138,7 +138,7 @@ export default function ValuationReportPage() {
                 )}
                  
                  <SidebarMenuItem>
-                  <SidebarMenuButton href="/" tooltip="Reports">
+                  <SidebarMenuButton href="/inventory/reports" tooltip="Reports">
                     <BarChart />
                     <span>Reports</span>
                   </SidebarMenuButton>
@@ -192,7 +192,7 @@ export default function ValuationReportPage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Medicine</TableHead>
+                                <TableHead className="min-w-[200px]">Medicine</TableHead>
                                 <TableHead className="text-right">Opening Stock</TableHead>
                                 <TableHead className="text-right">Received</TableHead>
                                 <TableHead className="text-right">Sales</TableHead>
@@ -226,4 +226,3 @@ export default function ValuationReportPage() {
     </div>
   );
 }
-
