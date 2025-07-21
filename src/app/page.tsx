@@ -20,10 +20,8 @@ import AiSummary from "@/components/dashboard/AiSummary";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { MoreHorizontal } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { allAppRoutes, AppRoute } from "@/lib/types";
@@ -208,15 +206,6 @@ export default function Home() {
                         </CollapsibleContent>
                     </Collapsible>
                 )}
-                 
-                 {hasPermission('/admin') && (
-                    <SidebarMenuItem>
-                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname === '/admin'}>
-                            {getIcon('Admin')}
-                            <span>Admin</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                 )}
             </SidebarMenu>
           </SidebarContent>
            <SidebarFooter>
@@ -231,7 +220,7 @@ export default function Home() {
           </SidebarFooter>
       </Sidebar>
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
-        <header className="sticky top-0 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+        <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
            <SidebarTrigger className="sm:hidden" />
            <div className="flex w-full items-center justify-between">
                 <h1 className="text-xl font-semibold">{dashboardTitle}</h1>

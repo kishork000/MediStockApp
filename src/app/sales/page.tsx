@@ -365,15 +365,6 @@ export default function SalesPage() {
                         </CollapsibleContent>
                     </Collapsible>
                 )}
-                 
-                 {hasPermission('/admin') && (
-                    <SidebarMenuItem>
-                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname === '/admin'}>
-                            {getIcon('Admin')}
-                            <span>Admin</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                 )}
             </SidebarMenu>
           </SidebarContent>
            <SidebarFooter>
@@ -388,7 +379,7 @@ export default function SalesPage() {
           </SidebarFooter>
       </Sidebar>
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+        <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
            <SidebarTrigger className="sm:hidden" />
            <div className="flex w-full items-center justify-between">
               <h1 className="text-xl font-semibold">Sales &amp; Returns</h1>
