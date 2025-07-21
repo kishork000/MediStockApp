@@ -313,6 +313,8 @@ export default function SalesPage() {
     
     const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory') && r.inSidebar);
 
+    const diseaseButtonText = selectedDiseases.length > 0 ? selectedDiseases.map(id => diseaseOptions.find(d => d.id === id)?.label).join(', ') : "Select diseases";
+
 
   return (
     <>
@@ -367,7 +369,26 @@ export default function SalesPage() {
                                             <div className="space-y-2"> <Label htmlFor="sugar">Blood Sugar</Label> <Input id="sugar" placeholder="e.g., 98 mg/dL" value={patientForm.sugar} onChange={handlePatientFormChange}/> </div>
                                         </div>
                                         <div className="space-y-2"> <Label htmlFor="address">Address</Label> <Textarea id="address" placeholder="123 Main St, Anytown..." value={patientForm.address} onChange={handlePatientFormChange}/> </div>
-                                        <div className="space-y-2"> <Label>Disease(s)</Label> <Popover> <PopoverTrigger asChild> <Button variant="outline" className="w-full justify-start font-normal"> <span>{selectedDiseases.length > 0 ? selectedDiseases.map(id => diseaseOptions.find(d => d.id === id)?.label).join(', ') : "Select diseases"}</span> </Button> </PopoverTrigger> <PopoverContent className="w-56 p-0"> <div className="space-y-2 p-2"> {diseaseOptions.map(disease => ( <div key={disease.id} className="flex items-center space-x-2"> <Checkbox id={disease.id} checked={selectedDiseases.includes(disease.id)} onCheckedChange={() => handleDiseaseSelection(disease.id)} /> <Label htmlFor={disease.id} className="font-normal">{disease.label}</Label> </div> ))} </div> </PopoverContent> </Popover> </div>
+                                        <div className="space-y-2">
+                                            <Label>Disease(s)</Label>
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <Button variant="outline" className="w-full justify-start font-normal">
+                                                        <span>{diseaseButtonText}</span>
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-56 p-0">
+                                                    <div className="space-y-2 p-2">
+                                                        {diseaseOptions.map(disease => (
+                                                            <div key={disease.id} className="flex items-center space-x-2">
+                                                                <Checkbox id={disease.id} checked={selectedDiseases.includes(disease.id)} onCheckedChange={() => handleDiseaseSelection(disease.id)} />
+                                                                <Label htmlFor={disease.id} className="font-normal">{disease.label}</Label>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </PopoverContent>
+                                            </Popover>
+                                        </div>
                                     </CardContent>
                                 </Card>
                                 
@@ -547,5 +568,3 @@ export default function SalesPage() {
     </>
   );
 }
-
-    
