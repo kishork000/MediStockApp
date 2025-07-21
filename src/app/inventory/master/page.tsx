@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, MoreHorizontal, Trash2, Pill } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, MoreHorizontal, Trash2, Pill, Undo } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
@@ -109,7 +109,7 @@ export default function MedicineMasterPage() {
             case 'Store Stock': return <Package />;
             case 'Medicine Master': return <Pill />;
             case 'Add Stock': return <PlusSquare />;
-            case 'Return to Manufacturer': return <PlusSquare />;
+            case 'Return to Manufacturer': return <Undo />;
             case 'Stock Transfer': return <GitBranch />;
             case 'Inventory Reports': return <BarChart />;
             case 'Valuation Report': return <TrendingUp />;
@@ -148,7 +148,7 @@ export default function MedicineMasterPage() {
                     </SidebarMenuItem>
                 ))}
 
-                {hasPermission('/inventory') && (
+                {hasPermission('/inventory/warehouse') && (
                     <Collapsible className="w-full" defaultOpen={pathname.startsWith('/inventory')}>
                         <CollapsibleTrigger asChild>
                             <SidebarMenuButton className="justify-between">
@@ -281,26 +281,24 @@ export default function MedicineMasterPage() {
                             <Label htmlFor="manufacturer">Manufacturer</Label>
                             <Input id="manufacturer" name="manufacturer" placeholder="e.g., Cipla" required />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="price">Default Price (₹)</Label>
-                                <Input id="price" name="price" type="number" step="0.01" placeholder="10.50" required />
-                            </div>
-                             <div className="space-y-2">
-                                <Label htmlFor="gst-slab">Default GST</Label>
-                                <Select name="gst-slab" required>
-                                    <SelectTrigger id="gst-slab">
-                                        <SelectValue placeholder="Select GST %" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="0">0%</SelectItem>
-                                        <SelectItem value="5">5%</SelectItem>
-                                        <SelectItem value="12">12%</SelectItem>
-                                        <SelectItem value="18">18%</SelectItem>
-                                        <SelectItem value="28">28%</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="price">Default Price (₹)</Label>
+                            <Input id="price" name="price" type="number" step="0.01" placeholder="10.50" required />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="gst-slab">Default GST</Label>
+                            <Select name="gst-slab" required>
+                                <SelectTrigger id="gst-slab">
+                                    <SelectValue placeholder="Select GST %" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="0">0%</SelectItem>
+                                    <SelectItem value="5">5%</SelectItem>
+                                    <SelectItem value="12">12%</SelectItem>
+                                    <SelectItem value="18">18%</SelectItem>
+                                    <SelectItem value="28">28%</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
                     <DialogFooter>
