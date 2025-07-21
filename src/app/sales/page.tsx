@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -10,8 +10,9 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarTrigger,
+  SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Trash2, PlusCircle, Activity, Printer, Settings, GitBranch, Search, Undo } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Trash2, PlusCircle, Activity, Printer, Settings, GitBranch, Search, Undo, LogOut, ChevronDown, Warehouse } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -24,6 +25,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Image from "next/image";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter, usePathname } from "next/navigation";
+import { allAppRoutes } from "@/lib/types";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ThemeToggle } from "@/components/theme-toggle";
+
 
 interface SaleItem {
     id: number;
@@ -77,6 +84,9 @@ const companyInfo = {
 
 
 export default function SalesPage() {
+  const { user, logout, loading, hasPermission } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
   const [activeTab, setActiveTab] = useState("new-sale");
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
   const [currentItem, setCurrentItem] = useState({ medicine: "", quantity: 1 });
@@ -87,6 +97,16 @@ export default function SalesPage() {
   const [invoiceIdToReturn, setInvoiceIdToReturn] = useState("");
   const [saleToReturn, setSaleToReturn] = useState<any>(null);
   const [itemsToReturn, setItemsToReturn] = useState<ReturnItem[]>([]);
+
+  const sidebarRoutes = useMemo(() => {
+    return allAppRoutes.filter(route => hasPermission(route.path) && route.path !== '/');
+  }, [hasPermission]);
+
+  useEffect(() => {
+    if (!loading && !user) {
+        router.push('/login');
+    }
+  }, [user, loading, router]);
 
 
   const handleAddItem = () => {
@@ -188,6 +208,32 @@ export default function SalesPage() {
   const totalGst = calculateTotalGst();
   const grandTotal = subtotal + totalGst;
 
+    if (loading || !user) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="text-2xl">Loading...</div>
+            </div>
+        );
+    }
+    
+    const getIcon = (name: string) => {
+        switch (name) {
+            case 'Dashboard': return <HomeIcon />;
+            case 'Patients': return <Users2 />;
+            case 'Sales': return <ShoppingCart />;
+            case 'Warehouse Stock': return <Warehouse />;
+            case 'Store Stock': return <Package />;
+            case 'Add Medicine': return <PlusSquare />;
+            case 'Stock Transfer': return <GitBranch />;
+            case 'Stock Reports': return <BarChart />;
+            case 'Diseases': return <Activity />;
+            case 'Admin': return <Settings />;
+            default: return <LayoutGrid />;
+        }
+    };
+    
+    const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory'));
+
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -206,56 +252,62 @@ export default function SalesPage() {
                     <span>Dashboard</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                
+                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory') && r.inSidebar).map((route) => (
+                    <SidebarMenuItem key={route.path}>
+                        <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}>
+                            {getIcon(route.name)}
+                            <span>{route.name}</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                ))}
+
+                {hasPermission('/inventory') && (
+                    <Collapsible className="w-full">
+                        <CollapsibleTrigger asChild>
+                           <SidebarMenuItem>
+                                <SidebarMenuButton className="justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <Package />
+                                        <span>Stock Management</span>
+                                    </div>
+                                    <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                             <SidebarMenu className="ml-7 mt-2 border-l pl-3">
+                                {stockManagementRoutes.map((route) => (
+                                    <SidebarMenuItem key={route.path}>
+                                        <SidebarMenuButton href={route.path} tooltip={route.name} size="sm" isActive={pathname === route.path}>
+                                            {getIcon(route.name)}
+                                            <span>{route.name}</span>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                ))}
+                            </SidebarMenu>
+                        </CollapsibleContent>
+                    </Collapsible>
+                )}
+                 
                  <SidebarMenuItem>
-                  <SidebarMenuButton href="/patients" tooltip="Patients">
-                    <Users2 />
-                    <span>Patients</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton href="/sales" isActive={true} tooltip="Sales">
-                    <ShoppingCart />
-                    <span>Sales</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton href="/" tooltip="Inventory">
-                    <Package />
-                    <span>Inventory</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton href="/inventory/add" tooltip="Add Medicine">
-                    <PlusSquare />
-                    <span>Add Medicine</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                 <SidebarMenuItem>
-                  <SidebarMenuButton href="/inventory/transfer" tooltip="Stock Transfer">
-                    <GitBranch />
-                    <span>Stock Transfer</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton href="/diseases" tooltip="Diseases">
-                    <Activity />
-                    <span>Diseases</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
                   <SidebarMenuButton href="/" tooltip="Reports">
                     <BarChart />
                     <span>Reports</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                 <SidebarMenuItem>
-                  <SidebarMenuButton href="/admin" tooltip="Admin">
-                    <Settings />
-                    <span>Admin</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
             </SidebarMenu>
           </SidebarContent>
+           <SidebarFooter>
+              <SidebarMenu>
+                  <SidebarMenuItem>
+                      <SidebarMenuButton onClick={logout} tooltip="Logout">
+                          <LogOut />
+                          <span>Logout</span>
+                      </SidebarMenuButton>
+                  </SidebarMenuItem>
+              </SidebarMenu>
+          </SidebarFooter>
       </Sidebar>
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 print:hidden">
@@ -263,17 +315,20 @@ export default function SalesPage() {
            <div className="flex-1">
              <h1 className="text-xl font-semibold">Sales & Returns</h1>
            </div>
-           <div className="flex items-center gap-2">
-                <Label htmlFor="current-store" className="hidden sm:block">Current Store:</Label>
-                <Select defaultValue="downtown-pharmacy">
-                    <SelectTrigger id="current-store" className="w-[180px]">
-                        <SelectValue placeholder="Select Store"/>
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="downtown-pharmacy">Downtown Pharmacy</SelectItem>
-                        <SelectItem value="uptown-health">Uptown Health</SelectItem>
-                    </SelectContent>
-                </Select>
+            <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                    <Label htmlFor="current-store" className="hidden sm:block">Current Store:</Label>
+                    <Select defaultValue="downtown-pharmacy">
+                        <SelectTrigger id="current-store" className="w-[180px]">
+                            <SelectValue placeholder="Select Store"/>
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="downtown-pharmacy">Downtown Pharmacy</SelectItem>
+                            <SelectItem value="uptown-health">Uptown Health</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <ThemeToggle />
            </div>
         </header>
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 print:p-0">
@@ -574,3 +629,4 @@ export default function SalesPage() {
     </div>
   );
 }
+

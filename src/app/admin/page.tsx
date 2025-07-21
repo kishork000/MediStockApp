@@ -25,7 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { allAppRoutes, AppRoute, UserRole } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -63,6 +63,7 @@ const initialUsers: User[] = [
 export default function AdminPage() {
     const { user, logout, loading, permissions, setPermissions, hasPermission } = useAuth();
     const router = useRouter();
+    const pathname = usePathname();
 
     const [companyName, setCompanyName] = useState("MediStock Pharmacy");
     const [companyAddress, setCompanyAddress] = useState("123 Health St, Wellness City, State 12345");
@@ -77,7 +78,7 @@ export default function AdminPage() {
 
      useEffect(() => {
         if (!loading && (!user || user.role !== 'Admin')) {
-            router.push('/');
+            router.push('/login');
         }
     }, [user, loading, router]);
 
@@ -199,7 +200,7 @@ export default function AdminPage() {
 
                 {sidebarRoutes.filter(r => !r.path.startsWith('/inventory') && r.inSidebar).map((route) => (
                     <SidebarMenuItem key={route.path}>
-                        <SidebarMenuButton href={route.path} tooltip={route.name} isActive={router.pathname === route.path}>
+                        <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}>
                             {getIcon(route.name)}
                             <span>{route.name}</span>
                         </SidebarMenuButton>
@@ -223,7 +224,7 @@ export default function AdminPage() {
                             <SidebarMenu className="ml-7 mt-2 border-l pl-3">
                                 {stockManagementRoutes.map((route) => (
                                     <SidebarMenuItem key={route.path}>
-                                        <SidebarMenuButton href={route.path} tooltip={route.name} size="sm" isActive={router.pathname === route.path}>
+                                        <SidebarMenuButton href={route.path} tooltip={route.name} size="sm" isActive={pathname === route.path}>
                                             {getIcon(route.name)}
                                             <span>{route.name}</span>
                                         </SidebarMenuButton>
@@ -478,15 +479,15 @@ export default function AdminPage() {
                             <form className="space-y-4" onSubmit={handleSaveSettings}>
                                 <div className="space-y-2">
                                     <Label htmlFor="company-name">Company Name</Label>
-                                    <Input id="company-name" name="company-name" defaultValue={companyName} onChange={(e) => setCompanyName(e.target.value)} />
+                                    <Input id="company-name" name="company-name" defaultValue={companyName} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="company-address">Company Address</Label>
-                                    <Textarea id="company-address" name="company-address" defaultValue={companyAddress} onChange={(e) => setCompanyAddress(e.target.value)} />
+                                    <Textarea id="company-address" name="company-address" defaultValue={companyAddress} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="gstin">GSTIN</Label>
-                                    <Input id="gstin" name="gstin" defaultValue={gstin} onChange={(e) => setGstin(e.target.value)} />
+                                    <Input id="gstin" name="gstin" defaultValue={gstin} />
                                 </div>
                                 <Button type="submit">Save Settings</Button>
                             </form>
@@ -531,5 +532,5 @@ export default function AdminPage() {
         </Dialog>
     </div>
   );
+}
 
-    
