@@ -29,14 +29,8 @@ interface User {
     name: string;
     email: string;
     role: "Admin" | "Pharmacist" | "Technician";
+    assignedStore?: string;
 }
-
-const initialUsers: User[] = [
-    { name: "Admin User", email: "admin@medistock.com", role: "Admin" },
-    { name: "Pharmacist One", email: "pharmacist1@medistock.com", role: "Pharmacist" },
-    { name: "Pharmacist Two", email: "pharmacist2@medistock.com", role: "Pharmacist" },
-    { name: "Technician One", email: "tech1@medistock.com", role: "Technician" },
-];
 
 interface Store {
     id: string;
@@ -48,6 +42,13 @@ interface Store {
 const initialStores: Store[] = [
     { id: "STR001", name: "Main Warehouse", address: "456 Industrial Ave, Metro City", gstin: "29BBBBB1111B1Z6"},
     { id: "STR002", name: "Downtown Pharmacy", address: "123 Main St, Wellness City", gstin: "22AAAAA0000A1Z5"},
+];
+
+const initialUsers: User[] = [
+    { name: "Admin User", email: "admin@medistock.com", role: "Admin", assignedStore: "STR001" },
+    { name: "Pharmacist One", email: "pharmacist1@medistock.com", role: "Pharmacist", assignedStore: "STR002" },
+    { name: "Pharmacist Two", email: "pharmacist2@medistock.com", role: "Pharmacist", assignedStore: "STR002" },
+    { name: "Technician One", email: "tech1@medistock.com", role: "Technician" },
 ];
 
 
@@ -93,6 +94,7 @@ export default function AdminPage() {
             name: formData.get("name") as string,
             email: formData.get("email") as string,
             role: formData.get("role") as User['role'],
+            assignedStore: formData.get("assignedStore") as string | undefined,
         };
         if (newUser.name && newUser.email && newUser.role) {
             setUsers([...users, newUser]);
@@ -204,6 +206,7 @@ export default function AdminPage() {
                                         <TableHead>Name</TableHead>
                                         <TableHead className="hidden sm:table-cell">Email</TableHead>
                                         <TableHead>Role</TableHead>
+                                        <TableHead className="hidden md:table-cell">Assigned Store</TableHead>
                                         <TableHead>
                                             <span className="sr-only">Actions</span>
                                         </TableHead>
@@ -219,6 +222,7 @@ export default function AdminPage() {
                                                     {user.role}
                                                 </Badge>
                                             </TableCell>
+                                            <TableCell className="hidden md:table-cell">{stores.find(s => s.id === user.assignedStore)?.name || 'N/A'}</TableCell>
                                             <TableCell>
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
@@ -311,18 +315,33 @@ export default function AdminPage() {
                                     <Label htmlFor="email">Email</Label>
                                     <Input id="email" name="email" type="email" placeholder="user@medistock.com" required />
                                 </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="role">Role</Label>
-                                    <Select name="role" required>
-                                        <SelectTrigger id="role">
-                                            <SelectValue placeholder="Select a role" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Pharmacist">Pharmacist</SelectItem>
-                                            <SelectItem value="Technician">Technician</SelectItem>
-                                            <SelectItem value="Admin">Admin</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="role">Role</Label>
+                                        <Select name="role" required>
+                                            <SelectTrigger id="role">
+                                                <SelectValue placeholder="Select a role" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="Pharmacist">Pharmacist</SelectItem>
+                                                <SelectItem value="Technician">Technician</SelectItem>
+                                                <SelectItem value="Admin">Admin</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="assignedStore">Assign to Store</Label>
+                                        <Select name="assignedStore">
+                                            <SelectTrigger id="assignedStore">
+                                                <SelectValue placeholder="Select a store" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {stores.map(store => (
+                                                    <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
                                 </div>
                                 <Button type="submit">Create User</Button>
                             </form>
@@ -393,5 +412,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
-    
