@@ -61,6 +61,14 @@ interface Patient {
     address?: string;
 }
 
+interface Medicine {
+    value: string;
+    label: string;
+    price: number;
+    gst: number;
+    stock: number;
+}
+
 const initialPatients: Patient[] = [
     { id: "PAT001", name: "Alice Johnson", age: 58, gender: "Female", mobile: "9876543210", lastVisit: "2024-07-15", bp: "120/80", sugar: "98 mg/dL", address: "123 Maple St, Springfield" },
     { id: "PAT002", name: "Bob Williams", age: 45, gender: "Male", mobile: "9876543211", lastVisit: "2024-07-12", bp: "130/85", sugar: "110 mg/dL", address: "456 Oak Ave, Springfield" },
@@ -68,7 +76,7 @@ const initialPatients: Patient[] = [
 ];
 
 
-const medicineOptions = [
+const initialMedicineStock: Medicine[] = [
     { value: "aspirin", label: "Aspirin", price: 10.00, gst: 5, stock: 150 },
     { value: "ibuprofen", label: "Ibuprofen", price: 15.50, gst: 5, stock: 20 },
     { value: "paracetamol", label: "Paracetamol", price: 5.75, gst: 5, stock: 100 },
@@ -92,8 +100,8 @@ const pastSales = [
         customer: "John Doe",
         date: "2024-07-20",
         items: [
-            { id: 1, medicine: "Paracetamol", quantity: 2, price: 5.75, gst: 5, total: 11.50, stock: 100 },
-            { id: 2, medicine: "Amoxicillin", quantity: 1, price: 55.20, gst: 12, total: 55.20, stock: 80 },
+            { id: 1, medicine: "Paracetamol", medicineValue: "paracetamol", quantity: 2, price: 5.75, gst: 5, total: 11.50, stock: 100 },
+            { id: 2, medicine: "Amoxicillin", medicineValue: "amoxicillin", quantity: 1, price: 55.20, gst: 12, total: 55.20, stock: 80 },
         ],
         store: "Downtown Pharmacy"
     }
@@ -117,6 +125,7 @@ export default function SalesPage() {
   const [selectedDiseases, setSelectedDiseases] = useState<string[]>([]);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [printSize, setPrintSize] = useState("80mm");
+  const [medicineOptions, setMedicineOptions] = useState<Medicine[]>(initialMedicineStock);
   
   // Patient form state
   const [patientForm, setPatientForm] = useState({
@@ -199,12 +208,33 @@ export default function SalesPage() {
         setPaymentModalOpen(true);
       }
   }
+  
+  const processSale = () => {
+    // 1. Deduct stock
+    const newMedicineOptions = [...medicineOptions];
+    saleItems.forEach(soldItem => {
+        const medicineIndex = newMedicineOptions.findIndex(med => med.value === soldItem.medicineValue);
+        if (medicineIndex > -1) {
+            newMedicineOptions[medicineIndex].stock -= soldItem.quantity;
+        }
+    });
+    setMedicineOptions(newMedicineOptions);
+    
+    // In a real app, you would also save the sale record to a database here.
+    toast({
+        title: "Sale Recorded",
+        description: "Stock levels have been updated."
+    });
+  }
+
 
   const handlePrint = () => {
-    window.print();
-    // After printing, close the modal and reset the sale form
-    setPaymentModalOpen(false);
-    resetSaleForm();
+    processSale();
+    setTimeout(() => {
+        window.print();
+        setPaymentModalOpen(false);
+        resetSaleForm();
+    }, 100);
   }
 
   const resetSaleForm = () => {
@@ -264,9 +294,9 @@ export default function SalesPage() {
       if (foundSale) {
           setSaleToReturn(foundSale);
           // Initialize items to return with returnQuantity
-          setItemsToReturn(foundSale.items.map(item => ({ ...item, returnQuantity: 0 })));
+          setItemsToReturn(foundSale.items.map((item: any) => ({ ...item, returnQuantity: 0 })));
       } else {
-          alert("Invoice not found.");
+          toast({ variant: "destructive", title: "Error", description: "Invoice not found." });
           setSaleToReturn(null);
           setItemsToReturn([]);
       }
@@ -281,20 +311,35 @@ export default function SalesPage() {
   const handleProcessRefund = () => {
       const itemsBeingReturned = itemsToReturn.filter(item => item.returnQuantity > 0);
       if(itemsBeingReturned.length === 0) {
-          alert("Please specify a quantity to return for at least one item.");
+          toast({ variant: "destructive", title: "Error", description: "Please specify a quantity to return for at least one item." });
           return;
       }
       // In a real app, this would trigger backend logic:
       // 1. Create a credit note record.
       // 2. Increase stock for the returned items in the specific store.
       // 3. Record the refund against the payment method.
+      
+      const newMedicineOptions = [...medicineOptions];
+      itemsBeingReturned.forEach(returnedItem => {
+          const medicineIndex = newMedicineOptions.findIndex(med => med.value === returnedItem.medicineValue);
+          if (medicineIndex > -1) {
+              newMedicineOptions[medicineIndex].stock += returnedItem.returnQuantity;
+          }
+      });
+      setMedicineOptions(newMedicineOptions);
+
+
       const refundAmount = itemsBeingReturned.reduce((acc, item) => {
         const pricePerUnit = item.price;
         const gstMultiplier = 1 + (item.gst / 100);
         return acc + (pricePerUnit * item.returnQuantity * gstMultiplier);
       }, 0).toFixed(2);
 
-      alert(`Refund of ₹${refundAmount} processed for invoice ${saleToReturn.invoiceId}. Stock for ${saleToReturn.store} has been updated.`);
+      toast({
+          title: "Refund Processed",
+          description: `Refund of ₹${refundAmount} for invoice ${saleToReturn.invoiceId}. Stock has been updated.`
+      });
+
       // Reset state
       setInvoiceIdToReturn("");
       setSaleToReturn(null);
@@ -540,7 +585,7 @@ export default function SalesPage() {
                                                     </SelectTrigger>
                                                     <SelectContent>
                                                         {medicineOptions.map(med => (
-                                                            <SelectItem key={med.value} value={med.value}>{med.label} (Stock: {med.stock})</SelectItem>
+                                                            <SelectItem key={med.value} value={med.value} disabled={med.stock <= 0}>{med.label} (Stock: {med.stock})</SelectItem>
                                                         ))}
                                                     </SelectContent>
                                                 </Select>
@@ -806,6 +851,7 @@ export default function SalesPage() {
     </>
   );
 }
+
 
 
 
