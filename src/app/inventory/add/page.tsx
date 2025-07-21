@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, Warehouse, GitBranch, LogOut, ChevronDown, TrendingUp, PlusCircle, Trash2, Upload, File, Download, Undo, Pill } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, Warehouse, GitBranch, LogOut, ChevronDown, TrendingUp, PlusCircle, Trash2, Upload, File, Download, Undo, Pill, Building } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -31,14 +31,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 interface MedicineMaster {
     id: string;
     name: string;
+    hsnCode: string;
+    price: number;
+    gstSlab: string;
 }
 
 const medicineMasterData: MedicineMaster[] = [
-    { id: "MED001", name: "Aspirin 100mg" },
-    { id: "MED002", name: "Ibuprofen 200mg" },
-    { id: "MED003", name: "Paracetamol 500mg" },
-    { id: "MED004", name: "Amoxicillin 250mg" },
-    { id: "MED005", name: "Atorvastatin 20mg" },
+    { id: "MED001", name: "Aspirin 100mg", hsnCode: "300490", price: 1.00, gstSlab: "5" },
+    { id: "MED002", name: "Ibuprofen 200mg", hsnCode: "300490", price: 2.50, gstSlab: "12" },
+    { id: "MED003", name: "Paracetamol 500mg", hsnCode: "300490", price: 0.50, gstSlab: "5" },
+    { id: "MED004", name: "Amoxicillin 250mg", hsnCode: "300450", price: 8.00, gstSlab: "12" },
+    { id: "MED005", name: "Atorvastatin 20mg", hsnCode: "300490", price: 15.00, gstSlab: "12" },
 ];
 
 const manufacturerOptions = [
@@ -107,6 +110,8 @@ export default function AddStockPage() {
                 ...item, 
                 medicineId: selectedMedicine.id,
                 medicineName: selectedMedicine.name,
+                pricePerUnit: selectedMedicine.price,
+                gstSlab: selectedMedicine.gstSlab,
             } : item
         ));
     };
@@ -181,6 +186,7 @@ export default function AddStockPage() {
             case 'Warehouse Stock': return <Warehouse />;
             case 'Store Stock': return <Package />;
             case 'Medicine Master': return <Pill />;
+            case 'Manufacturer Master': return <Building />;
             case 'Add Stock': return <PlusSquare />;
             case 'Return to Manufacturer': return <Undo />;
             case 'Stock Transfer': return <GitBranch />;

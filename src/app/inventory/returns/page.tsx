@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, Undo, PlusCircle, Trash2, Pill } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, Undo, PlusCircle, Trash2, Pill, Building } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -114,6 +114,7 @@ export default function ReturnToManufacturerPage() {
             case 'Warehouse Stock': return <Warehouse />;
             case 'Store Stock': return <Package />;
             case 'Medicine Master': return <Pill />;
+            case 'Manufacturer Master': return <Building />;
             case 'Add Stock': return <PlusSquare />;
             case 'Return to Manufacturer': return <Undo />;
             case 'Stock Transfer': return <GitBranch />;
@@ -154,7 +155,7 @@ export default function ReturnToManufacturerPage() {
                     </SidebarMenuItem>
                 ))}
 
-                {hasPermission('/inventory') && (
+                {hasPermission('/inventory/warehouse') && (
                     <Collapsible className="w-full" defaultOpen={pathname.startsWith('/inventory')}>
                         <CollapsibleTrigger asChild>
                            <SidebarMenuButton className="justify-between">

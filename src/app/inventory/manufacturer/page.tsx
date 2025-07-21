@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState, useMemo, useEffect } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -11,34 +12,40 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, Pill, Undo, Building } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, MoreHorizontal, Trash2, Pill, Undo, Building } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal } from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
-import { useMemo, useEffect } from "react";
 import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useToast } from "@/hooks/use-toast";
 
-const inventoryData = [
-    { name: "Aspirin", quantity: 1500, status: "In Stock", manufacturer: "Bayer", expiry: "2025-12-31" },
-    { name: "Ibuprofen", quantity: 2000, status: "In Stock", manufacturer: "Advil", expiry: "2026-06-30" },
-    { name: "Paracetamol", quantity: 450, status: "Low Stock", manufacturer: "Tylenol", expiry: "2024-10-31" },
-    { name: "Amoxicillin", quantity: 800, status: "In Stock", manufacturer: "Generic", expiry: "2025-08-01" },
-    { name: "Lisinopril", quantity: 1200, status: "In Stock", manufacturer: "Zestril", expiry: "2026-02-28" },
-    { name: "Metformin", quantity: 0, status: "Out of Stock", manufacturer: "Glucophage", expiry: "2024-09-15" },
-    { name: "Atorvastatin", quantity: 900, status: "In Stock", manufacturer: "Lipitor", expiry: "2025-11-20" },
+interface Manufacturer {
+    id: string;
+    name: string;
+}
+
+const initialManufacturers: Manufacturer[] = [
+    { id: "MAN001", name: "Bayer" },
+    { id: "MAN002", name: "Pfizer" },
+    { id: "MAN003", name: "Sun Pharma" },
+    { id: "MAN004", name: "Cipla" },
 ];
 
-export default function WarehouseInventoryPage() {
+export default function ManufacturerMasterPage() {
     const { user, logout, loading, hasPermission } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
+    const { toast } = useToast();
+    const [manufacturers, setManufacturers] = useState<Manufacturer[]>(initialManufacturers);
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
     const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
     const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && route.inSidebar && hasPermission(route.path)), [hasPermission]);
@@ -49,6 +56,30 @@ export default function WarehouseInventoryPage() {
         }
     }, [user, loading, router]);
 
+    const handleDelete = (id: string) => {
+        setManufacturers(manufacturers.filter(m => m.id !== id));
+        toast({ title: "Success", description: "Manufacturer removed from master list." });
+    };
+
+    const handleAddManufacturer = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+        const name = formData.get("manufacturer-name") as string;
+
+        if (name) {
+            const newManufacturer: Manufacturer = {
+                id: `MAN${(manufacturers.length + 1).toString().padStart(3, '0')}`,
+                name,
+            };
+            setManufacturers([...manufacturers, newManufacturer]);
+            toast({ title: "Success", description: "Manufacturer added to master list." });
+            setIsAddModalOpen(false);
+            e.currentTarget.reset();
+        } else {
+            toast({ variant: "destructive", title: "Error", description: "Please enter a manufacturer name." });
+        }
+    };
+    
     if (loading || !user) {
         return (
             <div className="flex items-center justify-center min-h-screen">
@@ -56,12 +87,13 @@ export default function WarehouseInventoryPage() {
             </div>
         );
     }
-    
+
     const getIcon = (name: string) => {
         switch (name) {
             case 'Dashboard': return <HomeIcon />;
             case 'Patients': return <Users2 />;
             case 'Sales': return <ShoppingCart />;
+            case 'Sales Reports': return <BarChart />;
             case 'Warehouse Stock': return <Warehouse />;
             case 'Store Stock': return <Package />;
             case 'Medicine Master': return <Pill />;
@@ -76,7 +108,7 @@ export default function WarehouseInventoryPage() {
             default: return <LayoutGrid />;
         }
     };
-    
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <Sidebar>
@@ -87,7 +119,7 @@ export default function WarehouseInventoryPage() {
             </SidebarMenuButton>
           </SidebarHeader>
           <SidebarContent>
-             <SidebarMenu>
+            <SidebarMenu>
                 {hasPermission('/') && (
                     <SidebarMenuItem>
                         <SidebarMenuButton href="/" tooltip="Dashboard">
@@ -96,7 +128,7 @@ export default function WarehouseInventoryPage() {
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 )}
-                
+
                 {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path)).map((route) => (
                     <SidebarMenuItem key={route.path}>
                         <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}>
@@ -109,7 +141,7 @@ export default function WarehouseInventoryPage() {
                 {hasPermission('/inventory/warehouse') && (
                     <Collapsible className="w-full" defaultOpen={pathname.startsWith('/inventory')}>
                         <CollapsibleTrigger asChild>
-                             <SidebarMenuButton className="justify-between">
+                            <SidebarMenuButton className="justify-between">
                                 <div className="flex items-center gap-3">
                                     <Package />
                                     <span>Stock Management</span>
@@ -142,7 +174,7 @@ export default function WarehouseInventoryPage() {
                  )}
             </SidebarMenu>
           </SidebarContent>
-           <SidebarFooter>
+          <SidebarFooter>
               <SidebarMenu>
                   <SidebarMenuItem>
                       <SidebarMenuButton onClick={logout} tooltip="Logout">
@@ -157,66 +189,88 @@ export default function WarehouseInventoryPage() {
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
            <SidebarTrigger className="sm:hidden" />
            <div className="flex w-full items-center justify-between">
-              <h1 className="text-xl font-semibold">Warehouse Inventory</h1>
-              <ThemeToggle />
+                <h1 className="text-xl font-semibold">Manufacturer Master</h1>
+                <div className="flex items-center gap-2">
+                    <Button onClick={() => setIsAddModalOpen(true)}>
+                        <PlusSquare className="mr-2 h-4 w-4"/>
+                        Add Manufacturer
+                    </Button>
+                    <ThemeToggle />
+                </div>
            </div>
         </header>
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
             <Card>
                 <CardHeader>
-                <CardTitle>Main Warehouse Stock</CardTitle>
-                <CardDescription>Manage your medicine inventory in the main warehouse.</CardDescription>
+                    <CardTitle>Manufacturer Master List</CardTitle>
+                    <CardDescription>Central repository of all medicine suppliers.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Medicine</TableHead>
-                            <TableHead>Manufacturer</TableHead>
-                            <TableHead className="text-right">Stock</TableHead>
-                            <TableHead className="text-right">Status</TableHead>
-                            <TableHead>Expiry Date</TableHead>
-                            <TableHead>
-                                <span className="sr-only">Actions</span>
-                            </TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {inventoryData.map((item) => (
-                            <TableRow key={item.name}>
-                                <TableCell className="font-medium">{item.name}</TableCell>
-                                <TableCell>{item.manufacturer}</TableCell>
-                                <TableCell className="text-right">{item.quantity}</TableCell>
-                                <TableCell className="text-right">
-                                    <Badge variant={item.status === 'In Stock' ? 'default' : item.status === 'Low Stock' ? 'secondary' : 'destructive'}>
-                                        {item.status}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell>{item.expiry}</TableCell>
-                                <TableCell className="text-right">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button aria-haspopup="true" size="icon" variant="ghost">
-                                                <MoreHorizontal className="h-4 w-4" />
-                                                <span className="sr-only">Toggle menu</span>
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                            <DropdownMenuItem>Edit</DropdownMenuItem>
-                                            <DropdownMenuItem>Restock</DropdownMenuItem>
-                                            <DropdownMenuItem>Delete</DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </TableCell>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="hidden sm:table-cell">ID</TableHead>
+                                <TableHead>Name</TableHead>
+                                <TableHead>
+                                    <span className="sr-only">Actions</span>
+                                </TableHead>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
+                        </TableHeader>
+                        <TableBody>
+                            {manufacturers.map((man) => (
+                                <TableRow key={man.id}>
+                                    <TableCell className="hidden sm:table-cell font-medium">{man.id}</TableCell>
+                                    <TableCell>{man.name}</TableCell>
+                                    <TableCell>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                    <span className="sr-only">Toggle menu</span>
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                <DropdownMenuItem>Edit</DropdownMenuItem>
+                                                <DropdownMenuItem onSelect={() => handleDelete(man.id)} className="text-destructive">
+                                                   <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
                 </CardContent>
             </Card>
         </main>
       </div>
+
+       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+            <DialogContent className="sm:max-w-md">
+                 <form onSubmit={handleAddManufacturer}>
+                    <DialogHeader>
+                        <DialogTitle>Add New Manufacturer</DialogTitle>
+                        <DialogDescription>
+                            Define a new supplier in the master list.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="manufacturer-name">Manufacturer Name</Label>
+                            <Input id="manufacturer-name" name="manufacturer-name" placeholder="e.g., Cipla Inc." required />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button type="button" variant="secondary">Cancel</Button>
+                        </DialogClose>
+                        <Button type="submit">Add to Master</Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }

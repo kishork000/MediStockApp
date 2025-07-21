@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, MoreHorizontal, Trash2, Pill, Undo } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, MoreHorizontal, Trash2, Pill, Undo, Building } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
@@ -26,18 +26,23 @@ import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 
 interface MedicineMaster {
     id: string;
     name: string;
+    hsnCode: string;
+    price: number;
+    gstSlab: string;
 }
 
 const initialMedicines: MedicineMaster[] = [
-    { id: "MED001", name: "Aspirin 100mg" },
-    { id: "MED002", name: "Ibuprofen 200mg" },
-    { id: "MED003", name: "Paracetamol 500mg" },
-    { id: "MED004", name: "Amoxicillin 250mg" },
-    { id: "MED005", name: "Atorvastatin 20mg" },
+    { id: "MED001", name: "Aspirin 100mg", hsnCode: "300490", price: 1.00, gstSlab: "5" },
+    { id: "MED002", name: "Ibuprofen 200mg", hsnCode: "300490", price: 2.50, gstSlab: "12" },
+    { id: "MED003", name: "Paracetamol 500mg", hsnCode: "300490", price: 0.50, gstSlab: "5" },
+    { id: "MED004", name: "Amoxicillin 250mg", hsnCode: "300450", price: 8.00, gstSlab: "12" },
+    { id: "MED005", name: "Atorvastatin 20mg", hsnCode: "300490", price: 15.00, gstSlab: "12" },
 ];
 
 export default function MedicineMasterPage() {
@@ -66,11 +71,17 @@ export default function MedicineMasterPage() {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
         const name = formData.get("medicine-name") as string;
+        const hsnCode = formData.get("hsn-code") as string;
+        const price = parseFloat(formData.get("price") as string);
+        const gstSlab = formData.get("gst-slab") as string;
 
-        if (name) {
+        if (name && hsnCode && price && gstSlab) {
             const newMedicine: MedicineMaster = {
                 id: `MED${(medicines.length + 1).toString().padStart(3, '0')}`,
                 name,
+                hsnCode,
+                price,
+                gstSlab,
             };
             setMedicines([...medicines, newMedicine]);
             toast({ title: "Success", description: "Medicine added to master list." });
@@ -98,6 +109,7 @@ export default function MedicineMasterPage() {
             case 'Warehouse Stock': return <Warehouse />;
             case 'Store Stock': return <Package />;
             case 'Medicine Master': return <Pill />;
+            case 'Manufacturer Master': return <Building />;
             case 'Add Stock': return <PlusSquare />;
             case 'Return to Manufacturer': return <Undo />;
             case 'Stock Transfer': return <GitBranch />;
@@ -211,6 +223,9 @@ export default function MedicineMasterPage() {
                             <TableRow>
                                 <TableHead className="hidden sm:table-cell">ID</TableHead>
                                 <TableHead>Name</TableHead>
+                                <TableHead className="hidden md:table-cell">HSN Code</TableHead>
+                                <TableHead className="hidden md:table-cell text-right">Price (₹)</TableHead>
+                                <TableHead className="hidden md:table-cell text-right">GST</TableHead>
                                 <TableHead>
                                     <span className="sr-only">Actions</span>
                                 </TableHead>
@@ -221,6 +236,9 @@ export default function MedicineMasterPage() {
                                 <TableRow key={med.id}>
                                     <TableCell className="hidden sm:table-cell font-medium">{med.id}</TableCell>
                                     <TableCell>{med.name}</TableCell>
+                                    <TableCell className="hidden md:table-cell">{med.hsnCode}</TableCell>
+                                    <TableCell className="hidden md:table-cell text-right">{med.price.toFixed(2)}</TableCell>
+                                    <TableCell className="hidden md:table-cell text-right">{med.gstSlab}%</TableCell>
                                     <TableCell>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
@@ -260,6 +278,31 @@ export default function MedicineMasterPage() {
                         <div className="space-y-2">
                             <Label htmlFor="medicine-name">Medicine Name</Label>
                             <Input id="medicine-name" name="medicine-name" placeholder="e.g., Paracetamol 500mg" required />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="hsn-code">HSN Code</Label>
+                            <Input id="hsn-code" name="hsn-code" placeholder="e.g., 300490" required />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="price">Default Price (₹)</Label>
+                                <Input id="price" name="price" type="number" step="0.01" placeholder="10.50" required />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="gst-slab">GST Slab</Label>
+                                <Select name="gst-slab" required>
+                                    <SelectTrigger id="gst-slab">
+                                        <SelectValue placeholder="Select GST %" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="0">0%</SelectItem>
+                                        <SelectItem value="5">5%</SelectItem>
+                                        <SelectItem value="12">12%</SelectItem>
+                                        <SelectItem value="18">18%</SelectItem>
+                                        <SelectItem value="28">28%</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                     </div>
                     <DialogFooter>
