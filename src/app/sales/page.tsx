@@ -31,6 +31,7 @@ import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 
 interface SaleItem {
@@ -47,6 +48,25 @@ interface SaleItem {
 interface ReturnItem extends SaleItem {
     returnQuantity: number;
 }
+
+interface Patient {
+    id: string;
+    name: string;
+    age: number;
+    gender: "Female" | "Male" | "Other";
+    mobile: string;
+    lastVisit: string;
+    bp?: string;
+    sugar?: string;
+    address?: string;
+}
+
+const initialPatients: Patient[] = [
+    { id: "PAT001", name: "Alice Johnson", age: 58, gender: "Female", mobile: "9876543210", lastVisit: "2024-07-15", bp: "120/80", sugar: "98 mg/dL", address: "123 Maple St, Springfield" },
+    { id: "PAT002", name: "Bob Williams", age: 45, gender: "Male", mobile: "9876543211", lastVisit: "2024-07-12", bp: "130/85", sugar: "110 mg/dL", address: "456 Oak Ave, Springfield" },
+    { id: "PAT003", name: "Charlie Brown", age: 62, gender: "Male", mobile: "9876543212", lastVisit: "2024-07-20", bp: "140/90", sugar: "150 mg/dL", address: "789 Pine Ln, Springfield" },
+];
+
 
 const medicineOptions = [
     { value: "aspirin", label: "Aspirin", price: 10.00, gst: 5, stock: 150 },
@@ -90,11 +110,23 @@ export default function SalesPage() {
   const { user, logout, loading, hasPermission } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("new-sale");
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
   const [currentItem, setCurrentItem] = useState({ medicine: "", quantity: 1 });
   const [selectedDiseases, setSelectedDiseases] = useState<string[]>([]);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  
+  // Patient form state
+  const [patientForm, setPatientForm] = useState({
+      name: "",
+      mobile: "",
+      age: "",
+      gender: "",
+      bp: "",
+      sugar: "",
+      address: "",
+  });
   
   // Return state
   const [invoiceIdToReturn, setInvoiceIdToReturn] = useState("");
@@ -156,8 +188,9 @@ export default function SalesPage() {
   
   const isSaleValid = useMemo(() => {
     if (saleItems.length === 0) return false;
+    if (!patientForm.name || !patientForm.mobile) return false;
     return saleItems.every(item => item.quantity <= item.stock);
-  }, [saleItems]);
+  }, [saleItems, patientForm]);
 
   const handleRecordSale = (e: React.FormEvent) => {
       e.preventDefault();
@@ -169,6 +202,50 @@ export default function SalesPage() {
   const handlePrint = () => {
     window.print();
   }
+  
+  const handlePatientFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      const { id, value } = e.target;
+      setPatientForm(prev => ({ ...prev, [id]: value }));
+  };
+
+  const handlePatientSelectChange = (value: string) => {
+      setPatientForm(prev => ({ ...prev, gender: value }));
+  };
+
+  const handleSearchPatient = () => {
+    if (!patientForm.mobile) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Please enter a mobile number to search.",
+        });
+        return;
+    }
+    const foundPatient = initialPatients.find(p => p.mobile === patientForm.mobile);
+
+    if (foundPatient) {
+        setPatientForm({
+            name: foundPatient.name,
+            mobile: foundPatient.mobile,
+            age: foundPatient.age.toString(),
+            gender: foundPatient.gender,
+            bp: foundPatient.bp || "",
+            sugar: foundPatient.sugar || "",
+            address: foundPatient.address || "",
+        });
+        toast({
+            title: "Patient Found",
+            description: `${foundPatient.name}'s details have been filled in.`,
+        });
+    } else {
+        toast({
+            variant: "destructive",
+            title: "Patient Not Found",
+            description: "No existing patient with this mobile number. Please fill in the details.",
+        });
+    }
+  };
+
 
   const handleSearchInvoice = () => {
       const foundSale = pastSales.find(s => s.invoiceId.toLowerCase() === invoiceIdToReturn.toLowerCase());
@@ -361,31 +438,37 @@ export default function SalesPage() {
                                         <CardTitle>Patient Information</CardTitle>
                                     </CardHeader>
                                     <CardContent className="space-y-4">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div className="space-y-2">
-                                                <Label htmlFor="patient-name">Patient Name</Label>
-                                                <Input id="patient-name" placeholder="John Doe" />
+                                                <Label htmlFor="name">Patient Name</Label>
+                                                <Input id="name" placeholder="John Doe" value={patientForm.name} onChange={handlePatientFormChange} required />
                                             </div>
                                             <div className="space-y-2">
-                                                <Label htmlFor="mobile-number">Mobile Number</Label>
-                                                <Input id="mobile-number" type="tel" placeholder="9876543210" />
+                                                <Label htmlFor="mobile">Mobile Number</Label>
+                                                <div className="flex gap-2">
+                                                     <Input id="mobile" type="tel" placeholder="9876543210" value={patientForm.mobile} onChange={handlePatientFormChange} required />
+                                                     <Button type="button" variant="outline" onClick={handleSearchPatient}>
+                                                        <Search className="h-4 w-4" />
+                                                        <span className="sr-only">Search</span>
+                                                     </Button>
+                                                </div>
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div className="space-y-2">
                                                 <Label htmlFor="age">Age</Label>
-                                                <Input id="age" type="number" placeholder="42" />
+                                                <Input id="age" type="number" placeholder="42" value={patientForm.age} onChange={handlePatientFormChange} />
                                             </div>
                                             <div className="space-y-2">
                                                 <Label htmlFor="gender">Gender</Label>
-                                                <Select>
+                                                <Select value={patientForm.gender} onValueChange={handlePatientSelectChange}>
                                                     <SelectTrigger id="gender">
                                                         <SelectValue placeholder="Select gender" />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="male">Male</SelectItem>
-                                                        <SelectItem value="female">Female</SelectItem>
-                                                        <SelectItem value="other">Other</SelectItem>
+                                                        <SelectItem value="Male">Male</SelectItem>
+                                                        <SelectItem value="Female">Female</SelectItem>
+                                                        <SelectItem value="Other">Other</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             </div>
@@ -393,16 +476,16 @@ export default function SalesPage() {
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div className="space-y-2">
                                                 <Label htmlFor="bp">Blood Pressure (BP)</Label>
-                                                <Input id="bp" placeholder="e.g., 120/80" />
+                                                <Input id="bp" placeholder="e.g., 120/80" value={patientForm.bp} onChange={handlePatientFormChange}/>
                                             </div>
                                             <div className="space-y-2">
                                                 <Label htmlFor="sugar">Blood Sugar</Label>
-                                                <Input id="sugar" placeholder="e.g., 98 mg/dL" />
+                                                <Input id="sugar" placeholder="e.g., 98 mg/dL" value={patientForm.sugar} onChange={handlePatientFormChange}/>
                                             </div>
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="address">Address</Label>
-                                            <Textarea id="address" placeholder="123 Main St, Anytown..." />
+                                            <Textarea id="address" placeholder="123 Main St, Anytown..." value={patientForm.address} onChange={handlePatientFormChange}/>
                                         </div>
                                         <div className="space-y-2">
                                             <Label>Disease(s)</Label>
