@@ -78,7 +78,7 @@ export default function ValuationReportPage() {
             case 'Store Stock': return <Package />;
             case 'Add Medicine': return <PlusSquare />;
             case 'Stock Transfer': return <GitBranch />;
-            case 'Stock Reports': return <BarChart />;
+            case 'Inventory Reports': return <BarChart />;
             case 'Valuation Report': return <TrendingUp />;
             case 'Diseases': return <Activity />;
             case 'Admin': return <Settings />;
@@ -86,7 +86,7 @@ export default function ValuationReportPage() {
         }
     };
     
-    const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory'));
+    const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory') && r.inSidebar);
     const totalValuation = valuationData.reduce((acc, item) => acc + (item.balance * item.price), 0);
 
   return (
@@ -144,12 +144,6 @@ export default function ValuationReportPage() {
                     </Collapsible>
                 )}
                  
-                 <SidebarMenuItem>
-                  <SidebarMenuButton href="/inventory/reports" tooltip="Reports">
-                    <BarChart />
-                    <span>Reports</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
             </SidebarMenu>
           </SidebarContent>
            <SidebarFooter>

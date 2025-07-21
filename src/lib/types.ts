@@ -1,3 +1,4 @@
+
 export type UserRole = "Admin" | "Pharmacist" | "Technician";
 
 export interface User {
@@ -27,7 +28,7 @@ export const allAppRoutes: AppRoute[] = [
     { path: "/inventory/add", name: "Add Medicine", inSidebar: true },
     { path: "/inventory/transfer", name: "Stock Transfer", inSidebar: true },
     { path: "/inventory/reports", name: "Inventory Reports", inSidebar: true },
-    { path: "/inventory/valuation", name: "Valuation Report", inSidebar: true },
+    { path: "/inventory/valuation", name: "Valuation Report", inSidebar: false },
     { path: "/diseases", name: "Diseases", inSidebar: true },
     { path: "/admin", name: "Admin", inSidebar: true },
 ];

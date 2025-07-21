@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -201,7 +202,7 @@ export default function PatientsPage() {
         }
     };
     
-    const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory'));
+    const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory') && r.inSidebar);
 
 
   return (
@@ -259,12 +260,6 @@ export default function PatientsPage() {
                     </Collapsible>
                 )}
                  
-                 <SidebarMenuItem>
-                  <SidebarMenuButton href="/inventory/reports" tooltip="Reports">
-                    <BarChart />
-                    <span>Inventory Reports</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
             </SidebarMenu>
           </SidebarContent>
            <SidebarFooter>

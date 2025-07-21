@@ -128,7 +128,7 @@ export default function StockTransferPage() {
             case 'Store Stock': return <Package />;
             case 'Add Medicine': return <PlusSquare />;
             case 'Stock Transfer': return <GitBranch />;
-            case 'Stock Reports': return <BarChart />;
+            case 'Inventory Reports': return <BarChart />;
             case 'Valuation Report': return <TrendingUp />;
             case 'Diseases': return <Activity />;
             case 'Admin': return <Settings />;
@@ -136,7 +136,7 @@ export default function StockTransferPage() {
         }
     };
     
-    const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory'));
+    const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory') && r.inSidebar);
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -193,12 +193,6 @@ export default function StockTransferPage() {
                     </Collapsible>
                 )}
                  
-                 <SidebarMenuItem>
-                  <SidebarMenuButton href="/inventory/reports" tooltip="Reports">
-                    <BarChart />
-                    <span>Reports</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
             </SidebarMenu>
           </SidebarContent>
            <SidebarFooter>
