@@ -11,7 +11,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useEffect } from "react";
 import { allAppRoutes, AppRoute } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const inventoryData = [
     { name: "Aspirin", quantity: 1500, status: "In Stock", manufacturer: "Bayer", expiry: "2025-12-31" },
@@ -61,7 +62,7 @@ export default function WarehouseInventoryPage() {
             case 'Dashboard': return <HomeIcon />;
             case 'Patients': return <Users2 />;
             case 'Sales': return <ShoppingCart />;
-            case 'Warehouse Stock': return <Package />;
+            case 'Warehouse Stock': return <Warehouse />;
             case 'Store Stock': return <Package />;
             case 'Add Medicine': return <PlusSquare />;
             case 'Stock Transfer': return <GitBranch />;
@@ -151,7 +152,10 @@ export default function WarehouseInventoryPage() {
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
            <SidebarTrigger className="sm:hidden" />
-           <h1 className="text-xl font-semibold">Warehouse Inventory</h1>
+           <div className="flex w-full items-center justify-between">
+              <h1 className="text-xl font-semibold">Warehouse Inventory</h1>
+              <ThemeToggle />
+           </div>
         </header>
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
             <Card>

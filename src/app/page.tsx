@@ -59,7 +59,6 @@ const salesData = [
 
 export default function Home() {
   const [data, setData] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState("dashboard");
   const { user, logout, loading, hasPermission } = useAuth();
   const router = useRouter();
 
@@ -90,10 +89,6 @@ export default function Home() {
     setData(generateData());
   }, []);
 
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
-  }
-
   if (loading || !user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -107,14 +102,12 @@ export default function Home() {
         case 'Dashboard': return <HomeIcon />;
         case 'Patients': return <Users2 />;
         case 'Sales': return <ShoppingCart />;
-        case 'Stock Management': return <Package />;
         case 'Warehouse Stock': return <Package />;
         case 'Store Stock': return <Package />;
         case 'Add Medicine': return <PlusSquare />;
         case 'Stock Transfer': return <GitBranch />;
         case 'Stock Reports': return <BarChart />;
         case 'Diseases': return <Activity />;
-        case 'Reports': return <BarChart />;
         case 'Admin': return <Settings />;
         default: return <LayoutGrid />;
     }
@@ -135,7 +128,7 @@ export default function Home() {
           <SidebarContent>
             <SidebarMenu>
                <SidebarMenuItem>
-                  <SidebarMenuButton href="/" isActive={activeTab === "dashboard"} tooltip="Dashboard">
+                  <SidebarMenuButton href="/" isActive={true} tooltip="Dashboard">
                     <HomeIcon />
                     <span>Dashboard</span>
                   </SidebarMenuButton>
@@ -179,7 +172,7 @@ export default function Home() {
                 )}
                  
                  <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => handleTabChange("reports")} isActive={activeTab === "reports"} tooltip="Reports">
+                  <SidebarMenuButton href="/" tooltip="Reports">
                     <BarChart />
                     <span>Reports</span>
                   </SidebarMenuButton>
@@ -313,4 +306,5 @@ export default function Home() {
       </div>
     </div>
   );
-}
+
+    

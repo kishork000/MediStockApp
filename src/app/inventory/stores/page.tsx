@@ -21,6 +21,7 @@ import { useRouter } from "next/navigation";
 import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const stores = [
     { id: "store1", name: "Downtown Pharmacy" },
@@ -158,7 +159,10 @@ export default function StoreInventoryPage() {
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
            <SidebarTrigger className="sm:hidden" />
-           <h1 className="text-xl font-semibold">Store Stock Status</h1>
+           <div className="flex w-full items-center justify-between">
+              <h1 className="text-xl font-semibold">Store Stock Status</h1>
+              <ThemeToggle />
+           </div>
         </header>
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
             <Card>
