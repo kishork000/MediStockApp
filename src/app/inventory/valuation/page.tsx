@@ -23,6 +23,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DateRangePicker } from "@/components/dashboard/DateRangePicker";
+import { DateRange } from "react-day-picker";
+import { addDays } from "date-fns";
+
 
 const valuationData = [
     { medicine: "Aspirin 100mg Tablet", price: 10, opening: 100, received: 50, sales: 30, balance: 120 },
@@ -43,6 +46,10 @@ export default function ValuationReportPage() {
     const { user, logout, loading, hasPermission } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
+    const [dateRange, setDateRange] = useState<DateRange | undefined>({
+      from: new Date(2023, 0, 20),
+      to: addDays(new Date(2023, 0, 20), 20),
+    });
 
     const sidebarRoutes = useMemo(() => {
         return allAppRoutes.filter(route => hasPermission(route.path) && route.path !== '/');
@@ -183,7 +190,7 @@ export default function ValuationReportPage() {
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <DateRangePicker />
+                            <DateRangePicker date={dateRange} setDate={setDateRange} />
                              <Button variant="outline"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
                         </div>
                     </div>
@@ -226,3 +233,5 @@ export default function ValuationReportPage() {
     </div>
   );
 }
+
+    

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -22,6 +23,8 @@ import { useRouter, usePathname } from "next/navigation";
 import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { DateRange } from "react-day-picker";
+import { addDays, parseISO } from "date-fns";
 
 const salesData = [
     { pharmacist: "Pharmacist One", store: "Downtown Pharmacy", medicine: "Aspirin", quantity: 5, total: 50.00, date: "2024-07-28" },
@@ -34,15 +37,15 @@ const salesData = [
 
 const stores = [
     { id: "all", name: "All Stores" },
-    { id: "downtown", name: "Downtown Pharmacy" },
-    { id: "uptown", name: "Uptown Health" },
+    { id: "Downtown Pharmacy", name: "Downtown Pharmacy" },
+    { id: "Uptown Health", name: "Uptown Health" },
 ];
 
 const pharmacists = [
     { id: "all", name: "All Pharmacists" },
-    { id: "p1", name: "Pharmacist One" },
-    { id: "p2", name: "Pharmacist Two" },
-    { id: "admin", name: "Admin User" },
+    { id: "Pharmacist One", name: "Pharmacist One" },
+    { id: "Pharmacist Two", name: "Pharmacist Two" },
+    { id: "Admin User", name: "Admin User" },
 ];
 
 export default function SalesReportPage() {
@@ -50,29 +53,62 @@ export default function SalesReportPage() {
     const router = useRouter();
     const pathname = usePathname();
 
-    // In a real app, these would come from an API based on filters
-    const totalSalesValue = salesData.reduce((acc, sale) => acc + sale.total, 0);
-    const totalItemsSold = salesData.reduce((acc, sale) => acc + sale.quantity, 0);
+    const [filteredData, setFilteredData] = useState(salesData);
+    const [selectedStore, setSelectedStore] = useState("all");
+    const [selectedPharmacist, setSelectedPharmacist] = useState("all");
+    const [dateRange, setDateRange] = useState<DateRange | undefined>({
+      from: new Date(2024, 6, 20),
+      to: addDays(new Date(2024, 6, 20), 20),
+    });
 
-    const highSellingMedicines = salesData.reduce((acc, sale) => {
-        const existing = acc.find(item => item.name === sale.medicine);
-        if (existing) {
-            existing.quantity += sale.quantity;
-        } else {
-            acc.push({ name: sale.medicine, quantity: sale.quantity });
-        }
-        return acc;
-    }, [] as { name: string; quantity: number; }[]).sort((a, b) => b.quantity - a.quantity);
+    const handleApplyFilters = () => {
+        let data = [...salesData];
 
-    const pharmacistSales = salesData.reduce((acc, sale) => {
-        const existing = acc.find(item => item.name === sale.pharmacist);
-        if (existing) {
-            existing.salesValue += sale.total;
-        } else {
-            acc.push({ name: sale.pharmacist, salesValue: sale.total });
+        if (selectedStore !== "all") {
+            data = data.filter(sale => sale.store === selectedStore);
         }
-        return acc;
-    }, [] as { name: string; salesValue: number; }[]).sort((a, b) => b.salesValue - a.salesValue);
+
+        if (selectedPharmacist !== "all") {
+            data = data.filter(sale => sale.pharmacist === selectedPharmacist);
+        }
+
+        if (dateRange?.from && dateRange?.to) {
+            data = data.filter(sale => {
+                const saleDate = parseISO(sale.date);
+                return saleDate >= dateRange.from! && saleDate <= dateRange.to!;
+            });
+        }
+        
+        setFilteredData(data);
+    };
+
+    const analytics = useMemo(() => {
+        const totalSalesValue = filteredData.reduce((acc, sale) => acc + sale.total, 0);
+        const totalItemsSold = filteredData.reduce((acc, sale) => acc + sale.quantity, 0);
+
+        const highSellingMedicines = filteredData.reduce((acc, sale) => {
+            const existing = acc.find(item => item.name === sale.medicine);
+            if (existing) {
+                existing.quantity += sale.quantity;
+            } else {
+                acc.push({ name: sale.medicine, quantity: sale.quantity });
+            }
+            return acc;
+        }, [] as { name: string; quantity: number; }[]).sort((a, b) => b.quantity - a.quantity);
+
+        const pharmacistSales = filteredData.reduce((acc, sale) => {
+            const existing = acc.find(item => item.name === sale.pharmacist);
+            if (existing) {
+                existing.salesValue += sale.total;
+            } else {
+                acc.push({ name: sale.pharmacist, salesValue: sale.total });
+            }
+            return acc;
+        }, [] as { name: string; salesValue: number; }[]).sort((a, b) => b.salesValue - a.salesValue);
+        
+        return { totalSalesValue, totalItemsSold, highSellingMedicines, pharmacistSales };
+
+    }, [filteredData]);
 
 
     const sidebarRoutes = useMemo(() => {
@@ -103,7 +139,7 @@ export default function SalesReportPage() {
             case 'Store Stock': return <Package />;
             case 'Add Medicine': return <PlusSquare />;
             case 'Stock Transfer': return <GitBranch />;
-            case 'Stock Reports': return <BarChart />;
+            case 'Inventory Reports': return <BarChart />;
             case 'Valuation Report': return <TrendingUp />;
             case 'Diseases': return <Activity />;
             case 'Admin': return <Settings />;
@@ -204,7 +240,7 @@ export default function SalesReportPage() {
                             <CardDescription>Analyze sales data with powerful filters.</CardDescription>
                         </div>
                          <div className="flex flex-wrap items-center gap-2">
-                            <Select defaultValue="all">
+                            <Select value={selectedStore} onValueChange={setSelectedStore}>
                                 <SelectTrigger className="w-full sm:w-[160px]">
                                     <SelectValue placeholder="Select Store" />
                                 </SelectTrigger>
@@ -214,7 +250,7 @@ export default function SalesReportPage() {
                                     ))}
                                 </SelectContent>
                             </Select>
-                             <Select defaultValue="all">
+                             <Select value={selectedPharmacist} onValueChange={setSelectedPharmacist}>
                                 <SelectTrigger className="w-full sm:w-[180px]">
                                     <SelectValue placeholder="Select Pharmacist" />
                                 </SelectTrigger>
@@ -224,8 +260,8 @@ export default function SalesReportPage() {
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <DateRangePicker />
-                            <Button variant="outline"><Filter className="mr-2 h-4 w-4" /> Apply</Button>
+                            <DateRangePicker date={dateRange} setDate={setDateRange} />
+                            <Button onClick={handleApplyFilters}><Filter className="mr-2 h-4 w-4" /> Apply</Button>
                         </div>
                     </div>
                 </CardHeader>
@@ -237,7 +273,7 @@ export default function SalesReportPage() {
                                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">₹{totalSalesValue.toFixed(2)}</div>
+                                <div className="text-2xl font-bold">₹{analytics.totalSalesValue.toFixed(2)}</div>
                             </CardContent>
                         </Card>
                         <Card>
@@ -246,7 +282,7 @@ export default function SalesReportPage() {
                                 <Package className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">{totalItemsSold}</div>
+                                <div className="text-2xl font-bold">{analytics.totalItemsSold}</div>
                             </CardContent>
                         </Card>
                     </div>
@@ -256,7 +292,7 @@ export default function SalesReportPage() {
                             <Card>
                                 <CardHeader>
                                     <CardTitle>High-Selling Medicines</CardTitle>
-                                    <CardDescription>Top medicines sold by quantity.</CardDescription>
+                                    <CardDescription>Top medicines sold by quantity in the selected period.</CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     <Table>
@@ -267,12 +303,16 @@ export default function SalesReportPage() {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {highSellingMedicines.map((item) => (
+                                            {analytics.highSellingMedicines.length > 0 ? analytics.highSellingMedicines.map((item) => (
                                                 <TableRow key={item.name}>
                                                     <TableCell className="font-medium">{item.name}</TableCell>
                                                     <TableCell className="text-right">{item.quantity}</TableCell>
                                                 </TableRow>
-                                            ))}
+                                            )) : (
+                                                <TableRow>
+                                                    <TableCell colSpan={2} className="text-center">No data available for this selection.</TableCell>
+                                                </TableRow>
+                                            )}
                                         </TableBody>
                                     </Table>
                                 </CardContent>
@@ -282,7 +322,7 @@ export default function SalesReportPage() {
                             <Card>
                                 <CardHeader>
                                     <CardTitle>Pharmacist Performance</CardTitle>
-                                    <CardDescription>Total sales value by each pharmacist.</CardDescription>
+                                    <CardDescription>Total sales value by each pharmacist in the selected period.</CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     <Table>
@@ -293,12 +333,16 @@ export default function SalesReportPage() {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {pharmacistSales.map((item) => (
+                                            {analytics.pharmacistSales.length > 0 ? analytics.pharmacistSales.map((item) => (
                                                 <TableRow key={item.name}>
                                                     <TableCell className="font-medium">{item.name}</TableCell>
                                                     <TableCell className="text-right">{item.salesValue.toFixed(2)}</TableCell>
                                                 </TableRow>
-                                            ))}
+                                            )) : (
+                                                <TableRow>
+                                                    <TableCell colSpan={2} className="text-center">No data available for this selection.</TableCell>
+                                                </TableRow>
+                                            )}
                                         </TableBody>
                                     </Table>
                                 </CardContent>
@@ -314,3 +358,5 @@ export default function SalesReportPage() {
       </div>
     </div>
   );
+
+    
