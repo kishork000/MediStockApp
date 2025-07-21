@@ -59,11 +59,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         const userPermissions = permissions[user.role] || [];
         
-        // Exact match is the highest priority
-        if (userPermissions.includes(path)) {
-            return true;
-        }
-
         // Special case for grouped routes like /inventory
         // If a user has permission for ANY route starting with a base path (e.g., /inventory/add)
         // they should also have access to the base path itself (for the collapsible trigger).
@@ -71,7 +66,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return userPermissions.some(p => p.startsWith('/inventory/'));
         }
         
-        return false;
+        // For all other routes, require an exact match.
+        return userPermissions.includes(path);
+
     }, [user, permissions]);
 
 
