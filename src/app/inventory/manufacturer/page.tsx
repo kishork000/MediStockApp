@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useTransition } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, MoreHorizontal, Trash2, Pill, Undo, Building } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, MoreHorizontal, Trash2, Pill, Undo, Building, Search } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
+import { fetchGstDetails } from "@/services/gstin-service";
 
 interface Manufacturer {
     id: string;
@@ -45,6 +46,16 @@ const initialManufacturers: Manufacturer[] = [
     { id: "MAN004", name: "Cipla Ltd", contactPerson: "Priya Singh", email: "priya.singh@cipla.com", phone: "9876543213", address: "Cipla House, Peninsula Business Park, Mumbai", gstin: "27AAACC2728D1Z2" },
 ];
 
+const defaultFormState = {
+    name: "",
+    contactPerson: "",
+    email: "",
+    phone: "",
+    address: "",
+    gstin: "",
+};
+
+
 export default function ManufacturerMasterPage() {
     const { user, logout, loading, hasPermission } = useAuth();
     const router = useRouter();
@@ -52,6 +63,9 @@ export default function ManufacturerMasterPage() {
     const { toast } = useToast();
     const [manufacturers, setManufacturers] = useState<Manufacturer[]>(initialManufacturers);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    
+    const [newManufacturerForm, setNewManufacturerForm] = useState(defaultFormState);
+    const [isFetchingGst, startFetchingGst] = useTransition();
 
     const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
     const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && route.inSidebar && hasPermission(route.path)), [hasPermission]);
@@ -61,6 +75,11 @@ export default function ManufacturerMasterPage() {
             router.push('/login');
         }
     }, [user, loading, router]);
+    
+    const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        setNewManufacturerForm(prev => ({ ...prev, [name]: value }));
+    };
 
     const handleDelete = (id: string) => {
         setManufacturers(manufacturers.filter(m => m.id !== id));
@@ -69,13 +88,8 @@ export default function ManufacturerMasterPage() {
 
     const handleAddManufacturer = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        const formData = new FormData(e.currentTarget);
-        const name = formData.get("manufacturer-name") as string;
-        const contactPerson = formData.get("contact-person") as string;
-        const email = formData.get("email") as string;
-        const phone = formData.get("phone") as string;
-        const address = formData.get("address") as string;
-        const gstin = formData.get("gstin") as string;
+        
+        const { name, contactPerson, email, phone, address, gstin } = newManufacturerForm;
 
         if (name && contactPerson && email && phone && address && gstin) {
             const newManufacturer: Manufacturer = {
@@ -90,10 +104,31 @@ export default function ManufacturerMasterPage() {
             setManufacturers([...manufacturers, newManufacturer]);
             toast({ title: "Success", description: "Manufacturer added to master list." });
             setIsAddModalOpen(false);
-            e.currentTarget.reset();
+            setNewManufacturerForm(defaultFormState);
         } else {
             toast({ variant: "destructive", title: "Error", description: "Please fill all fields." });
         }
+    };
+    
+    const handleFetchGstDetails = () => {
+        if (!newManufacturerForm.gstin) {
+            toast({ variant: "destructive", title: "Error", description: "Please enter a GSTIN to fetch details." });
+            return;
+        }
+
+        startFetchingGst(async () => {
+            const result = await fetchGstDetails(newManufacturerForm.gstin);
+            if (result) {
+                setNewManufacturerForm({
+                    ...newManufacturerForm,
+                    name: result.name,
+                    address: result.address,
+                });
+                toast({ title: "Details Fetched", description: "Manufacturer details have been auto-filled." });
+            } else {
+                toast({ variant: "destructive", title: "Not Found", description: "Could not find details for this GSTIN. Please enter manually." });
+            }
+        });
     };
     
     if (loading || !user) {
@@ -276,42 +311,46 @@ export default function ManufacturerMasterPage() {
                     <DialogHeader>
                         <DialogTitle>Add New Manufacturer</DialogTitle>
                         <DialogDescription>
-                            Define a new supplier with their contact details in the master list.
+                            Define a new supplier. Enter GSTIN to fetch details automatically (simulated).
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="space-y-2">
-                            <Label htmlFor="manufacturer-name">Manufacturer Name</Label>
-                            <Input id="manufacturer-name" name="manufacturer-name" placeholder="e.g., Cipla Inc." required />
+                             <Label htmlFor="gstin">GSTIN</Label>
+                             <div className="flex gap-2">
+                                <Input id="gstin" name="gstin" value={newManufacturerForm.gstin} onChange={handleFormChange} placeholder="15-digit GSTIN" required />
+                                <Button type="button" variant="outline" size="icon" onClick={handleFetchGstDetails} disabled={isFetchingGst}>
+                                    <Search className={isFetchingGst ? 'animate-spin' : ''} />
+                                </Button>
+                             </div>
+                             <p className="text-xs text-muted-foreground">Try: 27AAFCT6913H1Z3 or 27AABCP5871N1Z5</p>
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="name">Manufacturer Name</Label>
+                            <Input id="name" name="name" value={newManufacturerForm.name} onChange={handleFormChange} placeholder="e.g., Cipla Inc." required />
                         </div>
                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="contact-person">Contact Person</Label>
-                                <Input id="contact-person" name="contact-person" placeholder="e.g., Priya Singh" required />
+                                <Label htmlFor="contactPerson">Contact Person</Label>
+                                <Input id="contactPerson" name="contactPerson" value={newManufacturerForm.contactPerson} onChange={handleFormChange} placeholder="e.g., Priya Singh" required />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="phone">Phone Number</Label>
-                                <Input id="phone" name="phone" type="tel" placeholder="e.g., 9876543210" required />
+                                <Input id="phone" name="phone" value={newManufacturerForm.phone} onChange={handleFormChange} type="tel" placeholder="e.g., 9876543210" required />
                             </div>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="email">Email Address</Label>
-                                <Input id="email" name="email" type="email" placeholder="e.g., priya.singh@cipla.com" required />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="gstin">GSTIN</Label>
-                                <Input id="gstin" name="gstin" placeholder="15-digit GSTIN" required />
-                            </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="email">Email Address</Label>
+                            <Input id="email" name="email" value={newManufacturerForm.email} onChange={handleFormChange} type="email" placeholder="e.g., priya.singh@cipla.com" required />
                         </div>
                          <div className="space-y-2">
                             <Label htmlFor="address">Address</Label>
-                            <Textarea id="address" name="address" placeholder="e.g., Cipla House, Peninsula Business Park, Mumbai" required />
+                            <Textarea id="address" name="address" value={newManufacturerForm.address} onChange={handleFormChange} placeholder="e.g., Cipla House, Peninsula Business Park, Mumbai" required />
                         </div>
                     </div>
                     <DialogFooter>
                         <DialogClose asChild>
-                            <Button type="button" variant="secondary">Cancel</Button>
+                            <Button type="button" variant="secondary" onClick={() => setNewManufacturerForm(defaultFormState)}>Cancel</Button>
                         </DialogClose>
                         <Button type="submit">Add to Master</Button>
                     </DialogFooter>
