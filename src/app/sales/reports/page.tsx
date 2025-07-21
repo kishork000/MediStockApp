@@ -24,7 +24,11 @@ import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { DateRange } from "react-day-picker";
-import { addDays, parseISO, startOfDay, endOfDay } from "date-fns";
+import { addDays, parseISO, startOfDay, endOfDay, format } from "date-fns";
+import { SalesByPharmacistChart } from "@/components/sales/SalesByPharmacistChart";
+import { TopSellingMedicinesChart } from "@/components/sales/TopSellingMedicinesChart";
+import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { ChartTooltipContent } from "@/components/ui/chart";
 
 const salesData = [
     { pharmacist: "Pharmacist One", store: "Downtown Pharmacy", medicine: "Aspirin", quantity: 5, total: 50.00, date: "2024-07-28" },
@@ -87,6 +91,7 @@ export default function SalesReportPage() {
     // Apply filters on initial load
     useEffect(() => {
         handleApplyFilters();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
 
@@ -102,7 +107,7 @@ export default function SalesReportPage() {
                 acc.push({ name: sale.medicine, quantity: sale.quantity });
             }
             return acc;
-        }, [] as { name: string; quantity: number; }[]).sort((a, b) => b.quantity - a.quantity).slice(0, 5); // show top 5
+        }, [] as { name: string; quantity: number; }[]).sort((a, b) => b.quantity - a.quantity).slice(0, 5);
 
         const pharmacistSales = filteredData.reduce((acc, sale) => {
             const existing = acc.find(item => item.name === sale.pharmacist);
@@ -114,7 +119,19 @@ export default function SalesReportPage() {
             return acc;
         }, [] as { name: string; salesValue: number; }[]).sort((a, b) => b.salesValue - a.salesValue);
         
-        return { totalSalesValue, totalItemsSold, highSellingMedicines, pharmacistSales };
+        const salesOverTime = filteredData.reduce((acc, sale) => {
+            const saleDate = format(parseISO(sale.date), "MMM dd");
+            const existing = acc.find(item => item.date === saleDate);
+            if (existing) {
+                existing.total += sale.total;
+            } else {
+                acc.push({ date: saleDate, total: sale.total });
+            }
+            return acc;
+        }, [] as { date: string; total: number; }[]).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+
+        return { totalSalesValue, totalItemsSold, highSellingMedicines, pharmacistSales, salesOverTime };
 
     }, [filteredData]);
 
@@ -295,68 +312,35 @@ export default function SalesReportPage() {
                         </Card>
                     </div>
 
+                     <Card>
+                        <CardHeader>
+                            <CardTitle>Sales Over Time</CardTitle>
+                            <CardDescription>Total sales value in the selected period.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <ResponsiveContainer width="100%" height={300}>
+                                <AreaChart data={analytics.salesOverTime}>
+                                    <defs>
+                                        <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
+                                            <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="date" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                                    <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `₹${value}`} />
+                                    <Tooltip content={<ChartTooltipContent formatter={(value) => `₹${Number(value).toFixed(2)}`} />} />
+                                    <Area type="monotone" dataKey="total" stroke="hsl(var(--primary))" fill="url(#colorTotal)" />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </CardContent>
+                    </Card>
+
                     <div className="grid gap-8 md:grid-cols-2">
-                        <div>
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>High-Selling Medicines</CardTitle>
-                                    <CardDescription>Top medicines sold by quantity in the selected period.</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Medicine</TableHead>
-                                                <TableHead className="text-right">Quantity Sold</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {analytics.highSellingMedicines.length > 0 ? analytics.highSellingMedicines.map((item) => (
-                                                <TableRow key={item.name}>
-                                                    <TableCell className="font-medium">{item.name}</TableCell>
-                                                    <TableCell className="text-right">{item.quantity}</TableCell>
-                                                </TableRow>
-                                            )) : (
-                                                <TableRow>
-                                                    <TableCell colSpan={2} className="text-center">No data available for this selection.</TableCell>
-                                                </TableRow>
-                                            )}
-                                        </TableBody>
-                                    </Table>
-                                </CardContent>
-                            </Card>
-                        </div>
-                        <div>
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Pharmacist Performance</CardTitle>
-                                    <CardDescription>Total sales value by each pharmacist in the selected period.</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Pharmacist</TableHead>
-                                                <TableHead className="text-right">Total Sales (₹)</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {analytics.pharmacistSales.length > 0 ? analytics.pharmacistSales.map((item) => (
-                                                <TableRow key={item.name}>
-                                                    <TableCell className="font-medium">{item.name}</TableCell>
-                                                    <TableCell className="text-right">{item.salesValue.toFixed(2)}</TableCell>
-                                                </TableRow>
-                                            )) : (
-                                                <TableRow>
-                                                    <TableCell colSpan={2} className="text-center">No data available for this selection.</TableCell>
-                                                </TableRow>
-                                            )}
-                                        </TableBody>
-                                    </Table>
-                                </CardContent>
-                            </Card>
-                        </div>
+                        <TopSellingMedicinesChart data={analytics.highSellingMedicines} />
+                        <SalesByPharmacistChart data={analytics.pharmacistSales} />
                     </div>
+
                      <div className="mt-6 flex justify-end items-center">
                         <Button size="sm" variant="outline"><Download className="mr-2" /> Download Full Report</Button>
                     </div>
@@ -366,7 +350,5 @@ export default function SalesReportPage() {
       </div>
     </div>
   );
-
-    
 
     
