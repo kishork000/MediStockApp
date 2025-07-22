@@ -11,7 +11,8 @@ export interface Medicine {
     purchasePrice: number;
     sellingPrice: number;
     gstSlab: string;
-    minStockLevel: number;
+    warehouseMinStockLevel: number;
+    storeMinStockLevel: number;
     baseUnit: string; // e.g., PCS, BTL
     packType?: string; // e.g., STRIP, BOX
     unitsPerPack?: number; // e.g., 10 tablets per strip

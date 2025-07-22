@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -25,43 +25,41 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { DateRangePicker } from "@/components/dashboard/DateRangePicker";
 import { DateRange } from "react-day-picker";
 import { isWithinInterval, startOfDay, endOfDay } from "date-fns";
+import { Input } from "@/components/ui/input";
+import { InventoryItem, getAvailableStockForLocation } from "@/services/inventory-service";
+import { Medicine, getMedicines } from "@/services/medicine-service";
+import { useToast } from "@/hooks/use-toast";
 
+interface EnrichedInventoryItem extends InventoryItem {
+    minStockLevel: number;
+}
 
 const allStores = [
     { id: "STR002", name: "Downtown Pharmacy" },
     { id: "STR003", name: "Uptown Health" },
 ];
 
-const storeInventory: { [key: string]: any[] } = {
-    "STR002": [],
-    "STR003": [],
-};
-
-const medicineOptions = [
-    { value: "all", name: "All Medicines" },
-];
-
 const getStatus = (quantity: number, minStockLevel: number) => {
     if (quantity <= 0) return "Out of Stock";
-    if (quantity < minStockLevel) return "Low Stock";
+    if (quantity <= minStockLevel) return "Low Stock";
     return "In Stock";
 };
 
 export default function StoreInventoryPage() {
     const { user, logout, loading, hasPermission } = useAuth();
     const router = useRouter();
+    const { toast } = useToast();
     const pathname = usePathname();
     const [selectedStore, setSelectedStore] = useState("");
-    const [selectedMedicine, setSelectedMedicine] = useState("all");
-    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+    const [searchQuery, setSearchQuery] = useState("");
+
+    const [pageLoading, setPageLoading] = useState(true);
+    const [storeInventory, setStoreInventory] = useState<EnrichedInventoryItem[]>([]);
+    const [medicineMaster, setMedicineMaster] = useState<Medicine[]>([]);
 
     const availableStores = useMemo(() => {
-        if (user?.role === 'Admin') {
-            return allStores;
-        }
-        if (user?.role === 'Pharmacist' && user.assignedStore) {
-            return allStores.filter(s => s.id === user.assignedStore);
-        }
+        if (user?.role === 'Admin') return allStores;
+        if (user?.role === 'Pharmacist' && user.assignedStore) return allStores.filter(s => s.id === user.assignedStore);
         return [];
     }, [user]);
 
@@ -70,37 +68,51 @@ export default function StoreInventoryPage() {
             setSelectedStore(availableStores[0].id);
         }
     }, [availableStores, selectedStore]);
+    
+    const fetchStoreData = useCallback(async () => {
+        if (!selectedStore) return;
+        setPageLoading(true);
+        try {
+            const [stockItems, medicines] = await Promise.all([
+                getAvailableStockForLocation(selectedStore),
+                getMedicines()
+            ]);
 
+            const medicineMap = new Map<string, Medicine>(medicines.map(m => [m.id, m]));
 
-    const filteredInventory = useMemo(() => {
-        let inventory = storeInventory[selectedStore as keyof typeof storeInventory] || [];
-
-        if (selectedMedicine !== 'all') {
-            inventory = inventory.filter(item => item.value === selectedMedicine);
+            const enrichedStock = stockItems.map(item => {
+                const medicineDetails = medicineMap.get(item.medicineId);
+                return {
+                    ...item,
+                    minStockLevel: medicineDetails?.storeMinStockLevel || 0,
+                };
+            });
+            setStoreInventory(enrichedStock);
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to load store inventory.' });
         }
-
-        if (dateRange?.from && dateRange?.to) {
-            const interval = { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to) };
-            inventory = inventory.filter(item => isWithinInterval(item.date, interval));
-        }
-
-        return inventory;
-
-    }, [selectedStore, selectedMedicine, dateRange]);
-
-
-    const sidebarRoutes = useMemo(() => {
-        return allAppRoutes.filter(route => route.path !== '/');
-    }, []);
-
-     const stockManagementRoutes = useMemo(() => {
-        return allAppRoutes.filter(route => route.path.startsWith('/inventory') && hasPermission(route.path));
-    }, [hasPermission]);
+        setPageLoading(false);
+    }, [selectedStore, toast]);
 
     useEffect(() => {
-        if (!loading && !user) {
-            router.push('/login');
+        fetchStoreData();
+    }, [fetchStoreData]);
+
+    const filteredInventory = useMemo(() => {
+        let inventory = [...storeInventory];
+        if (searchQuery) {
+            inventory = inventory.filter(item => item.medicineName.toLowerCase().includes(searchQuery.toLowerCase()));
         }
+        return inventory;
+
+    }, [storeInventory, searchQuery]);
+
+
+    const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
+    const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory') && hasPermission(route.path)), [hasPermission]);
+
+    useEffect(() => {
+        if (!loading && !user) router.push('/login');
     }, [user, loading, router]);
 
     if (loading || !user) {
@@ -113,22 +125,7 @@ export default function StoreInventoryPage() {
     
     const getIcon = (name: string) => {
         switch (name) {
-            case 'Dashboard': return <HomeIcon />;
-            case 'Patients': return <Users2 />;
-            case 'Sales': return <ShoppingCart />;
-            case 'Sales Reports': return <BarChart />;
-            case 'Warehouse Stock': return <Warehouse />;
-            case 'Store Stock': return <Package />;
-            case 'Medicine Master': return <Pill />;
-            case 'Manufacturer Master': return <Building />;
-            case 'Add Stock': return <PlusSquare />;
-            case 'Return to Manufacturer': return <Undo />;
-            case 'Stock Transfer': return <GitBranch />;
-            case 'Inventory Reports': return <BarChart />;
-            case 'Valuation Report': return <TrendingUp />;
-            case 'Diseases': return <Activity />;
-            case 'Admin': return <Settings />;
-            default: return <LayoutGrid />;
+            case 'Dashboard': return <HomeIcon />; case 'Patients': return <Users2 />; case 'Sales': return <ShoppingCart />; case 'Sales Reports': return <BarChart />; case 'Warehouse Stock': return <Warehouse />; case 'Store Stock': return <Package />; case 'Medicine Master': return <Pill />; case 'Manufacturer Master': return <Building />; case 'Add Stock': return <PlusSquare />; case 'Return to Manufacturer': return <Undo />; case 'Stock Transfer': return <GitBranch />; case 'Inventory Reports': return <BarChart />; case 'Valuation Report': return <TrendingUp />; case 'Diseases': return <Activity />; case 'Admin': return <Settings />; default: return <LayoutGrid />;
         }
     };
 
@@ -189,7 +186,7 @@ export default function StoreInventoryPage() {
 
                  {hasPermission('/admin') && (
                     <SidebarMenuItem>
-                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname === '/admin'}>
+                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname.startsWith('/admin')}>
                             {getIcon('Admin')}
                             <span>Admin</span>
                         </SidebarMenuButton>
@@ -239,20 +236,16 @@ export default function StoreInventoryPage() {
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <Select 
-                                value={selectedMedicine}
-                                onValueChange={setSelectedMedicine}
-                            >
-                                <SelectTrigger className="w-full sm:w-[200px]">
-                                    <SelectValue placeholder="Select Medicine" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {medicineOptions.map(med => (
-                                        <SelectItem key={med.value} value={med.value}>{med.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                             <DateRangePicker onUpdate={(values) => setDateRange(values.range)} />
+                            <div className="relative">
+                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    type="search"
+                                    placeholder="Search medicine..."
+                                    className="w-full sm:w-[200px] pl-8"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
                         </div>
                     </div>
                 </CardHeader>
@@ -262,23 +255,28 @@ export default function StoreInventoryPage() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Medicine</TableHead>
-                                    <TableHead className="text-right hidden sm:table-cell">Open</TableHead>
-                                    <TableHead className="text-right hidden sm:table-cell">Rcvd</TableHead>
-                                    <TableHead className="text-right hidden sm:table-cell">Sold</TableHead>
-                                    <TableHead className="text-right font-bold">Avail</TableHead>
+                                    <TableHead className="text-right font-bold">Available</TableHead>
+                                    <TableHead className="text-right hidden sm:table-cell">Min. Stock</TableHead>
                                     <TableHead className="text-right">Status</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredInventory.length > 0 ? filteredInventory.map((item) => {
+                                {pageLoading ? (
+                                    Array.from({ length: 5 }).map((_, i) => (
+                                        <TableRow key={i}>
+                                            <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
+                                            <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
+                                            <TableCell><Skeleton className="h-6 w-24 ml-auto" /></TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : filteredInventory.length > 0 ? filteredInventory.map((item) => {
                                     const status = getStatus(item.quantity, item.minStockLevel);
                                     return (
-                                    <TableRow key={item.name}>
-                                        <TableCell className="font-medium">{item.name}</TableCell>
-                                        <TableCell className="text-right hidden sm:table-cell">{item.opening}</TableCell>
-                                        <TableCell className="text-right hidden sm:table-cell">{item.received}</TableCell>
-                                        <TableCell className="text-right hidden sm:table-cell">{item.sales}</TableCell>
+                                    <TableRow key={item.id}>
+                                        <TableCell className="font-medium">{item.medicineName}</TableCell>
                                         <TableCell className="text-right font-bold">{item.quantity}</TableCell>
+                                        <TableCell className="text-right hidden sm:table-cell">{item.minStockLevel}</TableCell>
                                         <TableCell className="text-right">
                                             <Badge variant={status === 'In Stock' ? 'default' : status === 'Low Stock' ? 'secondary' : 'destructive'}>
                                                 {status}
@@ -287,8 +285,8 @@ export default function StoreInventoryPage() {
                                     </TableRow>
                                 )}) : (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="text-center h-24">
-                                            No stock data available for the selected filters.
+                                        <TableCell colSpan={4} className="text-center h-24">
+                                            No stock data available for the selected store.
                                         </TableCell>
                                     </TableRow>
                                 )}

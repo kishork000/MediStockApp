@@ -19,19 +19,23 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
-import { useMemo, useEffect, useState } from "react";
+import { useMemo, useEffect, useState, useCallback } from "react";
 import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Skeleton } from "@/components/ui/skeleton";
+import { InventoryItem, getAvailableStockForLocation } from "@/services/inventory-service";
+import { Medicine, getMedicines } from "@/services/medicine-service";
+import { useToast } from "@/hooks/use-toast";
 
-
-// Mock data removed. Will be replaced by live data.
-const inventoryData: any[] = [];
+interface EnrichedInventoryItem extends InventoryItem {
+    minStockLevel: number;
+    manufacturerName: string;
+}
 
 const getStatus = (quantity: number, minStockLevel: number) => {
-    if (quantity === 0) return "Out of Stock";
-    if (quantity < minStockLevel) return "Low Stock";
+    if (quantity <= 0) return "Out of Stock";
+    if (quantity <= minStockLevel) return "Low Stock";
     return "In Stock";
 };
 
@@ -39,17 +43,49 @@ export default function WarehouseInventoryPage() {
     const { user, logout, loading, hasPermission } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
+    const { toast } = useToast();
     const [pageLoading, setPageLoading] = useState(true);
+    const [inventoryData, setInventoryData] = useState<EnrichedInventoryItem[]>([]);
 
     const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
     const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && route.inSidebar && hasPermission(route.path)), [hasPermission]);
 
+    const fetchWarehouseData = useCallback(async () => {
+        setPageLoading(true);
+        try {
+            const [stockItems, medicines] = await Promise.all([
+                getAvailableStockForLocation('warehouse'),
+                getMedicines()
+            ]);
+
+            const medicineMap = new Map<string, Medicine>(medicines.map(m => [m.id, m]));
+
+            const enrichedStock = stockItems.map(item => {
+                const medicineDetails = medicineMap.get(item.medicineId);
+                return {
+                    ...item,
+                    minStockLevel: medicineDetails?.warehouseMinStockLevel || 0,
+                    manufacturerName: medicineDetails?.manufacturerName || 'N/A',
+                };
+            });
+
+            setInventoryData(enrichedStock);
+
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to load warehouse data.' });
+        }
+        setPageLoading(false);
+    }, [toast]);
+    
+    useEffect(() => {
+        if(user) {
+            fetchWarehouseData();
+        }
+    }, [user, fetchWarehouseData]);
+
     useEffect(() => {
         if (!loading && !user) {
             router.push('/login');
-        }
-         if (!loading && user) {
-            setPageLoading(false);
         }
     }, [user, loading, router]);
 
@@ -129,7 +165,7 @@ export default function WarehouseInventoryPage() {
                 )}
                  {hasPermission('/admin') && (
                     <SidebarMenuItem>
-                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname === '/admin'}>
+                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname.startsWith('/admin')}>
                             {getIcon('Admin')}
                             <span>Admin</span>
                         </SidebarMenuButton>
@@ -169,47 +205,28 @@ export default function WarehouseInventoryPage() {
                             <TableHead>Medicine</TableHead>
                             <TableHead className="hidden sm:table-cell">Manufacturer</TableHead>
                             <TableHead className="text-right">Stock</TableHead>
-                            <TableHead className="text-right hidden sm:table-cell">Status</TableHead>
-                            <TableHead className="hidden md:table-cell">Expiry Date</TableHead>
-                            <TableHead>
-                                <span className="sr-only">Actions</span>
-                            </TableHead>
+                            <TableHead className="text-right hidden sm:table-cell">Min. Stock</TableHead>
+                            <TableHead className="text-right">Status</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {inventoryData.length > 0 ? inventoryData.map((item) => {
                             const status = getStatus(item.quantity, item.minStockLevel);
                             return (
-                            <TableRow key={item.name}>
-                                <TableCell className="font-medium">{item.name}</TableCell>
-                                <TableCell className="hidden sm:table-cell">{item.manufacturer}</TableCell>
+                            <TableRow key={item.id}>
+                                <TableCell className="font-medium">{item.medicineName}</TableCell>
+                                <TableCell className="hidden sm:table-cell">{item.manufacturerName}</TableCell>
                                 <TableCell className="text-right">{item.quantity}</TableCell>
-                                <TableCell className="text-right hidden sm:table-cell">
+                                <TableCell className="text-right hidden sm:table-cell">{item.minStockLevel}</TableCell>
+                                <TableCell className="text-right">
                                     <Badge variant={status === 'In Stock' ? 'default' : status === 'Low Stock' ? 'secondary' : 'destructive'}>
                                         {status}
                                     </Badge>
                                 </TableCell>
-                                <TableCell className="hidden md:table-cell">{item.expiry}</TableCell>
-                                <TableCell className="text-right">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button aria-haspopup="true" size="icon" variant="ghost">
-                                                <MoreHorizontal className="h-4 w-4" />
-                                                <span className="sr-only">Toggle menu</span>
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                            <DropdownMenuItem>Edit</DropdownMenuItem>
-                                            <DropdownMenuItem>Restock</DropdownMenuItem>
-                                            <DropdownMenuItem>Delete</DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </TableCell>
                             </TableRow>
                         )}) : (
                             <TableRow>
-                                <TableCell colSpan={6} className="h-24 text-center">
+                                <TableCell colSpan={5} className="h-24 text-center">
                                     No inventory data found. Add stock to see it here.
                                 </TableCell>
                             </TableRow>

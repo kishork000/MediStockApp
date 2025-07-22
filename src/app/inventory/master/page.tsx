@@ -42,7 +42,8 @@ const defaultFormState: Omit<Medicine, 'id'> = {
     purchasePrice: 0,
     sellingPrice: 0,
     gstSlab: "",
-    minStockLevel: 0,
+    warehouseMinStockLevel: 0,
+    storeMinStockLevel: 0,
     baseUnit: "",
     packType: "",
     unitsPerPack: 0,
@@ -120,7 +121,8 @@ export default function MedicineMasterPage() {
             purchasePrice: medicine.purchasePrice,
             sellingPrice: medicine.sellingPrice,
             gstSlab: medicine.gstSlab,
-            minStockLevel: medicine.minStockLevel,
+            warehouseMinStockLevel: medicine.warehouseMinStockLevel,
+            storeMinStockLevel: medicine.storeMinStockLevel,
             baseUnit: medicine.baseUnit,
             packType: medicine.packType || "",
             unitsPerPack: medicine.unitsPerPack || 0,
@@ -130,7 +132,7 @@ export default function MedicineMasterPage() {
     
     const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        const isNumberField = ['purchasePrice', 'sellingPrice', 'minStockLevel', 'unitsPerPack'].includes(name);
+        const isNumberField = ['purchasePrice', 'sellingPrice', 'warehouseMinStockLevel', 'storeMinStockLevel', 'unitsPerPack'].includes(name);
         setFormState(prev => ({ ...prev, [name]: isNumberField ? parseFloat(value) || 0 : value }));
     };
 
@@ -165,9 +167,9 @@ export default function MedicineMasterPage() {
     const handleAddOrUpdateMedicine = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         
-        const { name, hsnCode, purchasePrice, sellingPrice, gstSlab, minStockLevel, baseUnit, manufacturerId } = formState;
+        const { name, hsnCode, purchasePrice, sellingPrice, gstSlab, baseUnit, manufacturerId } = formState;
 
-        if (name && hsnCode && purchasePrice > 0 && sellingPrice > 0 && gstSlab && minStockLevel > 0 && baseUnit && manufacturerId) {
+        if (name && hsnCode && purchasePrice > 0 && sellingPrice > 0 && gstSlab && baseUnit && manufacturerId) {
             try {
                 if(modalMode === 'edit' && selectedMedicine) {
                     await updateMedicine(selectedMedicine.id, formState);
@@ -182,7 +184,7 @@ export default function MedicineMasterPage() {
                 toast({ variant: "destructive", title: "Error", description: "Failed to save medicine." });
             }
         } else {
-            toast({ variant: "destructive", title: "Error", description: "Please fill all required fields correctly. Prices, stock, and manufacturer are required." });
+            toast({ variant: "destructive", title: "Error", description: "Please fill all required fields correctly. Prices, stock levels, and manufacturer are required." });
         }
     };
     
@@ -309,7 +311,6 @@ export default function MedicineMasterPage() {
                                 <TableHead className="hidden md:table-cell">Manufacturer</TableHead>
                                 <TableHead className="hidden md:table-cell text-right">Selling Price (₹)</TableHead>
                                 <TableHead className="hidden md:table-cell text-right">Unit</TableHead>
-                                <TableHead className="hidden md:table-cell text-right">Min Stock</TableHead>
                                 <TableHead>
                                     <span className="sr-only">Actions</span>
                                 </TableHead>
@@ -323,7 +324,6 @@ export default function MedicineMasterPage() {
                                         <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-32" /></TableCell>
                                         <TableCell className="hidden md:table-cell text-right"><Skeleton className="h-4 w-16" /></TableCell>
                                         <TableCell className="hidden md:table-cell text-right"><Skeleton className="h-4 w-12" /></TableCell>
-                                        <TableCell className="hidden md:table-cell text-right"><Skeleton className="h-4 w-12" /></TableCell>
                                         <TableCell><Skeleton className="h-8 w-8" /></TableCell>
                                     </TableRow>
                                 ))
@@ -333,7 +333,6 @@ export default function MedicineMasterPage() {
                                     <TableCell className="hidden md:table-cell">{med.manufacturerName}</TableCell>
                                     <TableCell className="hidden md:table-cell text-right">{med.sellingPrice.toFixed(2)}</TableCell>
                                     <TableCell className="hidden md:table-cell text-right">{med.baseUnit}</TableCell>
-                                    <TableCell className="hidden md:table-cell text-right">{med.minStockLevel}</TableCell>
                                     <TableCell>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
@@ -441,22 +440,27 @@ export default function MedicineMasterPage() {
                         
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="minStockLevel">Minimum Stock Level</Label>
-                                <Input id="minStockLevel" name="minStockLevel" value={formState.minStockLevel} onChange={handleFormChange} type="number" placeholder="50" required />
+                                <Label htmlFor="warehouseMinStockLevel">Warehouse Min Stock Level</Label>
+                                <Input id="warehouseMinStockLevel" name="warehouseMinStockLevel" value={formState.warehouseMinStockLevel} onChange={handleFormChange} type="number" placeholder="100" required />
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="baseUnit">Base Unit</Label>
-                                <Select name="baseUnit" value={formState.baseUnit} onValueChange={(v) => handleSelectChange('baseUnit', v)} required>
-                                    <SelectTrigger id="baseUnit">
-                                        <SelectValue placeholder="Select Unit" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                       {unitTypes.map(ut => (
-                                            <SelectItem key={ut.id} value={ut.name}>{ut.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                             <div className="space-y-2">
+                                <Label htmlFor="storeMinStockLevel">Store Min Stock Level</Label>
+                                <Input id="storeMinStockLevel" name="storeMinStockLevel" value={formState.storeMinStockLevel} onChange={handleFormChange} type="number" placeholder="20" required />
                             </div>
+                        </div>
+
+                         <div className="space-y-2">
+                            <Label htmlFor="baseUnit">Base Unit</Label>
+                            <Select name="baseUnit" value={formState.baseUnit} onValueChange={(v) => handleSelectChange('baseUnit', v)} required>
+                                <SelectTrigger id="baseUnit">
+                                    <SelectValue placeholder="Select Unit" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                   {unitTypes.map(ut => (
+                                        <SelectItem key={ut.id} value={ut.name}>{ut.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
                     <DialogFooter>
