@@ -494,4 +494,3 @@ export default function StockReportsPage() {
     </div>
   );
 }
-
