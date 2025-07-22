@@ -44,7 +44,7 @@ export default function ReturnToManufacturerPage() {
     const [currentReturnItem, setCurrentReturnItem] = useState({ medicineId: "", quantity: 1 });
 
     const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
-    const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && route.inSidebar && hasPermission(route.path)), [hasPermission]);
+    const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && r.inSidebar && hasPermission(route.path)), [hasPermission]);
 
     const fetchPrerequisites = useCallback(async () => {
         try {

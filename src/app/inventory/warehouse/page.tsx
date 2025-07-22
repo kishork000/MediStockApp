@@ -67,7 +67,7 @@ export default function WarehouseInventoryPage() {
     });
 
     const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
-    const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && route.inSidebar && hasPermission(route.path)), [hasPermission]);
+    const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && r.inSidebar && hasPermission(route.path)), [hasPermission]);
 
     const fetchWarehouseData = useCallback(async () => {
         setPageLoading(true);
