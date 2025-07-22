@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useTransition } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -31,7 +31,10 @@ import { allAppRoutes, AppRoute, UserRole } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useToast } from "@/hooks/use-toast";
-import Link from "next/link";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Skeleton } from "@/components/ui/skeleton";
+import { UnitType, getUnitTypes, addUnitType, deleteUnitType } from "@/services/unit-service";
+import { PackagingType, getPackagingTypes, addPackagingType, deletePackagingType } from "@/services/packaging-service";
 
 
 interface User {
@@ -77,6 +80,18 @@ export default function AdminPage() {
     
     const [users, setUsers] = useState<User[]>(initialUsers);
 
+    // State for Unit Types
+    const [unitTypes, setUnitTypes] = useState<UnitType[]>([]);
+    const [isAddUnitModalOpen, setIsAddUnitModalOpen] = useState(false);
+    const [newUnitTypeName, setNewUnitTypeName] = useState("");
+
+    // State for Packaging Types
+    const [packagingTypes, setPackagingTypes] = useState<PackagingType[]>([]);
+    const [isAddPackagingModalOpen, setIsAddPackagingModalOpen] = useState(false);
+    const [newPackagingTypeName, setNewPackagingTypeName] = useState("");
+    
+    const [dataLoading, setDataLoading] = useState(true);
+
     const sidebarRoutes = useMemo(() => {
         return allAppRoutes.filter(route => route.path !== '/');
     }, []);
@@ -86,6 +101,27 @@ export default function AdminPage() {
             router.push('/login');
         }
     }, [user, loading, router]);
+    
+    const fetchMasterData = async () => {
+        setDataLoading(true);
+        try {
+            const [units, packagings] = await Promise.all([
+                getUnitTypes(),
+                getPackagingTypes(),
+            ]);
+            setUnitTypes(units);
+            setPackagingTypes(packagings);
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch master data.' });
+        }
+        setDataLoading(false);
+    };
+
+    useEffect(() => {
+        if (user) {
+            fetchMasterData();
+        }
+    }, [user, toast]);
 
 
     const handleSaveSettings = (e: React.FormEvent<HTMLFormElement>) => {
@@ -151,6 +187,59 @@ export default function AdminPage() {
             newPermissions[role] = newPermissions[role].filter(r => r !== route);
         }
         setPermissions(newPermissions);
+    };
+
+    const handleAddUnitType = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        if (newUnitTypeName.trim()) {
+            try {
+                await addUnitType({ name: newUnitTypeName.trim() });
+                toast({ title: "Success", description: "Unit type added." });
+                await fetchMasterData();
+                setIsAddUnitModalOpen(false);
+                setNewUnitTypeName("");
+            } catch (error) {
+                toast({ variant: "destructive", title: "Error", description: "Failed to add unit type." });
+            }
+        } else {
+            toast({ variant: "destructive", title: "Error", description: "Please enter a name." });
+        }
+    };
+     const handleDeleteUnit = async (id: string) => {
+        try {
+            await deleteUnitType(id);
+            await fetchMasterData();
+            toast({ title: "Success", description: "Unit type deleted." });
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: "Failed to delete unit type." });
+        }
+    };
+
+     const handleAddPackagingType = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        if (newPackagingTypeName.trim()) {
+            try {
+                await addPackagingType({ name: newPackagingTypeName.trim() });
+                toast({ title: "Success", description: "Packaging type added." });
+                await fetchMasterData();
+                setIsAddPackagingModalOpen(false);
+                setNewPackagingTypeName("");
+            } catch (error) {
+                toast({ variant: "destructive", title: "Error", description: "Failed to add packaging type." });
+            }
+        } else {
+            toast({ variant: "destructive", title: "Error", description: "Please enter a name." });
+        }
+    };
+
+    const handleDeletePackaging = async (id: string) => {
+        try {
+            await deletePackagingType(id);
+            await fetchMasterData();
+            toast({ title: "Success", description: "Packaging type deleted." });
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: "Failed to delete packaging type." });
+        }
     };
 
 
@@ -266,35 +355,31 @@ export default function AdminPage() {
            </div>
         </header>
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
+            <TooltipProvider>
             <Tabs defaultValue="users">
                 <div className="flex items-center">
                     <TabsList>
-                        <TabsTrigger value="users">
-                            <Users className="md:hidden" />
-                            <span className="hidden md:inline">User Management</span>
-                        </TabsTrigger>
-                        <TabsTrigger value="permissions">
-                            <ShieldCheck className="md:hidden" />
-                            <span className="hidden md:inline">Permissions</span>
-                        </TabsTrigger>
-                        <TabsTrigger value="stores">
-                            <Store className="md:hidden" />
-                            <span className="hidden md:inline">Store Management</span>
-                        </TabsTrigger>
-                         <TabsTrigger value="units" asChild>
-                            <Link href="/admin/units"><Layers className="md:hidden" /><span className="hidden md:inline">Unit Types</span></Link>
-                        </TabsTrigger>
-                        <TabsTrigger value="packaging" asChild>
-                            <Link href="/admin/packaging"><Box className="md:hidden" /><span className="hidden md:inline">Packaging Types</span></Link>
-                        </TabsTrigger>
-                        <TabsTrigger value="add-user">
-                             <UserPlus className="md:hidden" />
-                             <span className="hidden md:inline">Add User</span>
-                        </TabsTrigger>
-                        <TabsTrigger value="settings">
-                            <Building className="md:hidden" />
-                            <span className="hidden md:inline">Company Settings</span>
-                        </TabsTrigger>
+                        <Tooltip><TooltipTrigger asChild>
+                            <TabsTrigger value="users"><Users className="md:hidden" /><span className="hidden md:inline">User Management</span></TabsTrigger>
+                        </TooltipTrigger><TooltipContent>User Management</TooltipContent></Tooltip>
+                        <Tooltip><TooltipTrigger asChild>
+                           <TabsTrigger value="permissions"><ShieldCheck className="md:hidden" /><span className="hidden md:inline">Permissions</span></TabsTrigger>
+                        </TooltipTrigger><TooltipContent>Permissions</TooltipContent></Tooltip>
+                         <Tooltip><TooltipTrigger asChild>
+                            <TabsTrigger value="stores"><Store className="md:hidden" /><span className="hidden md:inline">Store Management</span></TabsTrigger>
+                        </TooltipTrigger><TooltipContent>Store Management</TooltipContent></Tooltip>
+                         <Tooltip><TooltipTrigger asChild>
+                             <TabsTrigger value="units"><Layers className="md:hidden" /><span className="hidden md:inline">Unit Types</span></TabsTrigger>
+                        </TooltipTrigger><TooltipContent>Unit Types</TooltipContent></Tooltip>
+                         <Tooltip><TooltipTrigger asChild>
+                            <TabsTrigger value="packaging"><Box className="md:hidden" /><span className="hidden md:inline">Packaging Types</span></TabsTrigger>
+                        </TooltipTrigger><TooltipContent>Packaging Types</TooltipContent></Tooltip>
+                        <Tooltip><TooltipTrigger asChild>
+                            <TabsTrigger value="add-user"><UserPlus className="md:hidden" /><span className="hidden md:inline">Add User</span></TabsTrigger>
+                        </TooltipTrigger><TooltipContent>Add User</TooltipContent></Tooltip>
+                        <Tooltip><TooltipTrigger asChild>
+                           <TabsTrigger value="settings"><Building className="md:hidden" /><span className="hidden md:inline">Company Settings</span></TabsTrigger>
+                        </TooltipTrigger><TooltipContent>Company Settings</TooltipContent></Tooltip>
                     </TabsList>
                 </div>
                 <TabsContent value="users">
@@ -440,6 +525,46 @@ export default function AdminPage() {
                         </CardContent>
                     </Card>
                 </TabsContent>
+                 <TabsContent value="units">
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <div>
+                               <CardTitle>Unit Types</CardTitle>
+                               <CardDescription>Manage the base measurement units for medicines (e.g., PCS, BTL, ML).</CardDescription>
+                            </div>
+                           <Button onClick={() => setIsAddUnitModalOpen(true)} size="sm"><PlusSquare className="mr-2 h-4 w-4" /> Add Unit Type</Button>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader><TableRow><TableHead>Name</TableHead><TableHead><span className="sr-only">Actions</span></TableHead></TableRow></TableHeader>
+                                <TableBody>
+                                    {dataLoading ? (Array.from({ length: 3 }).map((_, i) => (<TableRow key={i}><TableCell><Skeleton className="h-4 w-32" /></TableCell><TableCell><Skeleton className="h-8 w-8" /></TableCell></TableRow>)))
+                                        : unitTypes.map((type) => (<TableRow key={type.id}><TableCell className="font-medium">{type.name}</TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDeleteUnit(type.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell></TableRow>))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                 <TabsContent value="packaging">
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                          <div>
+                            <CardTitle>Packaging Types</CardTitle>
+                            <CardDescription>Manage the types of packaging for medicines (e.g., Box, Strip).</CardDescription>
+                          </div>
+                           <Button onClick={() => setIsAddPackagingModalOpen(true)} size="sm"><PlusSquare className="mr-2 h-4 w-4" /> Add Packaging Type</Button>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader><TableRow><TableHead>Name</TableHead><TableHead><span className="sr-only">Actions</span></TableHead></TableRow></TableHeader>
+                                <TableBody>
+                                    {dataLoading ? (Array.from({ length: 3 }).map((_, i) => (<TableRow key={i}><TableCell><Skeleton className="h-4 w-32" /></TableCell><TableCell><Skeleton className="h-8 w-8" /></TableCell></TableRow>)))
+                                        : packagingTypes.map((type) => (<TableRow key={type.id}><TableCell className="font-medium">{type.name}</TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDeletePackaging(type.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell></TableRow>))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
                 <TabsContent value="add-user">
                     <Card>
                         <CardHeader>
@@ -519,6 +644,7 @@ export default function AdminPage() {
                     </Card>
                 </TabsContent>
             </Tabs>
+            </TooltipProvider>
         </main>
       </div>
 
@@ -554,8 +680,40 @@ export default function AdminPage() {
               </form>
           </DialogContent>
       </Dialog>
+        <Dialog open={isAddUnitModalOpen} onOpenChange={setIsAddUnitModalOpen}>
+            <DialogContent className="sm:max-w-md">
+                <form onSubmit={handleAddUnitType}>
+                    <DialogHeader><DialogTitle>Add New Unit Type</DialogTitle><DialogDescription>Create a new base unit for use in the medicine master.</DialogDescription></DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="unit-name">Unit Type Name</Label>
+                            <Input id="unit-name" name="name" value={newUnitTypeName} onChange={(e) => setNewUnitTypeName(e.target.value)} placeholder="e.g., PCS" required />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
+                        <Button type="submit">Add Unit</Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+         <Dialog open={isAddPackagingModalOpen} onOpenChange={setIsAddPackagingModalOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <form onSubmit={handleAddPackagingType}>
+                        <DialogHeader><DialogTitle>Add New Packaging Type</DialogTitle><DialogDescription>Create a new packaging type for use in the medicine master.</DialogDescription></DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="packaging-name">Packaging Type Name</Label>
+                                <Input id="packaging-name" name="name" value={newPackagingTypeName} onChange={(e) => setNewPackagingTypeName(e.target.value)} placeholder="e.g., Box" required />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
+                            <Button type="submit">Add Type</Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
     </div>
   );
 }
-
-    
