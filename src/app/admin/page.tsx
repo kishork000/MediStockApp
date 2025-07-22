@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
-import { useAuth, NewUser } from "@/contexts/AuthContext";
+import { useAuth, NewUser, UpdateUser } from "@/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { allAppRoutes, AppRoute } from "@/lib/types";
@@ -69,7 +69,7 @@ const initialStores: Store[] = [
 
 
 export default function AdminPage() {
-    const { user, logout, loading, permissions, setPermissions, hasPermission, users: userList, createUser, deleteUser: deleteUserFromContext, addRole, editRole, deleteRole } = useAuth();
+    const { user, logout, loading, permissions, setPermissions, hasPermission, users: userList, createUser, updateUser, deleteUser: deleteUserFromContext, addRole, editRole, deleteRole } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
     const { toast } = useToast();
@@ -111,6 +111,10 @@ export default function AdminPage() {
     const [roleModalMode, setRoleModalMode] = useState<'add' | 'edit'>('add');
     const [roleName, setRoleName] = useState("");
     const [originalRoleName, setOriginalRoleName] = useState("");
+
+    // State for User Edit
+    const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
+    const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
 
     const sidebarRoutes = useMemo(() => {
@@ -270,6 +274,35 @@ export default function AdminPage() {
             toast({ variant: "destructive", title: "Error", description: "Please fill all required user details." });
         }
     };
+
+    const handleUserUpdateSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        if (!selectedUser) return;
+        const formData = new FormData(e.currentTarget);
+        const updatedData: UpdateUser = {
+            name: formData.get("name") as string,
+            email: formData.get("email") as string,
+            role: formData.get("role") as string,
+            assignedStore: formData.get("assignedStore") as string || undefined,
+            altMobile: formData.get("altMobile") as string || undefined,
+            pan: formData.get("pan") as string || undefined,
+            aadhar: formData.get("aadhar") as string || undefined,
+        };
+
+        try {
+            await updateUser(selectedUser.id, updatedData);
+            toast({ title: "Success", description: "User updated successfully." });
+            setIsEditUserModalOpen(false);
+            setSelectedUser(null);
+        } catch (error: any) {
+            toast({ variant: "destructive", title: "Error", description: error.message });
+        }
+    };
+
+    const openEditUserModal = (userToEdit: User) => {
+        setSelectedUser(userToEdit);
+        setIsEditUserModalOpen(true);
+    }
 
     const handlePermissionChange = (role: string, route: string, checked: boolean | 'indeterminate') => {
         if (typeof checked !== 'boolean' || role === 'Admin') return;
@@ -478,7 +511,7 @@ export default function AdminPage() {
             <TooltipProvider>
             <Tabs defaultValue="users">
                 <div className="flex items-center">
-                    <TabsList>
+                    <TabsList className="flex-wrap h-auto">
                         <Tooltip><TooltipTrigger asChild>
                             <TabsTrigger value="users"><Users className="md:hidden" /><span className="hidden md:inline">User Management</span></TabsTrigger>
                         </TooltipTrigger><TooltipContent>User Management</TooltipContent></Tooltip>
@@ -528,7 +561,10 @@ export default function AdminPage() {
                                 <TableBody>
                                     {users.map((u) => (
                                         <TableRow key={u.id}>
-                                            <TableCell className="font-medium">{u.name}</TableCell>
+                                            <TableCell>
+                                                <Button variant="link" className="p-0 h-auto font-medium md:hidden" onClick={() => openEditUserModal(u)}>{u.name}</Button>
+                                                <span className="font-medium hidden md:inline">{u.name}</span>
+                                            </TableCell>
                                             <TableCell className="hidden sm:table-cell">{u.loginId}</TableCell>
                                             <TableCell className="hidden sm:table-cell">{u.email}</TableCell>
                                             <TableCell>
@@ -547,7 +583,7 @@ export default function AdminPage() {
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                        <DropdownMenuItem disabled>Edit</DropdownMenuItem>
+                                                        <DropdownMenuItem onSelect={() => openEditUserModal(u)}>Edit</DropdownMenuItem>
                                                         <DropdownMenuItem onSelect={() => confirmDelete(u.id, 'user')} className="text-destructive">Delete</DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
@@ -936,6 +972,80 @@ export default function AdminPage() {
                         <DialogFooter>
                             <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
                             <Button type="submit">{roleModalMode === 'add' ? 'Add Role' : 'Save Changes'}</Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+             <Dialog open={isEditUserModalOpen} onOpenChange={setIsEditUserModalOpen}>
+                <DialogContent className="sm:max-w-lg">
+                    <form onSubmit={handleUserUpdateSubmit}>
+                        <DialogHeader>
+                            <DialogTitle>Edit User: {selectedUser?.name}</DialogTitle>
+                            <DialogDescription>Update the user's details below.</DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                             <div className="space-y-2">
+                                <Label htmlFor="edit-name">Full Name</Label>
+                                <Input id="edit-name" name="name" defaultValue={selectedUser?.name} required />
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-loginId">Login ID</Label>
+                                    <Input id="edit-loginId" name="loginId" defaultValue={selectedUser?.loginId} disabled />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-email">Email</Label>
+                                    <Input id="edit-email" name="email" type="email" defaultValue={selectedUser?.email} required />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-altMobile">Alt. Mobile No.</Label>
+                                <Input id="edit-altMobile" name="altMobile" type="tel" defaultValue={selectedUser?.altMobile} />
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-pan">PAN Number</Label>
+                                    <Input id="edit-pan" name="pan" defaultValue={selectedUser?.pan} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-aadhar">Aadhar Number</Label>
+                                    <Input id="edit-aadhar" name="aadhar" defaultValue={selectedUser?.aadhar} />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-role">Role</Label>
+                                    <Select name="role" defaultValue={selectedUser?.role} required>
+                                        <SelectTrigger id="edit-role">
+                                            <SelectValue placeholder="Select a role" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {Object.keys(permissions).map(role => (
+                                                <SelectItem key={role} value={role}>{role}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-assignedStore">Assign to Store</Label>
+                                    <Select name="assignedStore" defaultValue={selectedUser?.assignedStore}>
+                                        <SelectTrigger id="edit-assignedStore">
+                                            <SelectValue placeholder="Select a store" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {stores.map(store => (
+                                                <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <DialogClose asChild>
+                                <Button type="button" variant="secondary" onClick={() => setIsEditUserModalOpen(false)}>Cancel</Button>
+                            </DialogClose>
+                            <Button type="submit">Save Changes</Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>

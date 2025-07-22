@@ -1,10 +1,9 @@
 
 "use client";
 
-import React, { createContext, useState, useContext, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback, ReactNode, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { UserRole, RolePermissions, allAppRoutes } from '@/lib/types';
-import { seedDatabase } from '@/services/seed-service';
 
 export interface User {
     id: string;
@@ -43,6 +42,10 @@ export interface NewUser {
     aadhar?: string;
 }
 
+export interface UpdateUser extends Omit<NewUser, 'password' | 'loginId'> {
+    // loginId and password are not editable
+}
+
 interface AuthContextType {
     user: User | null;
     users: User[];
@@ -53,6 +56,7 @@ interface AuthContextType {
     setPermissions: (permissions: RolePermissions) => void;
     hasPermission: (path: string) => boolean;
     createUser: (newUser: NewUser) => Promise<void>;
+    updateUser: (userId: string, updatedData: UpdateUser) => Promise<void>;
     deleteUser: (userId: string) => Promise<void>;
     addRole: (roleName: string) => Promise<void>;
     editRole: (oldRoleName: string, newRoleName: string) => Promise<void>;
@@ -69,34 +73,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const router = useRouter();
     const pathname = usePathname();
 
-    useEffect(() => {
-        try {
-            const storedUser = localStorage.getItem('medi-stock-user');
-            if (storedUser) {
-                const parsedUser = JSON.parse(storedUser);
-                setUser(parsedUser);
-            }
-
-            const storedUsers = localStorage.getItem('medi-stock-users');
-            if (storedUsers) {
-                setUsersState(JSON.parse(storedUsers));
-                mockUsers = JSON.parse(storedUsers); // Keep mockUsers in sync
-            } else {
-                 localStorage.setItem('medi-stock-users', JSON.stringify(mockUsers));
-            }
-
-            const storedPermissions = localStorage.getItem('medi-stock-permissions');
-            if (storedPermissions) {
-                setPermissionsState(JSON.parse(storedPermissions));
-            } else {
-                localStorage.setItem('medi-stock-permissions', JSON.stringify(initialPermissions));
-            }
-
-        } catch (error) {
-            console.error("Failed to parse from localStorage", error);
-            localStorage.clear();
-        }
-        setLoading(false);
+    const setPermissions = useCallback((newPermissions: RolePermissions) => {
+        setPermissionsState(newPermissions);
+        localStorage.setItem('medi-stock-permissions', JSON.stringify(newPermissions));
     }, []);
 
     const hasPermission = useCallback((path: string): boolean => {
@@ -117,6 +96,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return userPermissions.includes(path);
 
     }, [user, permissions]);
+
+    const logout = useCallback(async () => {
+        setUser(null);
+        localStorage.removeItem('medi-stock-user');
+        router.push('/login');
+    }, [router]);
+
+    useEffect(() => {
+        try {
+            const storedUser = localStorage.getItem('medi-stock-user');
+            if (storedUser) {
+                const parsedUser = JSON.parse(storedUser);
+                setUser(parsedUser);
+            }
+
+            const storedUsers = localStorage.getItem('medi-stock-users');
+            if (storedUsers) {
+                const parsedUsers = JSON.parse(storedUsers);
+                setUsersState(parsedUsers);
+                mockUsers = parsedUsers; // Keep mockUsers in sync
+            } else {
+                 localStorage.setItem('medi-stock-users', JSON.stringify(mockUsers));
+            }
+
+            const storedPermissions = localStorage.getItem('medi-stock-permissions');
+            if (storedPermissions) {
+                setPermissionsState(JSON.parse(storedPermissions));
+            } else {
+                localStorage.setItem('medi-stock-permissions', JSON.stringify(initialPermissions));
+            }
+
+        } catch (error) {
+            console.error("Failed to parse from localStorage", error);
+            localStorage.clear();
+        }
+        setLoading(false);
+    }, []);
 
 
     useEffect(() => {
@@ -139,10 +155,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
              }
         }
 
-    }, [user, loading, pathname, router, hasPermission]);
+    }, [user, loading, pathname, router, hasPermission, logout]);
 
 
-    const login = async (credential: string, pass: string): Promise<boolean> => {
+    const login = useCallback(async (credential: string, pass: string): Promise<boolean> => {
         const foundUser = usersState.find(u => u.email.toLowerCase() === credential.toLowerCase() || u.loginId.toLowerCase() === credential.toLowerCase());
         
         if (foundUser) {
@@ -151,20 +167,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return true;
         }
         return false;
-    };
-
-    const logout = async () => {
-        setUser(null);
-        localStorage.removeItem('medi-stock-user');
-        router.push('/login');
-    };
-
-    const setPermissions = (newPermissions: RolePermissions) => {
-        setPermissionsState(newPermissions);
-        localStorage.setItem('medi-stock-permissions', JSON.stringify(newPermissions));
-    }
+    }, [usersState]);
     
-    const createUser = async (newUser: NewUser) => {
+    const createUser = useCallback(async (newUser: NewUser) => {
         if (usersState.some(u => u.email === newUser.email)) {
             throw new Error("A user with this email already exists.");
         }
@@ -180,23 +185,50 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const updatedUsers = [...usersState, userToCreate];
         setUsersState(updatedUsers);
         localStorage.setItem('medi-stock-users', JSON.stringify(updatedUsers));
-    };
+    }, [usersState]);
 
-    const deleteUser = async (userId: string) => {
+    const updateUser = useCallback(async (userId: string, updatedData: UpdateUser) => {
+        if (updatedData.email && usersState.some(u => u.email === updatedData.email && u.id !== userId)) {
+            throw new Error("A user with this email already exists.");
+        }
+
+        const updatedUsers = usersState.map(u => {
+            if (u.id === userId) {
+                return {
+                    ...u,
+                    ...updatedData
+                };
+            }
+            return u;
+        });
+
+        setUsersState(updatedUsers);
+        localStorage.setItem('medi-stock-users', JSON.stringify(updatedUsers));
+
+        if (user?.id === userId) {
+             const updatedCurrentUser = updatedUsers.find(u => u.id === userId);
+             if (updatedCurrentUser) {
+                setUser(updatedCurrentUser);
+                localStorage.setItem('medi-stock-user', JSON.stringify(updatedCurrentUser));
+             }
+        }
+    }, [usersState, user?.id]);
+
+    const deleteUser = useCallback(async (userId: string) => {
          const updatedUsers = usersState.filter(u => u.id !== userId);
          setUsersState(updatedUsers);
          localStorage.setItem('medi-stock-users', JSON.stringify(updatedUsers));
-    };
+    }, [usersState]);
 
-    const addRole = async (roleName: string) => {
+    const addRole = useCallback(async (roleName: string) => {
         if (permissions[roleName]) {
             throw new Error(`Role "${roleName}" already exists.`);
         }
         const newPermissions = { ...permissions, [roleName]: [] };
         setPermissions(newPermissions);
-    };
+    }, [permissions, setPermissions]);
 
-    const editRole = async (oldRoleName: string, newRoleName: string) => {
+    const editRole = useCallback(async (oldRoleName: string, newRoleName: string) => {
         if (oldRoleName === 'Admin') {
             throw new Error("Cannot rename the Admin role.");
         }
@@ -220,9 +252,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setUser(updatedCurrentUser);
             localStorage.setItem('medi-stock-user', JSON.stringify(updatedCurrentUser));
         }
-    };
+    }, [permissions, setPermissions, usersState, user?.role]);
 
-    const deleteRole = async (roleName: string) => {
+    const deleteRole = useCallback(async (roleName: string) => {
         if (roleName === 'Admin') {
             throw new Error("Cannot delete the Admin role.");
         }
@@ -232,10 +264,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const newPermissions = { ...permissions };
         delete newPermissions[roleName];
         setPermissions(newPermissions);
-    };
+    }, [permissions, setPermissions, usersState]);
 
 
-    const value = { user, users: usersState, login, logout, loading, permissions, setPermissions, hasPermission, createUser, deleteUser, addRole, editRole, deleteRole };
+    const value = useMemo(() => ({ user, users: usersState, login, logout, loading, permissions, setPermissions, hasPermission, createUser, updateUser, deleteUser, addRole, editRole, deleteRole }), [user, usersState, login, logout, loading, permissions, setPermissions, hasPermission, createUser, updateUser, deleteUser, addRole, editRole, deleteRole]);
 
     return (
         <AuthContext.Provider value={value}>
@@ -251,5 +283,3 @@ export const useAuth = (): AuthContextType => {
     }
     return context;
 };
-
-    
