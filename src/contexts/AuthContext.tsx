@@ -4,19 +4,23 @@
 import React, { createContext, useState, useContext, useEffect, useCallback, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { User, UserRole, RolePermissions, allAppRoutes } from '@/lib/types';
+import { auth } from '@/lib/firebase-config'; // Import auth from firebase-config
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut, User as FirebaseAuthUser } from 'firebase/auth';
 
-
-// Mock user data - in a real app, this would come from an API
-const initialUsers = [
-    { name: "Admin User", email: "admin@medistock.com", role: "Admin" as UserRole, assignedStore: "STR001", password: "password" },
-    { name: "Pharmacist One", email: "pharmacist1@medistock.com", role: "Pharmacist" as UserRole, assignedStore: "STR002", password: "password" },
-    { name: "Supervisor One", email: "supervisor1@medistock.com", role: "Supervisor" as UserRole, password: "password" },
+// This mock data is now only used for initial role permissions.
+// User accounts are managed by Firebase Auth and user details would be in Firestore.
+const mockUserDetails: Omit<User, 'email'>[] = [
+    { name: "Admin User", role: "Admin" as UserRole, assignedStore: "STR001" },
+    { name: "Pharmacist One", role: "Pharmacist" as UserRole, assignedStore: "STR002" },
+    { name: "Supervisor One", role: "Supervisor" as UserRole },
+    { name: "Pharmacist Two", role: "Pharmacist" as UserRole, assignedStore: "STR003" },
 ];
+
 
 const initialPermissions: RolePermissions = {
     Admin: allAppRoutes.map(r => r.path), // Admin has all permissions
-    Pharmacist: ['/', '/patients', '/sales', '/inventory/stores', '/inventory/transfer'],
-    Supervisor: ['/', '/sales', '/sales/reports', '/inventory/reports', '/inventory/valuation']
+    Pharmacist: ['/', '/patients', '/sales', '/inventory/stores', '/inventory/reports', '/inventory/transfer', '/inventory/valuation'],
+    Supervisor: ['/', '/patients', '/sales', '/sales/reports', '/inventory', '/inventory/warehouse', '/inventory/stores', '/inventory/master', '/inventory/manufacturer', '/inventory/add', '/inventory/returns', '/inventory/transfer', '/inventory/reports', '/inventory/valuation' ]
 };
 
 
@@ -40,18 +44,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const pathname = usePathname();
 
     useEffect(() => {
-        const storedUser = localStorage.getItem('medi-stock-user');
-        if (storedUser) {
-            setUser(JSON.parse(storedUser));
-        }
+        const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+            if (firebaseUser) {
+                // In a real app, you'd fetch user role & details from your Firestore database here
+                // For this project, we'll map the firebase email to our mock user details
+                const userDetails = mockUserDetails.find(u => u.name.toLowerCase().replace(' ', '') === firebaseUser.email?.split('@')[0]);
+
+                if (userDetails) {
+                    const appUser: User = {
+                        email: firebaseUser.email || '',
+                        ...userDetails,
+                    };
+                    setUser(appUser);
+                    localStorage.setItem('medi-stock-user', JSON.stringify(appUser));
+                }
+            } else {
+                setUser(null);
+                localStorage.removeItem('medi-stock-user');
+            }
+            setLoading(false);
+        });
+
         const storedPermissions = localStorage.getItem('medi-stock-permissions');
         if (storedPermissions) {
             setPermissionsState(JSON.parse(storedPermissions));
         } else {
-            // If no permissions in storage, set initial and save them
             localStorage.setItem('medi-stock-permissions', JSON.stringify(initialPermissions));
         }
-        setLoading(false);
+
+        return () => unsubscribe();
     }, []);
 
     const hasPermission = useCallback((path: string): boolean => {
@@ -60,12 +81,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         const userPermissions = permissions[user.role] || [];
         
-        // For the collapsible trigger, it should be visible if any child route is permitted
         if (path === '/inventory') {
             return userPermissions.some(p => p.startsWith('/inventory/'));
         }
         
-        // For all other routes, require an exact match in the permissions array.
         return userPermissions.includes(path);
 
     }, [user, permissions]);
@@ -80,12 +99,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
 
         if (user && pathname !== '/login' && !hasPermission(pathname)) {
-            // If user doesn't have permission, redirect to their default allowed page (e.g., dashboard)
-            // This prevents getting stuck on a page they've just lost access to.
              if(hasPermission('/')) {
                 router.push('/');
              } else {
-                // If they can't even see the dashboard, log them out.
                 logout();
              }
         }
@@ -94,29 +110,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
     const login = async (email: string, pass: string): Promise<boolean> => {
-        const foundUser = initialUsers.find(u => u.email === email && u.password === pass);
-        if (foundUser) {
-            const { password, ...userToStore } = foundUser;
-            setUser(userToStore);
-            localStorage.setItem('medi-stock-user', JSON.stringify(userToStore));
-            
-            // Reload permissions from storage on login to get the latest.
-            const storedPermissions = localStorage.getItem('medi-stock-permissions');
-            if (storedPermissions) {
-                setPermissionsState(JSON.parse(storedPermissions));
-            } else {
-                setPermissionsState(initialPermissions);
-                 localStorage.setItem('medi-stock-permissions', JSON.stringify(initialPermissions));
-            }
-            
+        try {
+            await signInWithEmailAndPassword(auth, email, pass);
+            // onAuthStateChanged will handle setting the user state
             return true;
+        } catch (error) {
+            console.error("Firebase Authentication Error:", error);
+            return false;
         }
-        return false;
     };
 
-    const logout = () => {
-        setUser(null);
-        localStorage.removeItem('medi-stock-user');
+    const logout = async () => {
+        await signOut(auth);
+        // onAuthStateChanged will handle clearing user state
         router.push('/login');
     };
 
@@ -141,5 +147,3 @@ export const useAuth = (): AuthContextType => {
     }
     return context;
 };
-
-    
