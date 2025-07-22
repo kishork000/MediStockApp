@@ -59,11 +59,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 const parsedUser = JSON.parse(storedUser);
                 setUser(parsedUser);
                  if (parsedUser.role === 'Admin') {
-                    const seeded = localStorage.getItem('db_seeded_v1');
+                    const seeded = localStorage.getItem('db_seeded_v2');
                     if (!seeded) {
                         console.log("Admin logged in, checking if DB needs seeding...");
                         seedDatabase().then(() => {
-                           localStorage.setItem('db_seeded_v1', 'true');
+                           localStorage.setItem('db_seeded_v2', 'true');
                            console.log("Database seeding complete.");
                         });
                     }
