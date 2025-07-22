@@ -205,7 +205,7 @@ export default function SalesPage() {
   const processSale = async (paymentMethod: 'Cash' | 'Online') => {
     if (!user || !patientForm.id) return;
     
-    const saleData: Omit<Sale, 'createdAt' | 'invoiceId'> = {
+    const saleData = {
         patientId: patientForm.id,
         patientName: patientForm.name,
         patientMobile: patientForm.mobile,
@@ -220,7 +220,7 @@ export default function SalesPage() {
     };
     
     try {
-        await recordSale(saleData);
+        await recordSale(saleData, patientForm.mobile);
         toast({ title: "Sale Recorded", description: "Stock levels have been updated." });
         setTimeout(() => { 
             window.print(); 
@@ -409,23 +409,23 @@ export default function SalesPage() {
                                     <CardContent className="space-y-4">
                                         <div className="space-y-2">
                                             <Label htmlFor="name">Patient Name</Label>
-                                            <Input id="name" name="name" value={patientForm.name} onChange={handlePatientFormChange} placeholder="John Doe" required />
+                                            <Input id="name" name="name" value={patientForm.name} onChange={handlePatientFormChange} placeholder="John Doe" required autoComplete="name" />
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="mobile">Mobile Number</Label>
                                             <div className="flex gap-2">
-                                                <Input id="mobile" name="mobile" value={patientForm.mobile} onChange={handlePatientFormChange} type="tel" placeholder="9876543210" required />
+                                                <Input id="mobile" name="mobile" value={patientForm.mobile} onChange={handlePatientFormChange} type="tel" placeholder="9876543210" required autoComplete="tel" />
                                                 <Button type="button" variant="outline" size="icon" onClick={handleSearchPatient}><Search /></Button>
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="space-y-2">
                                                 <Label htmlFor="age">Age</Label>
-                                                <Input id="age" name="age" value={patientForm.age} onChange={handlePatientFormChange} type="number" placeholder="42" />
+                                                <Input id="age" name="age" value={patientForm.age} onChange={handlePatientFormChange} type="number" placeholder="42" autoComplete="off" />
                                             </div>
                                             <div className="space-y-2">
                                                 <Label htmlFor="gender">Gender</Label>
-                                                <Select name="gender" value={patientForm.gender} onValueChange={handlePatientSelectChange}>
+                                                <Select name="gender" value={patientForm.gender} onValueChange={handlePatientSelectChange} autoComplete="sex">
                                                     <SelectTrigger id="gender"><SelectValue placeholder="Select" /></SelectTrigger>
                                                     <SelectContent><SelectItem value="Male">Male</SelectItem><SelectItem value="Female">Female</SelectItem><SelectItem value="Other">Other</SelectItem></SelectContent>
                                                 </Select>
@@ -434,16 +434,16 @@ export default function SalesPage() {
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="space-y-2">
                                                 <Label htmlFor="bp">Blood Pressure (BP)</Label>
-                                                <Input id="bp" name="bp" value={patientForm.bp} onChange={handlePatientFormChange} placeholder="e.g., 120/80" />
+                                                <Input id="bp" name="bp" value={patientForm.bp} onChange={handlePatientFormChange} placeholder="e.g., 120/80" autoComplete="off" />
                                             </div>
                                             <div className="space-y-2">
                                                 <Label htmlFor="sugar">Blood Sugar</Label>
-                                                <Input id="sugar" name="sugar" value={patientForm.sugar} onChange={handlePatientFormChange} placeholder="e.g., 98 mg/dL" />
+                                                <Input id="sugar" name="sugar" value={patientForm.sugar} onChange={handlePatientFormChange} placeholder="e.g., 98 mg/dL" autoComplete="off" />
                                             </div>
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="address">Address</Label>
-                                            <Textarea id="address" name="address" value={patientForm.address} onChange={handlePatientFormChange} placeholder="123 Main St, Anytown..." />
+                                            <Textarea id="address" name="address" value={patientForm.address} onChange={handlePatientFormChange} placeholder="123 Main St, Anytown..." autoComplete="street-address" />
                                         </div>
                                         <div className="space-y-2">
                                             <Label>Disease(s)</Label>
@@ -457,8 +457,8 @@ export default function SalesPage() {
                                                     <div className="space-y-2">
                                                         {diseaseOptions.map(disease => (
                                                             <div key={disease.id} className="flex items-center space-x-2">
-                                                                <Checkbox id={disease.id} name="disease" value={disease.id} checked={selectedDiseases.includes(disease.id)} onCheckedChange={() => handleDiseaseSelection(disease.id)} />
-                                                                <Label htmlFor={disease.id}>{disease.label}</Label>
+                                                                <Checkbox id={`disease-${disease.id}`} name="disease" value={disease.id} checked={selectedDiseases.includes(disease.id)} onCheckedChange={() => handleDiseaseSelection(disease.id)} />
+                                                                <Label htmlFor={`disease-${disease.id}`}>{disease.label}</Label>
                                                             </div>
                                                         ))}
                                                     </div>
