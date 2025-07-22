@@ -493,38 +493,38 @@ export default function AdminPage() {
         </main>
       </div>
 
-        <Dialog open={isAddStoreModalOpen} onOpenChange={setIsAddStoreModalOpen}>
-            <DialogContent className="sm:max-w-md">
-                 <form onSubmit={handleAddStore}>
-                    <DialogHeader>
-                        <DialogTitle>Add New Store</DialogTitle>
-                        <DialogDescription>
-                            Fill in the details for the new store or warehouse.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="store-name">Store Name</Label>
-                            <Input id="store-name" name="store-name" placeholder="e.g., Downtown Pharmacy" required />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="store-address">Address</Label>
-                            <Textarea id="store-address" name="store-address" placeholder="123 Main St..." required />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="store-gstin">GSTIN</Label>
-                            <Input id="store-gstin" name="store-gstin" placeholder="Store's GST Number" required />
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <DialogClose asChild>
-                            <Button type="button" variant="secondary">Cancel</Button>
-                        </DialogClose>
-                        <Button type="submit">Add Store</Button>
-                    </DialogFooter>
-                </form>
-            </DialogContent>
-        </Dialog>
+      <Dialog open={isAddStoreModalOpen} onOpenChange={setIsAddStoreModalOpen}>
+          <DialogContent className="sm:max-w-md">
+               <form onSubmit={handleAddStore}>
+                  <DialogHeader>
+                      <DialogTitle>Add New Store</DialogTitle>
+                      <DialogDescription>
+                          Fill in the details for the new store or warehouse.
+                      </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                      <div className="space-y-2">
+                          <Label htmlFor="store-name">Store Name</Label>
+                          <Input id="store-name" name="store-name" placeholder="e.g., Downtown Pharmacy" required />
+                      </div>
+                      <div className="space-y-2">
+                          <Label htmlFor="store-address">Address</Label>
+                          <Textarea id="store-address" name="store-address" placeholder="123 Main St..." required />
+                      </div>
+                      <div className="space-y-2">
+                          <Label htmlFor="store-gstin">GSTIN</Label>
+                          <Input id="store-gstin" name="store-gstin" placeholder="Store's GST Number" required />
+                      </div>
+                  </div>
+                  <DialogFooter>
+                      <DialogClose asChild>
+                          <Button type="button" variant="secondary">Cancel</Button>
+                      </DialogClose>
+                      <Button type="submit">Add Store</Button>
+                  </DialogFooter>
+              </form>
+          </DialogContent>
+      </Dialog>
     </div>
   );
 }
