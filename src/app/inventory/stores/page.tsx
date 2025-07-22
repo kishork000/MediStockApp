@@ -72,9 +72,10 @@ export default function StoreInventoryPage() {
     
     const [allSales, setAllSales] = useState<Sale[]>([]);
     const [allTransfers, setAllTransfers] = useState<Transfer[]>([]);
+    const [allMedicines, setAllMedicines] = useState<Medicine[]>([]);
     const [stockLedger, setStockLedger] = useState<StockLedgerItem[]>([]);
     const [isLedgerLoading, setIsLedgerLoading] = useState(false);
-    const filtersRef = useRef<{dateRange?: DateRange}>({});
+    const filtersRef = useRef<{dateRange?: DateRange, medicineId: string}>({ medicineId: 'all' });
 
     const availableStores = useMemo(() => {
         if (user?.role === 'Admin') return allStores;
@@ -107,6 +108,7 @@ export default function StoreInventoryPage() {
             ]);
 
             const medicineMap = new Map<string, Medicine>(medicines.map(m => [m.id, m]));
+            setAllMedicines(medicines);
             setAllSales(sales);
             setAllTransfers(transfers);
 
@@ -141,7 +143,13 @@ export default function StoreInventoryPage() {
         const salesInDateRange = allSales.filter(s => s.storeId === selectedStore && isWithinInterval(parseISO(s.createdAt), { start: startDate, end: endDate }));
         const transfersInDateRange = allTransfers.filter(t => (t.to === selectedStore || t.from === selectedStore) && isWithinInterval(parseISO(t.date), { start: startDate, end: endDate }));
 
-        const medicineIds = new Set([...storeInventory.map(i => i.medicineId), ...salesInDateRange.flatMap(s => s.items.map(i => i.medicineValue)), ...transfersInDateRange.flatMap(t => t.items.map(i => i.medicineId))]);
+        let medicineIds: Set<string>;
+
+        if (filtersRef.current.medicineId === 'all') {
+            medicineIds = new Set([...storeInventory.map(i => i.medicineId), ...salesInDateRange.flatMap(s => s.items.map(i => i.medicineValue)), ...transfersInDateRange.flatMap(t => t.items.map(i => i.medicineId))]);
+        } else {
+            medicineIds = new Set([filtersRef.current.medicineId]);
+        }
 
         const ledger: StockLedgerItem[] = [];
 
@@ -328,11 +336,23 @@ export default function StoreInventoryPage() {
                                 <p className="text-sm font-medium">Date Range</p>
                                 <DateRangePicker onUpdate={(v) => (filtersRef.current.dateRange = v.range)} />
                             </div>
+                             <div className="w-full sm:w-auto space-y-2 flex-grow">
+                                <p className="text-sm font-medium">Medicine</p>
+                                <Select onValueChange={(value) => filtersRef.current.medicineId = value} defaultValue="all">
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select Medicine" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Medicines</SelectItem>
+                                        {allMedicines.map(med => <SelectItem key={med.id} value={med.id}>{med.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                             <div className="w-full sm:w-auto flex gap-2">
                                 <Button onClick={calculateStockLedger} disabled={isLedgerLoading} className="w-full sm:w-auto">
                                     {isLedgerLoading ? 'Generating...' : 'Apply Filters'}
                                 </Button>
-                                <Button variant="outline" onClick={() => { setStockLedger([]); filtersRef.current = {}; }} className="w-full sm:w-auto">Reset</Button>
+                                <Button variant="outline" onClick={() => { setStockLedger([]); filtersRef.current = {medicineId: 'all'}; }} className="w-full sm:w-auto">Reset</Button>
                             </div>
                         </CardContent>
                     </Card>
