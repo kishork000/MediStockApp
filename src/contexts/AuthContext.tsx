@@ -7,20 +7,11 @@ import { User, UserRole, RolePermissions, allAppRoutes } from '@/lib/types';
 import { auth } from '@/lib/firebase-config'; // Import auth from firebase-config
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, User as FirebaseAuthUser } from 'firebase/auth';
 
-// This mock data is now only used for initial role permissions.
-// User accounts are managed by Firebase Auth and user details would be in Firestore.
-const mockUserDetails: Omit<User, 'email'>[] = [
-    { name: "Admin User", role: "Admin" as UserRole, assignedStore: "STR001" },
-    { name: "Pharmacist One", role: "Pharmacist" as UserRole, assignedStore: "STR002" },
-    { name: "Supervisor One", role: "Supervisor" as UserRole },
-    { name: "Pharmacist Two", role: "Pharmacist" as UserRole, assignedStore: "STR003" },
-];
-
-const userRoleMapping: { [emailPrefix: string]: Omit<User, 'email'> } = {
-    'admin': { name: "Admin User", role: "Admin", assignedStore: "STR001" },
-    'pharmacist1': { name: "Pharmacist One", role: "Pharmacist", assignedStore: "STR002" },
-    'pharmacist2': { name: "Pharmacist Two", role: "Pharmacist", assignedStore: "STR003" },
-    'supervisor1': { name: "Supervisor One", role: "Supervisor" },
+const userRoleMapping: { [email: string]: Omit<User, 'email'> } = {
+    'admin@medistock.com': { name: "Admin User", role: "Admin", assignedStore: "STR001" },
+    'pharmacist1@medistock.com': { name: "Pharmacist One", role: "Pharmacist", assignedStore: "STR002" },
+    'pharmacist2@medistock.com': { name: "Pharmacist Two", role: "Pharmacist", assignedStore: "STR003" },
+    'supervisor1@medistock.com': { name: "Supervisor One", role: "Supervisor" },
 };
 
 
@@ -52,15 +43,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-            if (firebaseUser) {
+            if (firebaseUser && firebaseUser.email) {
                 // In a real app, you'd fetch user role & details from your Firestore database here
                 // For this project, we'll map the firebase email to our mock user details
-                const emailPrefix = firebaseUser.email?.split('@')[0];
-                const userDetails = emailPrefix ? userRoleMapping[emailPrefix] : undefined;
+                const userDetails = userRoleMapping[firebaseUser.email];
 
                 if (userDetails) {
                     const appUser: User = {
-                        email: firebaseUser.email || '',
+                        email: firebaseUser.email,
                         ...userDetails,
                     };
                     setUser(appUser);
