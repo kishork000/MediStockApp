@@ -57,7 +57,7 @@ const initialUsers: User[] = [
     { name: "Admin User", email: "admin@medistock.com", role: "Admin", assignedStore: "STR001", password: "password" },
     { name: "Pharmacist One", email: "pharmacist1@medistock.com", role: "Pharmacist", assignedStore: "STR002", password: "password" },
     { name: "Pharmacist Two", email: "pharmacist2@medistock.com", role: "Pharmacist", assignedStore: "STR003", password: "password" },
-    { name: "Technician One", email: "tech1@medistock.com", role: "Technician", password: "password" },
+    { name: "Supervisor One", email: "supervisor1@medistock.com", role: "Supervisor", password: "password" },
 ];
 
 
@@ -447,7 +447,7 @@ export default function AdminPage() {
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="Pharmacist">Pharmacist</SelectItem>
-                                                <SelectItem value="Technician">Technician</SelectItem>
+                                                <SelectItem value="Supervisor">Supervisor</SelectItem>
                                                 <SelectItem value="Admin">Admin</SelectItem>
                                             </SelectContent>
                                         </Select>

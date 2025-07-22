@@ -15,7 +15,7 @@ const initialUsers = [
 const initialPermissions: RolePermissions = {
     Admin: allAppRoutes.map(r => r.path), // Admin has all permissions
     Pharmacist: ['/', '/patients', '/sales', '/inventory/stores', '/inventory/transfer'],
-    Technician: ['/', '/sales']
+    Supervisor: ['/', '/sales']
 };
 
 
