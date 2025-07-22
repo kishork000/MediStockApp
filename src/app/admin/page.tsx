@@ -80,8 +80,12 @@ export default function AdminPage() {
     const [gstin, setGstin] = useState("22AAAAA0000A1Z5");
     const [cin, setCin] = useState("U12345MH2024PLC123456");
     const [stores, setStores] = useState<Store[]>(initialStores);
-    const [isAddStoreModalOpen, setIsAddStoreModalOpen] = useState(false);
     
+    // Store Modal State
+    const [isStoreModalOpen, setIsStoreModalOpen] = useState(false);
+    const [storeModalMode, setStoreModalMode] = useState<'add' | 'edit'>('add');
+    const [selectedStore, setSelectedStore] = useState<Store | null>(null);
+
     const [users, setUsers] = useState<User[]>(initialUsers);
 
     // State for Unit Types
@@ -151,12 +155,46 @@ export default function AdminPage() {
             disclaimer: formData.get("disclaimer") as string,
         };
         setStores([...stores, newStore]);
-        setIsAddStoreModalOpen(false);
+        setIsStoreModalOpen(false);
         e.currentTarget.reset();
+        toast({ title: "Success", description: "Store added successfully." });
+    };
+    
+    const handleUpdateStore = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        if (!selectedStore) return;
+
+        const formData = new FormData(e.currentTarget);
+        const updatedStore: Store = {
+            id: selectedStore.id,
+            storeCode: formData.get("store-code") as string,
+            name: formData.get("store-name") as string,
+            address: formData.get("store-address") as string,
+            gstin: formData.get("store-gstin") as string,
+            cin: formData.get("store-cin") as string,
+            disclaimer: formData.get("disclaimer") as string,
+        };
+        setStores(stores.map(s => s.id === updatedStore.id ? updatedStore : s));
+        setIsStoreModalOpen(false);
+        e.currentTarget.reset();
+        toast({ title: "Success", description: "Store details updated." });
     };
 
     const handleDeleteStore = (id: string) => {
         setStores(stores.filter(s => s.id !== id));
+        toast({ title: "Success", description: "Store deleted." });
+    };
+
+    const openAddStoreModal = () => {
+        setStoreModalMode('add');
+        setSelectedStore(null);
+        setIsStoreModalOpen(true);
+    };
+
+    const openEditStoreModal = (store: Store) => {
+        setStoreModalMode('edit');
+        setSelectedStore(store);
+        setIsStoreModalOpen(true);
     };
 
     const handleAddUser = (e: React.FormEvent<HTMLFormElement>) => {
@@ -486,7 +524,7 @@ export default function AdminPage() {
                              <CardTitle>Store Management</CardTitle>
                              <CardDescription>Manage your pharmacy stores and warehouses.</CardDescription>
                            </div>
-                           <Button onClick={() => setIsAddStoreModalOpen(true)}>
+                           <Button onClick={openAddStoreModal}>
                                <Store className="mr-2 h-4 w-4" />
                                Add Store
                            </Button>
@@ -521,7 +559,7 @@ export default function AdminPage() {
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                        <DropdownMenuItem>Edit</DropdownMenuItem>
+                                                        <DropdownMenuItem onSelect={() => openEditStoreModal(store)}>Edit</DropdownMenuItem>
                                                         <DropdownMenuItem onSelect={() => handleDeleteStore(store.id)} className="text-destructive">
                                                             <Trash2 className="mr-2 h-4 w-4" /> Delete
                                                         </DropdownMenuItem>
@@ -664,50 +702,50 @@ export default function AdminPage() {
         </main>
       </div>
 
-      <Dialog open={isAddStoreModalOpen} onOpenChange={setIsAddStoreModalOpen}>
+      <Dialog open={isStoreModalOpen} onOpenChange={setIsStoreModalOpen}>
           <DialogContent className="sm:max-w-md">
-               <form onSubmit={handleAddStore}>
+               <form onSubmit={storeModalMode === 'add' ? handleAddStore : handleUpdateStore}>
                   <DialogHeader>
-                      <DialogTitle>Add New Store</DialogTitle>
+                      <DialogTitle>{storeModalMode === 'add' ? 'Add New Store' : 'Edit Store'}</DialogTitle>
                       <DialogDescription>
-                          Fill in the details for the new store or warehouse.
+                          {storeModalMode === 'add' ? 'Fill in the details for the new store or warehouse.' : 'Update the details for this store.'}
                       </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="store-code">Store Code</Label>
-                            <Input id="store-code" name="store-code" placeholder="e.g., DP01" required />
+                            <Input id="store-code" name="store-code" defaultValue={selectedStore?.storeCode} placeholder="e.g., DP01" required />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="store-name">Store Name</Label>
-                            <Input id="store-name" name="store-name" placeholder="e.g., Downtown Pharmacy" required />
+                            <Input id="store-name" name="store-name" defaultValue={selectedStore?.name} placeholder="e.g., Downtown Pharmacy" required />
                         </div>
                       </div>
                       <div className="space-y-2">
                           <Label htmlFor="store-address">Address</Label>
-                          <Textarea id="store-address" name="store-address" placeholder="123 Main St..." required />
+                          <Textarea id="store-address" name="store-address" defaultValue={selectedStore?.address} placeholder="123 Main St..." required />
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="store-gstin">GSTIN</Label>
-                            <Input id="store-gstin" name="store-gstin" placeholder="Store's GST Number" required />
+                            <Input id="store-gstin" name="store-gstin" defaultValue={selectedStore?.gstin} placeholder="Store's GST Number" required />
                         </div>
                          <div className="space-y-2">
                             <Label htmlFor="store-cin">CIN</Label>
-                            <Input id="store-cin" name="store-cin" placeholder="Store's CIN" />
+                            <Input id="store-cin" name="store-cin" defaultValue={selectedStore?.cin} placeholder="Store's CIN" />
                         </div>
                       </div>
                       <div className="space-y-2">
                             <Label htmlFor="disclaimer">Disclaimer</Label>
-                            <Textarea id="disclaimer" name="disclaimer" placeholder="e.g., All sales are final." />
+                            <Textarea id="disclaimer" name="disclaimer" defaultValue={selectedStore?.disclaimer} placeholder="e.g., All sales are final." />
                       </div>
                   </div>
                   <DialogFooter>
                       <DialogClose asChild>
-                          <Button type="button" variant="secondary">Cancel</Button>
+                          <Button type="button" variant="secondary" onClick={() => { setIsStoreModalOpen(false); setSelectedStore(null);}}>Cancel</Button>
                       </DialogClose>
-                      <Button type="submit">Add Store</Button>
+                      <Button type="submit">{storeModalMode === 'add' ? 'Add Store' : 'Save Changes'}</Button>
                   </DialogFooter>
               </form>
           </DialogContent>
