@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo, useTransition } from "react";
+import { useState, useEffect, useMemo, useTransition, useRef } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -73,6 +73,7 @@ export default function AdminPage() {
     const router = useRouter();
     const pathname = usePathname();
     const { toast } = useToast();
+    const addUserFormRef = useRef<HTMLFormElement>(null);
 
     const [companyName, setCompanyName] = useState("MediStock Pharmacy");
     const [companyAddress, setCompanyAddress] = useState("123 Health St, Wellness City, State 12345");
@@ -266,7 +267,7 @@ export default function AdminPage() {
             try {
                 await createUser(newUser);
                  toast({ title: "Success", description: "User created successfully!" });
-                 e.currentTarget.reset();
+                 addUserFormRef.current?.reset();
             } catch (error: any) {
                  toast({ variant: "destructive", title: "Error", description: error.message });
             }
@@ -762,7 +763,7 @@ export default function AdminPage() {
                             <CardDescription>Fill in the details to add a new staff member.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <form className="space-y-4" onSubmit={handleAddUser}>
+                            <form ref={addUserFormRef} className="space-y-4" onSubmit={handleAddUser}>
                                 <div className="space-y-2">
                                     <Label htmlFor="name">Full Name</Label>
                                     <Input id="name" name="name" placeholder="Full Name" required />
