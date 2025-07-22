@@ -12,7 +12,7 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { DollarSign, Home as HomeIcon, LayoutGrid, Package, Users, CreditCard, ShoppingCart, BarChart, Pill, Download, PlusSquare, Users2, Activity, Settings, GitBranch, LogOut, TrendingUp, Warehouse, BookOpen } from "lucide-react";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import type { DashboardData } from "./dashboard/types";
 import StatCard from "@/components/dashboard/StatCard";
 import OverviewChart from "@/components/dashboard/OverviewChart";
@@ -31,6 +31,10 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import Link from "next/link";
 import { Building, Undo } from "lucide-react";
 import StockAlerts from "@/components/dashboard/StockAlerts";
+import { getSales, Sale } from "@/services/sales-service";
+import { getAvailableStockForLocation, InventoryItem } from "@/services/inventory-service";
+import { format, parseISO, subMonths } from "date-fns";
+import { Skeleton } from "@/components/ui/skeleton";
 
 
 const emptyDashboardData: DashboardData = {
@@ -45,18 +49,85 @@ const emptyDashboardData: DashboardData = {
     overview: [],
 };
 
-// Mock data removed, will be replaced by backend logic later.
-const salesData: any[] = [];
-
 
 export default function Home() {
   const { user, logout, loading, hasPermission } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const [dashboardData, setDashboardData] = useState<DashboardData>(emptyDashboardData);
+  const [recentSales, setRecentSales] = useState<Sale[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
 
   const sidebarRoutes = useMemo(() => {
     return allAppRoutes.filter(route => route.path !== '/');
   }, []);
+
+  const fetchData = useCallback(async () => {
+    if (!user) return;
+    setDataLoading(true);
+
+    try {
+        const [sales, warehouseStock, downtownStock, uptownStock] = await Promise.all([
+            getSales(),
+            getAvailableStockForLocation('warehouse'),
+            getAvailableStockForLocation('STR002'),
+            getAvailableStockForLocation('STR003'),
+        ]);
+
+        // Filter sales based on user role and assigned store
+        const userSales = user.role === 'Admin'
+            ? sales
+            : sales.filter(s => s.storeId === user.assignedStore);
+
+        // Calculate metrics
+        const totalRevenue = userSales.reduce((sum, sale) => sum + sale.grandTotal, 0);
+        const salesCount = userSales.length;
+
+        const allStock = [...warehouseStock, ...downtownStock, ...uptownStock];
+        const totalStock = allStock.reduce((sum, item) => sum + item.quantity, 0);
+
+        // Generate overview data for the chart (last 12 months)
+        const overview = Array.from({ length: 12 }).map((_, i) => {
+            const date = subMonths(new Date(), i);
+            return {
+                name: format(date, 'MMM'),
+                total: 0,
+            };
+        }).reverse();
+
+        userSales.forEach(sale => {
+            const month = format(parseISO(sale.createdAt), 'MMM');
+            const monthData = overview.find(d => d.name === month);
+            if (monthData) {
+                monthData.total += sale.grandTotal;
+            }
+        });
+        
+        setDashboardData({
+            totalRevenue: `₹${totalRevenue.toFixed(2)}`,
+            sales: salesCount.toString(),
+            stockAvailability: totalStock.toString(),
+            subscriptions: salesCount.toString(), // Using sales count as a proxy for prescriptions
+            overview,
+            // Note: "change" metrics are not implemented as they require historical data comparison
+            revenueChange: " ",
+            salesChange: " ",
+            stockChange: " ",
+            subscriptionsChange: " ",
+        });
+        
+        setRecentSales(userSales.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5));
+
+    } catch (error) {
+        console.error("Failed to fetch dashboard data:", error);
+    } finally {
+        setDataLoading(false);
+    }
+  }, [user]);
+  
+  useEffect(() => {
+      fetchData();
+  }, [fetchData]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -64,8 +135,6 @@ export default function Home() {
     }
   }, [user, loading, router]);
   
-  const dashboardData = emptyDashboardData;
-
   const dashboardTitle = useMemo(() => {
       if(user?.role === 'Admin') return 'Company Dashboard';
       if(user?.assignedStore === 'STR002') return 'Downtown Pharmacy Dashboard';
@@ -184,34 +253,38 @@ export default function Home() {
               <TabsContent value="dashboard">
                 <div className="grid auto-rows-max items-start gap-4 md:gap-8 lg:grid-cols-2">
                   <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 lg:col-span-2">
-                      <StatCard 
-                        title="Total Revenue"
-                        value={dashboardData.totalRevenue}
-                        change={dashboardData.revenueChange}
-                        icon={DollarSign}
-                      />
-                      <StatCard 
-                        title="Sales"
-                        value={dashboardData.sales}
-                        change={dashboardData.salesChange}
-                        icon={CreditCard}
-                      />
-                      <StatCard 
-                        title="Stock Availability"
-                        value={dashboardData.stockAvailability}
-                        change={dashboardData.stockChange}
-                        icon={Package}
-                      />
-                      <StatCard 
-                        title="New Prescriptions"
-                        value={dashboardData.subscriptions}
-                        change={dashboardData.subscriptionsChange}
-                        icon={Pill}
-                      />
+                    {dataLoading ? Array.from({length: 4}).map((_, i) => <Skeleton key={i} className="h-28" />) :
+                        <>
+                          <StatCard 
+                            title="Total Revenue"
+                            value={dashboardData.totalRevenue}
+                            change={dashboardData.revenueChange}
+                            icon={DollarSign}
+                          />
+                          <StatCard 
+                            title="Sales"
+                            value={dashboardData.sales}
+                            change={dashboardData.salesChange}
+                            icon={CreditCard}
+                          />
+                          <StatCard 
+                            title="Stock Availability"
+                            value={dashboardData.stockAvailability}
+                            change={dashboardData.stockChange}
+                            icon={Package}
+                          />
+                          <StatCard 
+                            title="New Prescriptions"
+                            value={dashboardData.subscriptions}
+                            change={dashboardData.subscriptionsChange}
+                            icon={Pill}
+                          />
+                        </>
+                    }
                   </div>
                   <div className="grid gap-4 md:gap-8 lg:grid-cols-2 lg:col-span-2">
                       <div className="lg:col-span-1">
-                          <OverviewChart data={dashboardData.overview} />
+                          {dataLoading ? <Skeleton className="h-[438px]" /> : <OverviewChart data={dashboardData.overview} />}
                       </div>
                       <div className="space-y-4 lg:col-span-1">
                           <AiSummary dashboardData={dashboardData} />
@@ -230,7 +303,7 @@ export default function Home() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="hidden sm:table-cell">ID</TableHead>
+                                        <TableHead className="hidden sm:table-cell">Invoice ID</TableHead>
                                         <TableHead>Customer</TableHead>
                                         <TableHead className="hidden md:table-cell">Date</TableHead>
                                         <TableHead className="text-right">Amount</TableHead>
@@ -238,15 +311,16 @@ export default function Home() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {salesData.length > 0 ? salesData.map((sale) => (
-                                        <TableRow key={sale.id}>
-                                            <TableCell className="hidden sm:table-cell font-medium">{sale.id}</TableCell>
-                                            <TableCell>{sale.customer}</TableCell>
-                                            <TableCell className="hidden md:table-cell">{sale.date}</TableCell>
-                                            <TableCell className="text-right">{sale.amount}</TableCell>
+                                    {dataLoading ? Array.from({length: 5}).map((_, i) => <TableRow key={i}><TableCell colSpan={5}><Skeleton className="h-5" /></TableCell></TableRow>) :
+                                     recentSales.length > 0 ? recentSales.map((sale) => (
+                                        <TableRow key={sale.invoiceId}>
+                                            <TableCell className="hidden sm:table-cell font-medium">{sale.invoiceId}</TableCell>
+                                            <TableCell>{sale.patientName}</TableCell>
+                                            <TableCell className="hidden md:table-cell">{format(parseISO(sale.createdAt), "PPP")}</TableCell>
+                                            <TableCell className="text-right">₹{sale.grandTotal.toFixed(2)}</TableCell>
                                             <TableCell className="text-right">
-                                                <Badge variant={sale.status === 'Paid' ? 'default' : 'secondary'}>
-                                                    {sale.status}
+                                                <Badge variant={sale.paymentMethod === 'Cash' ? 'default' : 'secondary'}>
+                                                    {sale.paymentMethod}
                                                 </Badge>
                                             </TableCell>
                                         </TableRow>
