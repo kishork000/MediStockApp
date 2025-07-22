@@ -5,7 +5,6 @@ import { useState, useMemo, useEffect } from "react";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger, SidebarFooter } from "@/components/ui/sidebar";
 import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, MoreHorizontal, Trash2, Building } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
@@ -19,6 +18,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PackagingType, getPackagingTypes, addPackagingType, deletePackagingType } from "@/services/packaging-service";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export default function PackagingTypeMasterPage() {
     const { user, logout, loading, hasPermission } = useAuth();
@@ -29,6 +29,8 @@ export default function PackagingTypeMasterPage() {
     const [dataLoading, setDataLoading] = useState(true);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [newPackagingTypeName, setNewPackagingTypeName] = useState("");
+    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
     const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
     const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && route.inSidebar && hasPermission(route.path)), [hasPermission]);
@@ -51,14 +53,23 @@ export default function PackagingTypeMasterPage() {
             router.push('/login');
         }
     }, [user, loading, router]);
+    
+    const confirmDelete = (id: string) => {
+        setItemToDelete(id);
+        setIsDeleteConfirmOpen(true);
+    };
 
-    const handleDelete = async (id: string) => {
+    const handleDelete = async () => {
+        if (!itemToDelete) return;
         try {
-            await deletePackagingType(id);
+            await deletePackagingType(itemToDelete);
             await fetchPackagingTypes();
             toast({ title: "Success", description: "Packaging type deleted." });
         } catch (error) {
             toast({ variant: "destructive", title: "Error", description: "Failed to delete packaging type." });
+        } finally {
+            setItemToDelete(null);
+            setIsDeleteConfirmOpen(false);
         }
     };
 
@@ -144,7 +155,7 @@ export default function PackagingTypeMasterPage() {
                                 <TableHeader><TableRow><TableHead>Name</TableHead><TableHead><span className="sr-only">Actions</span></TableHead></TableRow></TableHeader>
                                 <TableBody>
                                     {dataLoading ? (Array.from({ length: 3 }).map((_, i) => (<TableRow key={i}><TableCell><Skeleton className="h-4 w-32" /></TableCell><TableCell><Skeleton className="h-8 w-8" /></TableCell></TableRow>)))
-                                        : packagingTypes.map((type) => (<TableRow key={type.id}><TableCell className="font-medium">{type.name}</TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDelete(type.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell></TableRow>))}
+                                        : packagingTypes.map((type) => (<TableRow key={type.id}><TableCell className="font-medium">{type.name}</TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => confirmDelete(type.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell></TableRow>))}
                                 </TableBody>
                             </Table>
                         </CardContent>
@@ -168,8 +179,20 @@ export default function PackagingTypeMasterPage() {
                     </form>
                 </DialogContent>
             </Dialog>
+            <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the packaging type.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setItemToDelete(null)}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete}>Continue</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
-
-    

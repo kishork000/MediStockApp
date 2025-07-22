@@ -31,6 +31,7 @@ import { Medicine, getMedicines, addMedicine, updateMedicine, deleteMedicine } f
 import { Skeleton } from "@/components/ui/skeleton";
 import { UnitType, getUnitTypes } from "@/services/unit-service";
 import { PackagingType, getPackagingTypes } from "@/services/packaging-service";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const defaultFormState: Omit<Medicine, 'id'> = {
     name: "",
@@ -59,6 +60,8 @@ export default function MedicineMasterPage() {
     const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
     const [selectedMedicine, setSelectedMedicine] = useState<Medicine | null>(null);
     const [formState, setFormState] = useState(defaultFormState);
+    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
 
     const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
@@ -126,14 +129,23 @@ export default function MedicineMasterPage() {
     const handleSelectChange = (name: 'gstSlab' | 'baseUnit' | 'packType', value: string) => {
         setFormState(prev => ({...prev, [name]: value}));
     }
+    
+    const confirmDelete = (id: string) => {
+        setItemToDelete(id);
+        setIsDeleteConfirmOpen(true);
+    };
 
-    const handleDelete = async (id: string) => {
+    const handleDelete = async () => {
+        if (!itemToDelete) return;
         try {
-            await deleteMedicine(id);
+            await deleteMedicine(itemToDelete);
             await fetchMasterData();
             toast({ title: "Success", description: "Medicine removed from master list." });
         } catch (error) {
             toast({ variant: "destructive", title: "Error", description: "Failed to remove medicine." });
+        } finally {
+            setItemToDelete(null);
+            setIsDeleteConfirmOpen(false);
         }
     };
 
@@ -320,7 +332,7 @@ export default function MedicineMasterPage() {
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                 <DropdownMenuItem onSelect={() => openEditModal(med)}>Edit</DropdownMenuItem>
-                                                <DropdownMenuItem onSelect={() => handleDelete(med.id)} className="text-destructive">
+                                                <DropdownMenuItem onSelect={() => confirmDelete(med.id)} className="text-destructive">
                                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
@@ -430,8 +442,21 @@ export default function MedicineMasterPage() {
                 </form>
             </DialogContent>
         </Dialog>
+
+        <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the medicine from the master list.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setItemToDelete(null)}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete}>Continue</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 }
-
-    

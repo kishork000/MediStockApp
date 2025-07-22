@@ -35,6 +35,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Skeleton } from "@/components/ui/skeleton";
 import { UnitType, getUnitTypes, addUnitType, deleteUnitType } from "@/services/unit-service";
 import { PackagingType, getPackagingTypes, addPackagingType, deletePackagingType } from "@/services/packaging-service";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 
 interface User {
@@ -99,6 +100,10 @@ export default function AdminPage() {
     const [newPackagingTypeName, setNewPackagingTypeName] = useState("");
     
     const [dataLoading, setDataLoading] = useState(true);
+    
+    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<{ id: string; type: 'user' | 'store' | 'unit' | 'packaging' } | null>(null);
+
 
     const sidebarRoutes = useMemo(() => {
         return allAppRoutes.filter(route => route.path !== '/');
@@ -180,10 +185,40 @@ export default function AdminPage() {
         toast({ title: "Success", description: "Store details updated." });
     };
 
-    const handleDeleteStore = (id: string) => {
-        setStores(stores.filter(s => s.id !== id));
-        toast({ title: "Success", description: "Store deleted." });
+    const confirmDelete = (id: string, type: 'user' | 'store' | 'unit' | 'packaging') => {
+        setItemToDelete({ id, type });
+        setIsDeleteConfirmOpen(true);
     };
+
+    const handleDelete = async () => {
+        if (!itemToDelete) return;
+
+        const { id, type } = itemToDelete;
+        
+        try {
+            if (type === 'store') {
+                setStores(stores.filter(s => s.id !== id));
+                toast({ title: "Success", description: "Store deleted." });
+            } else if (type === 'user') {
+                setUsers(prev => prev.filter(u => u.id !== id));
+                toast({ title: "Success", description: `User has been deleted.`});
+            } else if (type === 'unit') {
+                await deleteUnitType(id);
+                await fetchMasterData();
+                toast({ title: "Success", description: "Unit type deleted." });
+            } else if (type === 'packaging') {
+                await deletePackagingType(id);
+                await fetchMasterData();
+                toast({ title: "Success", description: "Packaging type deleted." });
+            }
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: `Failed to delete ${type}.` });
+        } finally {
+            setItemToDelete(null);
+            setIsDeleteConfirmOpen(false);
+        }
+    };
+
 
     const openAddStoreModal = () => {
         setStoreModalMode('add');
@@ -218,11 +253,6 @@ export default function AdminPage() {
         }
     };
 
-    const handleDeleteUser = (userToDelete: User) => {
-       setUsers(prev => prev.filter(u => u.id !== userToDelete.id));
-       toast({ title: "Success", description: `User ${userToDelete.name} has been deleted.`});
-    };
-
     const handlePermissionChange = (role: UserRole, route: string, checked: boolean | 'indeterminate') => {
         if (typeof checked !== 'boolean' || role === 'Admin') return;
         
@@ -251,15 +281,6 @@ export default function AdminPage() {
             toast({ variant: "destructive", title: "Error", description: "Please enter a name." });
         }
     };
-     const handleDeleteUnit = async (id: string) => {
-        try {
-            await deleteUnitType(id);
-            await fetchMasterData();
-            toast({ title: "Success", description: "Unit type deleted." });
-        } catch (error) {
-            toast({ variant: "destructive", title: "Error", description: "Failed to delete unit type." });
-        }
-    };
 
      const handleAddPackagingType = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -275,16 +296,6 @@ export default function AdminPage() {
             }
         } else {
             toast({ variant: "destructive", title: "Error", description: "Please enter a name." });
-        }
-    };
-
-    const handleDeletePackaging = async (id: string) => {
-        try {
-            await deletePackagingType(id);
-            await fetchMasterData();
-            toast({ title: "Success", description: "Packaging type deleted." });
-        } catch (error) {
-            toast({ variant: "destructive", title: "Error", description: "Failed to delete packaging type." });
         }
     };
 
@@ -469,7 +480,7 @@ export default function AdminPage() {
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                         <DropdownMenuItem disabled>Edit</DropdownMenuItem>
-                                                        <DropdownMenuItem onSelect={() => handleDeleteUser(u)} className="text-destructive">Delete</DropdownMenuItem>
+                                                        <DropdownMenuItem onSelect={() => confirmDelete(u.id, 'user')} className="text-destructive">Delete</DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </TableCell>
@@ -560,7 +571,7 @@ export default function AdminPage() {
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                         <DropdownMenuItem onSelect={() => openEditStoreModal(store)}>Edit</DropdownMenuItem>
-                                                        <DropdownMenuItem onSelect={() => handleDeleteStore(store.id)} className="text-destructive">
+                                                        <DropdownMenuItem onSelect={() => confirmDelete(store.id, 'store')} className="text-destructive">
                                                             <Trash2 className="mr-2 h-4 w-4" /> Delete
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
@@ -587,7 +598,7 @@ export default function AdminPage() {
                                 <TableHeader><TableRow><TableHead>Name</TableHead><TableHead><span className="sr-only">Actions</span></TableHead></TableRow></TableHeader>
                                 <TableBody>
                                     {dataLoading ? (Array.from({ length: 3 }).map((_, i) => (<TableRow key={i}><TableCell><Skeleton className="h-4 w-32" /></TableCell><TableCell><Skeleton className="h-8 w-8" /></TableCell></TableRow>)))
-                                        : unitTypes.map((type) => (<TableRow key={type.id}><TableCell className="font-medium">{type.name}</TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDeleteUnit(type.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell></TableRow>))}
+                                        : unitTypes.map((type) => (<TableRow key={type.id}><TableCell className="font-medium">{type.name}</TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => confirmDelete(type.id, 'unit')}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell></TableRow>))}
                                 </TableBody>
                             </Table>
                         </CardContent>
@@ -607,7 +618,7 @@ export default function AdminPage() {
                                 <TableHeader><TableRow><TableHead>Name</TableHead><TableHead><span className="sr-only">Actions</span></TableHead></TableRow></TableHeader>
                                 <TableBody>
                                     {dataLoading ? (Array.from({ length: 3 }).map((_, i) => (<TableRow key={i}><TableCell><Skeleton className="h-4 w-32" /></TableCell><TableCell><Skeleton className="h-8 w-8" /></TableCell></TableRow>)))
-                                        : packagingTypes.map((type) => (<TableRow key={type.id}><TableCell className="font-medium">{type.name}</TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDeletePackaging(type.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell></TableRow>))}
+                                        : packagingTypes.map((type) => (<TableRow key={type.id}><TableCell className="font-medium">{type.name}</TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => confirmDelete(type.id, 'packaging')}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell></TableRow>))}
                                 </TableBody>
                             </Table>
                         </CardContent>
@@ -784,6 +795,20 @@ export default function AdminPage() {
                     </form>
                 </DialogContent>
             </Dialog>
+            <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the {itemToDelete?.type} from the system.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setItemToDelete(null)}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete}>Continue</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
     </div>
   );
 }

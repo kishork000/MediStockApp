@@ -30,6 +30,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { fetchGstDetails } from "@/services/gstin-service";
 import { Manufacturer, addManufacturer, getManufacturers, updateManufacturer, deleteManufacturer } from "@/services/manufacturer-service";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 
 const defaultFormState: Omit<Manufacturer, 'id'> = {
@@ -57,6 +58,9 @@ export default function ManufacturerMasterPage() {
     
     const [formState, setFormState] = useState(defaultFormState);
     const [isFetchingGst, startFetchingGst] = useTransition();
+
+    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
     const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
     const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && route.inSidebar && hasPermission(route.path)), [hasPermission]);
@@ -100,14 +104,23 @@ export default function ManufacturerMasterPage() {
         setFormState(man);
         setIsEditModalOpen(true);
     };
+    
+    const confirmDelete = (id: string) => {
+        setItemToDelete(id);
+        setIsDeleteConfirmOpen(true);
+    };
 
-    const handleDelete = async (id: string) => {
+    const handleDelete = async () => {
+        if (!itemToDelete) return;
         try {
-            await deleteManufacturer(id);
+            await deleteManufacturer(itemToDelete);
             await fetchManufacturers();
             toast({ title: "Success", description: "Manufacturer removed from master list." });
         } catch (error) {
             toast({ variant: "destructive", title: "Error", description: "Failed to remove manufacturer." });
+        } finally {
+            setItemToDelete(null);
+            setIsDeleteConfirmOpen(false);
         }
     };
 
@@ -324,7 +337,7 @@ export default function ManufacturerMasterPage() {
                                                     <Eye className="mr-2 h-4 w-4" /> View
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem onSelect={() => openEditModal(man)}>Edit</DropdownMenuItem>
-                                                <DropdownMenuItem onSelect={() => handleDelete(man.id)} className="text-destructive">
+                                                <DropdownMenuItem onSelect={() => confirmDelete(man.id)} className="text-destructive">
                                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
@@ -365,7 +378,7 @@ export default function ManufacturerMasterPage() {
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="cin">CIN</Label>
-                            <Input id="cin" name="cin" value={formState.cin} onChange={handleFormChange} placeholder="Corporate Identification Number" />
+                            <Input id="cin" name="cin" value={formState.cin || ''} onChange={handleFormChange} placeholder="Corporate Identification Number" />
                         </div>
                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
@@ -437,6 +450,20 @@ export default function ManufacturerMasterPage() {
                 </DialogContent>
             </Dialog>
         )}
+        <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the manufacturer and all associated data.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setItemToDelete(null)}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete}>Continue</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 }

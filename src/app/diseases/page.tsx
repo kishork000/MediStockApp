@@ -26,6 +26,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface Disease {
     id: string;
@@ -41,6 +42,8 @@ export default function DiseasesPage() {
     const router = useRouter();
     const pathname = usePathname();
     const [diseases, setDiseases] = useState(initialDiseases);
+    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
     const sidebarRoutes = useMemo(() => {
         return allAppRoutes.filter(route => route.path !== '/');
@@ -53,8 +56,15 @@ export default function DiseasesPage() {
     }, [user, loading, router]);
 
 
+    const confirmDelete = (id: string) => {
+        setItemToDelete(id);
+        setIsDeleteConfirmOpen(true);
+    };
+
     const handleDelete = (id: string) => {
         setDiseases(diseases.filter(d => d.id !== id));
+        setItemToDelete(null);
+        setIsDeleteConfirmOpen(false);
     };
 
     const handleAddDisease = (e: React.FormEvent<HTMLFormElement>) => {
@@ -235,7 +245,7 @@ export default function DiseasesPage() {
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                         <DropdownMenuItem>Edit</DropdownMenuItem>
-                                                        <DropdownMenuItem onSelect={() => handleDelete(disease.id)} className="text-destructive">
+                                                        <DropdownMenuItem onSelect={() => confirmDelete(disease.id)} className="text-destructive">
                                                            <Trash2 className="mr-2 h-4 w-4" /> Delete
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
@@ -276,6 +286,20 @@ export default function DiseasesPage() {
             </Tabs>
         </main>
       </div>
+       <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the disease record.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setItemToDelete(null)}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => itemToDelete && handleDelete(itemToDelete)}>Continue</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 }
