@@ -244,7 +244,7 @@ export default function SalesReportPage() {
              <SidebarMenu>
                 {hasPermission('/') && (
                     <SidebarMenuItem>
-                        <SidebarMenuButton href="/" tooltip="Dashboard">
+                        <SidebarMenuButton href="/" tooltip="Dashboard" isActive={pathname === '/'}>
                             <HomeIcon />
                             <span>Dashboard</span>
                         </SidebarMenuButton>
@@ -287,7 +287,7 @@ export default function SalesReportPage() {
                 )}
                  {hasPermission('/admin') && (
                     <SidebarMenuItem>
-                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname === '/admin'}>
+                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname.startsWith('/admin')}>
                             {getIcon('Admin')}
                             <span>Admin</span>
                         </SidebarMenuButton>
