@@ -94,7 +94,7 @@ export default function WarehouseInventoryPage() {
           </SidebarHeader>
           <SidebarContent>
              <SidebarMenu>
-                 {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path) && r.path !== '/admin').map((route) => (
+                 {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path)).map((route) => (
                     <SidebarMenuItem key={route.path}>
                         <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}>
                             {getIcon(route.name)}
@@ -128,14 +128,6 @@ export default function WarehouseInventoryPage() {
                         </CollapsibleContent>
                     </Collapsible>
                 )}
-                 {hasPermission('/admin') && (
-                    <SidebarMenuItem>
-                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname === '/admin'}>
-                            {getIcon('Admin')}
-                            <span>Admin</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                 )}
             </SidebarMenu>
           </SidebarContent>
            <SidebarFooter>

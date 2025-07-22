@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Activity, Settings, Store, MoreHorizontal, Trash2, GitBranch, LogOut, ShieldCheck, ChevronDown, Warehouse, TrendingUp } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Activity, Settings, Store, MoreHorizontal, Trash2, GitBranch, LogOut, ShieldCheck, ChevronDown, Warehouse, TrendingUp, Building, UserPlus } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -135,7 +135,7 @@ export default function AdminPage() {
     };
 
     const handlePermissionChange = (role: UserRole, route: string, checked: boolean | 'indeterminate') => {
-        if (typeof checked !== 'boolean') return;
+        if (typeof checked !== 'boolean' || role === 'Admin') return;
         
         const newPermissions = { ...permissions };
         if (checked) {
@@ -194,7 +194,7 @@ export default function AdminPage() {
           </SidebarHeader>
           <SidebarContent>
             <SidebarMenu>
-                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path) && r.path !== '/admin').map((route) => (
+                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path)).map((route) => (
                     <SidebarMenuItem key={route.path}>
                         <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}>
                             {getIcon(route.name)}
@@ -228,14 +228,6 @@ export default function AdminPage() {
                         </CollapsibleContent>
                     </Collapsible>
                 )}
-                 {hasPermission('/admin') && (
-                    <SidebarMenuItem>
-                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname === '/admin'}>
-                            {getIcon('Admin')}
-                            <span>Admin</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                 )}
             </SidebarMenu>
           </SidebarContent>
             <SidebarFooter>
@@ -261,11 +253,26 @@ export default function AdminPage() {
             <Tabs defaultValue="users">
                 <div className="flex items-center">
                     <TabsList>
-                        <TabsTrigger value="users">User Management</TabsTrigger>
-                        <TabsTrigger value="permissions">Permissions</TabsTrigger>
-                        <TabsTrigger value="stores">Store Management</TabsTrigger>
-                        <TabsTrigger value="add-user">Add User</TabsTrigger>
-                        <TabsTrigger value="settings">Company Settings</TabsTrigger>
+                        <TabsTrigger value="users">
+                            <Users className="md:hidden" />
+                            <span className="hidden md:inline">User Management</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="permissions">
+                            <ShieldCheck className="md:hidden" />
+                            <span className="hidden md:inline">Permissions</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="stores">
+                            <Store className="md:hidden" />
+                            <span className="hidden md:inline">Store Management</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="add-user">
+                             <UserPlus className="md:hidden" />
+                             <span className="hidden md:inline">Add User</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="settings">
+                            <Building className="md:hidden" />
+                            <span className="hidden md:inline">Company Settings</span>
+                        </TabsTrigger>
                     </TabsList>
                 </div>
                 <TabsContent value="users">
@@ -338,7 +345,7 @@ export default function AdminPage() {
                                                 <div key={`${role}-${route.path}`} className="flex items-center space-x-2">
                                                     <Checkbox 
                                                         id={`${role}-${route.path}`}
-                                                        checked={permissions[role].includes(route.path)}
+                                                        checked={role === 'Admin' ? true : permissions[role].includes(route.path)}
                                                         onCheckedChange={(checked) => handlePermissionChange(role, route.path, checked)}
                                                         disabled={role === 'Admin'}
                                                     />
