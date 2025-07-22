@@ -51,7 +51,7 @@ export async function getSales(): Promise<Sale[]> {
  * This is a transactional operation to ensure data consistency.
  * @param saleData The complete sale object.
  */
-export async function recordSale(saleData: Omit<Sale, 'createdAt' | 'invoiceId' | 'patientMobile'>, patientMobile: string): Promise<void> {
+export async function recordSale(saleData: Omit<Sale, 'createdAt' | 'invoiceId'>): Promise<void> {
     
     // In a real production app with high traffic, you'd use a transaction
     // to read stock levels and write the sale in a single atomic operation.
@@ -69,7 +69,6 @@ export async function recordSale(saleData: Omit<Sale, 'createdAt' | 'invoiceId' 
         // 2. Record the sale document
         await addDoc(salesCollectionRef, {
             ...saleData,
-            patientMobile,
             createdAt: serverTimestamp(),
         });
 

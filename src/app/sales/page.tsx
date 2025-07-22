@@ -49,6 +49,15 @@ interface BlindReturnItem {
     quantity: number;
 }
 
+interface GstBreakdown {
+    [rate: string]: {
+        taxableValue: number;
+        cgst: number;
+        sgst: number;
+    };
+}
+
+
 const diseaseOptions = [
     { id: "d1", label: "Fever" },
     { id: "d2", label: "Headache" },
@@ -220,7 +229,7 @@ export default function SalesPage() {
     };
     
     try {
-        await recordSale(saleData, patientForm.mobile);
+        await recordSale(saleData);
         toast({ title: "Sale Recorded", description: "Stock levels have been updated." });
         setTimeout(() => { 
             window.print(); 
@@ -236,7 +245,7 @@ export default function SalesPage() {
   const handlePrint = (paymentMethod: 'Cash' | 'Online') => { processSale(paymentMethod); }
   const resetSaleForm = () => { setSaleItems([]); setSelectedDiseases([]); setPatientForm({ id: "", name: "", mobile: "", age: "", gender: "" as Patient['gender'], bp: "", sugar: "", address: "" }); }
   
-  const handlePatientFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => { const { id, value } = e.target; setPatientForm(prev => ({ ...prev, [id]: value })); };
+  const handlePatientFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => { const { name, value } = e.target; setPatientForm(prev => ({ ...prev, [name]: value })); };
   const handlePatientSelectChange = (value: Patient['gender']) => { setPatientForm(prev => ({ ...prev, gender: value })); };
 
   const handleSearchPatient = async () => {
@@ -280,6 +289,23 @@ export default function SalesPage() {
   const subtotal = calculateSubtotal();
   const totalGst = calculateTotalGst();
   const grandTotal = subtotal + totalGst;
+
+  const gstBreakdown = useMemo(() => {
+    const breakdown: GstBreakdown = {};
+    saleItems.forEach(item => {
+        const rate = item.gst.toString();
+        if (!breakdown[rate]) {
+            breakdown[rate] = { taxableValue: 0, cgst: 0, sgst: 0 };
+        }
+        const taxableValue = item.total / (1 + item.gst / 100);
+        const totalGstForItem = item.total - taxableValue;
+        breakdown[rate].taxableValue += taxableValue;
+        breakdown[rate].cgst += totalGstForItem / 2;
+        breakdown[rate].sgst += totalGstForItem / 2;
+    });
+    return breakdown;
+  }, [saleItems]);
+
 
     if (loading || !user) { return ( <div className="flex items-center justify-center min-h-screen"><div className="text-2xl">Loading...</div></div> ); }
     
@@ -753,6 +779,7 @@ export default function SalesPage() {
             <thead>
                 <tr>
                     <th className="text-left">Item</th>
+                    <th className="text-center">GST%</th>
                     <th className="text-right">Qty</th>
                     <th className="text-right">Price</th>
                     <th className="text-right">Total</th>
@@ -762,6 +789,7 @@ export default function SalesPage() {
             {saleItems.map(item => (
                 <tr key={item.id}>
                     <td>{item.medicine}</td>
+                    <td className="text-center">{item.gst}</td>
                     <td className="text-right">{item.quantity}</td>
                     <td className="text-right">{item.price.toFixed(2)}</td>
                     <td className="text-right">{item.total.toFixed(2)}</td>
@@ -772,7 +800,32 @@ export default function SalesPage() {
         <hr className="my-1 border-dashed border-black"/>
         <div className="text-xs text-right space-y-0.5">
             <p>Subtotal: {subtotal.toFixed(2)}</p>
-            <p>Total GST: {totalGst.toFixed(2)}</p>
+        </div>
+        <hr className="my-1 border-dashed border-black"/>
+        <table className="w-full text-xs">
+            <thead>
+                <tr>
+                    <th className="text-left">GST%</th>
+                    <th className="text-right">Taxable</th>
+                    <th className="text-right">CGST</th>
+                    <th className="text-right">SGST</th>
+                    <th className="text-right">Total GST</th>
+                </tr>
+            </thead>
+            <tbody>
+            {Object.entries(gstBreakdown).map(([rate, values]) => (
+                <tr key={rate}>
+                    <td className="text-left">{rate}%</td>
+                    <td className="text-right">{values.taxableValue.toFixed(2)}</td>
+                    <td className="text-right">{values.cgst.toFixed(2)}</td>
+                    <td className="text-right">{values.sgst.toFixed(2)}</td>
+                    <td className="text-right">{(values.cgst + values.sgst).toFixed(2)}</td>
+                </tr>
+            ))}
+            </tbody>
+        </table>
+        <hr className="my-1 border-dashed border-black"/>
+        <div className="text-xs text-right space-y-0.5">
             <p className="font-bold">Grand Total: {grandTotal.toFixed(2)}</p>
         </div>
         <hr className="my-1 border-dashed border-black"/>
@@ -784,3 +837,4 @@ export default function SalesPage() {
 </>
   );
 }
+
