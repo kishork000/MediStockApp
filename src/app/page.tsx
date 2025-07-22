@@ -11,7 +11,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { DollarSign, Home as HomeIcon, LayoutGrid, Package, Users, CreditCard, ShoppingCart, BarChart, Pill, Download, PlusSquare, Users2, Activity, Settings, GitBranch, LogOut, TrendingUp, Warehouse } from "lucide-react";
+import { DollarSign, Home as HomeIcon, LayoutGrid, Package, Users, CreditCard, ShoppingCart, BarChart, Pill, Download, PlusSquare, Users2, Activity, Settings, GitBranch, LogOut, TrendingUp, Warehouse, BookOpen } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import type { DashboardData } from "./dashboard/types";
 import StatCard from "@/components/dashboard/StatCard";
@@ -99,6 +99,7 @@ export default function Home() {
         case 'Inventory Reports': return <BarChart />;
         case 'Valuation Report': return <TrendingUp />;
         case 'Diseases': return <Activity />;
+        case 'Documentation': return <BookOpen />;
         case 'Admin': return <Settings />;
         default: return <LayoutGrid />;
     }
