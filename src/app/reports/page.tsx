@@ -274,8 +274,8 @@ export default function UniversalReportPage() {
                             <CardDescription>Use any combination of filters to generate a sales report. All sales data is shown by default.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                <div>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                <div className="col-span-2 md:col-span-1">
                                     <Label>Date Range</Label>
                                     <DateRangePicker onUpdate={(values) => (filtersRef.current.dateRange = values.range)} className="w-full" />
                                 </div>
@@ -308,7 +308,7 @@ export default function UniversalReportPage() {
                                         </SelectContent>
                                     </Select>
                                 </div>
-                                <div className="lg:col-span-2">
+                                <div className="col-span-2 md:col-span-3 lg:col-span-1">
                                     <Label htmlFor="medicineId">Medicine</Label>
                                     <Select defaultValue={filtersRef.current.medicineId} onValueChange={v => (filtersRef.current.medicineId = v)}>
                                         <SelectTrigger id="medicineId"><SelectValue /></SelectTrigger>
@@ -383,3 +383,4 @@ export default function UniversalReportPage() {
             </div>
         </div>
     );
+}
