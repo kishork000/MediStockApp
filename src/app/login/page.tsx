@@ -19,7 +19,7 @@ import { LayoutGrid } from "lucide-react";
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
-  const [email, setEmail] = useState("");
+  const [credential, setCredential] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
@@ -27,11 +27,11 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     try {
-      const success = await login(email, password);
+      const success = await login(credential, password);
       if (success) {
         router.push("/");
       } else {
-        setError("Invalid email or password.");
+        setError("Invalid credentials or password.");
       }
     } catch (err) {
       setError("An unexpected error occurred. Please try again.");
@@ -48,20 +48,20 @@ export default function LoginPage() {
             </div>
           <CardTitle className="text-2xl">Login</CardTitle>
           <CardDescription>
-            Enter your email below to login to your account
+            Enter your email or Login ID to access your account
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="grid gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="credential">Email or Login ID</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="m@example.com"
+                id="credential"
+                type="text"
+                placeholder="user@example.com or user01"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={credential}
+                onChange={(e) => setCredential(e.target.value)}
               />
             </div>
             <div className="grid gap-2">

@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, NewUser } from "@/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { allAppRoutes, AppRoute, UserRole } from "@/lib/types";
@@ -40,11 +40,15 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 interface User {
     id: string;
+    loginId: string;
     name: string;
     email: string;
     role: UserRole;
     assignedStore?: string;
     password?: string;
+    altMobile?: string;
+    pan?: string;
+    aadhar?: string;
 }
 
 interface Store {
@@ -57,12 +61,6 @@ interface Store {
     disclaimer?: string;
 }
 
-const initialUsers: User[] = [
-    { id: "1", name: "Admin User", email: "admin@medistock.com", role: "Admin" },
-    { id: "2", name: "Pharmacist One", email: "pharmacist1@medistock.com", role: "Pharmacist", assignedStore: "STR002" },
-    { id: "3", name: "Supervisor One", email: "supervisor1@medistock.com", role: "Supervisor" },
-];
-
 const initialStores: Store[] = [
     { id: "STR001", storeCode: "WH01", name: "Main Warehouse", address: "456 Industrial Ave, Metro City", gstin: "29BBBBB1111B1Z6", cin: "U12345MH2024PTC123456" },
     { id: "STR002", storeCode: "DP01", name: "Downtown Pharmacy", address: "123 Main St, Wellness City", gstin: "22AAAAA0000A1Z5", cin: "U12345MH2024PTC123457", disclaimer: "All sales are final." },
@@ -71,7 +69,7 @@ const initialStores: Store[] = [
 
 
 export default function AdminPage() {
-    const { user, logout, loading, permissions, setPermissions, hasPermission } = useAuth();
+    const { user, logout, loading, permissions, setPermissions, hasPermission, users: userList, createUser, deleteUser: deleteUserFromContext } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
     const { toast } = useToast();
@@ -87,7 +85,11 @@ export default function AdminPage() {
     const [storeModalMode, setStoreModalMode] = useState<'add' | 'edit'>('add');
     const [selectedStore, setSelectedStore] = useState<Store | null>(null);
 
-    const [users, setUsers] = useState<User[]>(initialUsers);
+    const [users, setUsers] = useState<User[]>([]);
+
+    useEffect(() => {
+        setUsers(userList);
+    }, [userList]);
 
     // State for Unit Types
     const [unitTypes, setUnitTypes] = useState<UnitType[]>([]);
@@ -200,7 +202,7 @@ export default function AdminPage() {
                 setStores(stores.filter(s => s.id !== id));
                 toast({ title: "Success", description: "Store deleted." });
             } else if (type === 'user') {
-                setUsers(prev => prev.filter(u => u.id !== id));
+                await deleteUserFromContext(id);
                 toast({ title: "Success", description: `User has been deleted.`});
             } else if (type === 'unit') {
                 await deleteUnitType(id);
@@ -232,24 +234,31 @@ export default function AdminPage() {
         setIsStoreModalOpen(true);
     };
 
-    const handleAddUser = (e: React.FormEvent<HTMLFormElement>) => {
+    const handleAddUser = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
-        const newUser: User = {
-            id: (users.length + 1).toString(),
+        const newUser: NewUser = {
             name: formData.get("name") as string,
             email: formData.get("email") as string,
+            loginId: formData.get("loginId") as string,
             role: formData.get("role") as UserRole,
             assignedStore: formData.get("assignedStore") as string || undefined,
             password: formData.get("password") as string,
+            altMobile: formData.get("altMobile") as string || undefined,
+            pan: formData.get("pan") as string || undefined,
+            aadhar: formData.get("aadhar") as string || undefined,
         };
         
-        if (newUser.name && newUser.email && newUser.role && newUser.password) {
-            setUsers(prev => [...prev, newUser]);
-            toast({ title: "Success", description: "User created successfully! Note: this is a mock implementation." });
-            e.currentTarget.reset();
+        if (newUser.name && newUser.email && newUser.loginId && newUser.role && newUser.password) {
+            try {
+                await createUser(newUser);
+                 toast({ title: "Success", description: "User created successfully!" });
+                 e.currentTarget.reset();
+            } catch (error: any) {
+                 toast({ variant: "destructive", title: "Error", description: error.message });
+            }
         } else {
-            toast({ variant: "destructive", title: "Error", description: "Please fill all user details including password." });
+            toast({ variant: "destructive", title: "Error", description: "Please fill all required user details." });
         }
     };
 
@@ -450,6 +459,7 @@ export default function AdminPage() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Name</TableHead>
+                                        <TableHead className="hidden sm:table-cell">Login ID</TableHead>
                                         <TableHead className="hidden sm:table-cell">Email</TableHead>
                                         <TableHead>Role</TableHead>
                                         <TableHead className="hidden md:table-cell">Assigned Store</TableHead>
@@ -462,6 +472,7 @@ export default function AdminPage() {
                                     {users.map((u) => (
                                         <TableRow key={u.id}>
                                             <TableCell className="font-medium">{u.name}</TableCell>
+                                            <TableCell className="hidden sm:table-cell">{u.loginId}</TableCell>
                                             <TableCell className="hidden sm:table-cell">{u.email}</TableCell>
                                             <TableCell>
                                                 <Badge variant={u.role === 'Admin' ? 'destructive' : u.role === 'Supervisor' ? 'secondary' : 'default'}>
@@ -633,17 +644,39 @@ export default function AdminPage() {
                         <CardContent>
                             <form className="space-y-4" onSubmit={handleAddUser}>
                                 <div className="space-y-2">
-                                    <Label htmlFor="name">Name</Label>
+                                    <Label htmlFor="name">Full Name</Label>
                                     <Input id="name" name="name" placeholder="Full Name" required />
                                 </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="email">Email</Label>
-                                    <Input id="email" name="email" type="email" placeholder="user@medistock.com" required />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="loginId">Login ID</Label>
+                                        <Input id="loginId" name="loginId" placeholder="e.g., user01" required />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="email">Email</Label>
+                                        <Input id="email" name="email" type="email" placeholder="user@medistock.com" required />
+                                    </div>
                                 </div>
-                                 <div className="space-y-2">
-                                    <Label htmlFor="password">Password</Label>
-                                    <Input id="password" name="password" type="password" required />
-                                </div>
+                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                     <div className="space-y-2">
+                                        <Label htmlFor="password">Password</Label>
+                                        <Input id="password" name="password" type="password" required />
+                                    </div>
+                                     <div className="space-y-2">
+                                        <Label htmlFor="altMobile">Alt. Mobile No.</Label>
+                                        <Input id="altMobile" name="altMobile" type="tel" />
+                                    </div>
+                                 </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                     <div className="space-y-2">
+                                        <Label htmlFor="pan">PAN Number</Label>
+                                        <Input id="pan" name="pan" />
+                                    </div>
+                                     <div className="space-y-2">
+                                        <Label htmlFor="aadhar">Aadhar Number</Label>
+                                        <Input id="aadhar" name="aadhar" />
+                                    </div>
+                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="role">Role</Label>

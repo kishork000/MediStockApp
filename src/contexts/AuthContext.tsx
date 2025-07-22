@@ -3,9 +3,20 @@
 
 import React, { createContext, useState, useContext, useEffect, useCallback, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { User, UserRole, RolePermissions, allAppRoutes } from '@/lib/types';
+import { UserRole, RolePermissions, allAppRoutes } from '@/lib/types';
 import { seedDatabase } from '@/services/seed-service';
 
+export interface User {
+    id: string;
+    loginId: string;
+    name: string;
+    email: string;
+    role: UserRole;
+    assignedStore?: string;
+    altMobile?: string;
+    pan?: string;
+    aadhar?: string;
+}
 
 const initialPermissions: RolePermissions = {
     Admin: allAppRoutes.map(r => r.path),
@@ -13,74 +24,76 @@ const initialPermissions: RolePermissions = {
     Supervisor: ['/', '/patients', '/sales', '/sales/reports', '/inventory', '/inventory/warehouse', '/inventory/stores', '/inventory/master', '/inventory/manufacturer', '/inventory/add', '/inventory/returns', '/inventory/transfer', '/inventory/reports', '/inventory/valuation' ]
 };
 
-const mockUsers: User[] = [
-    { id: "1", name: "Admin User", email: "admin@medistock.com", role: "Admin" },
-    { id: "2", name: "Pharmacist One", email: "pharmacist1@medistock.com", role: "Pharmacist", assignedStore: "STR002" },
-    { id: "3", name: "Supervisor One", email: "supervisor1@medistock.com", role: "Supervisor" },
+let mockUsers: User[] = [
+    { id: "1", loginId: "admin", name: "Admin User", email: "admin@medistock.com", role: "Admin", aadhar: "1234 5678 9012", pan: "ABCDE1234F" },
+    { id: "2", loginId: "pharm1", name: "Pharmacist One", email: "pharmacist1@medistock.com", role: "Pharmacist", assignedStore: "STR002" },
+    { id: "3", loginId: "super1", name: "Supervisor One", email: "supervisor1@medistock.com", role: "Supervisor" },
 ];
 
 
-interface NewUser {
+export interface NewUser {
     name: string;
     email: string;
+    loginId: string;
     role: UserRole;
     assignedStore?: string;
     password?: string;
+    altMobile?: string;
+    pan?: string;
+    aadhar?: string;
 }
 
 interface AuthContextType {
     user: User | null;
-    login: (email: string, pass: string) => Promise<boolean>;
+    users: User[];
+    login: (credential: string, pass: string) => Promise<boolean>;
     logout: () => void;
     loading: boolean;
     permissions: RolePermissions;
     setPermissions: (permissions: RolePermissions) => void;
     hasPermission: (path: string) => boolean;
-    // These functions will now be simple placeholders, as user management will happen in the Admin page state
     createUser: (newUser: NewUser) => Promise<void>;
-    deleteUser: (userId: string, email: string) => Promise<void>;
-    fetchUsers: () => Promise<User[]>;
+    deleteUser: (userId: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
+    const [usersState, setUsersState] = useState<User[]>(mockUsers);
     const [loading, setLoading] = useState(true);
     const [permissions, setPermissionsState] = useState<RolePermissions>(initialPermissions);
     const router = useRouter();
     const pathname = usePathname();
 
     useEffect(() => {
-        // Check if a user session exists in local storage
         try {
             const storedUser = localStorage.getItem('medi-stock-user');
             if (storedUser) {
                 const parsedUser = JSON.parse(storedUser);
                 setUser(parsedUser);
-                 if (parsedUser.role === 'Admin') {
-                    const seeded = localStorage.getItem('db_seeded_v2');
-                    if (!seeded) {
-                        console.log("Admin logged in, checking if DB needs seeding...");
-                        seedDatabase().then(() => {
-                           localStorage.setItem('db_seeded_v2', 'true');
-                           console.log("Database seeding complete.");
-                        });
-                    }
-                }
             }
+
+            const storedUsers = localStorage.getItem('medi-stock-users');
+            if (storedUsers) {
+                setUsersState(JSON.parse(storedUsers));
+                mockUsers = JSON.parse(storedUsers); // Keep mockUsers in sync
+            } else {
+                 localStorage.setItem('medi-stock-users', JSON.stringify(mockUsers));
+            }
+
+            const storedPermissions = localStorage.getItem('medi-stock-permissions');
+            if (storedPermissions) {
+                setPermissionsState(JSON.parse(storedPermissions));
+            } else {
+                localStorage.setItem('medi-stock-permissions', JSON.stringify(initialPermissions));
+            }
+
         } catch (error) {
-            console.error("Failed to parse user from localStorage", error);
-            localStorage.removeItem('medi-stock-user');
+            console.error("Failed to parse from localStorage", error);
+            localStorage.clear();
         }
         setLoading(false);
-
-        const storedPermissions = localStorage.getItem('medi-stock-permissions');
-        if (storedPermissions) {
-            setPermissionsState(JSON.parse(storedPermissions));
-        } else {
-            localStorage.setItem('medi-stock-permissions', JSON.stringify(initialPermissions));
-        }
     }, []);
 
     const hasPermission = useCallback((path: string): boolean => {
@@ -121,9 +134,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }, [user, loading, pathname, router, hasPermission]);
 
 
-    const login = async (email: string, pass: string): Promise<boolean> => {
-        const foundUser = mockUsers.find(u => u.email === email);
-        // We're ignoring the password for this mock implementation for simplicity.
+    const login = async (credential: string, pass: string): Promise<boolean> => {
+        const foundUser = usersState.find(u => u.email.toLowerCase() === credential.toLowerCase() || u.loginId.toLowerCase() === credential.toLowerCase());
+        
         if (foundUser) {
             setUser(foundUser);
             localStorage.setItem('medi-stock-user', JSON.stringify(foundUser));
@@ -143,23 +156,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem('medi-stock-permissions', JSON.stringify(newPermissions));
     }
     
-    // These functions are now placeholders. The actual logic will be handled
-    // within the Admin page component's state.
     const createUser = async (newUser: NewUser) => {
-        console.log("Mock createUser called. User management is handled in Admin page state.");
+        if (usersState.some(u => u.email === newUser.email)) {
+            throw new Error("A user with this email already exists.");
+        }
+        if (usersState.some(u => u.loginId === newUser.loginId)) {
+            throw new Error("A user with this Login ID already exists.");
+        }
+
+        const userToCreate: User = {
+            id: (usersState.length + 1).toString(),
+            ...newUser,
+        };
+
+        const updatedUsers = [...usersState, userToCreate];
+        setUsersState(updatedUsers);
+        localStorage.setItem('medi-stock-users', JSON.stringify(updatedUsers));
     };
 
-    const deleteUser = async (userId: string, email: string) => {
-         console.log("Mock deleteUser called. User management is handled in Admin page state.");
-    };
-
-    const fetchUsers = async (): Promise<User[]> => {
-        console.log("Mock fetchUsers called. Users are managed in Admin page state.");
-        return Promise.resolve(mockUsers); // Return the base mock users
+    const deleteUser = async (userId: string) => {
+         const updatedUsers = usersState.filter(u => u.id !== userId);
+         setUsersState(updatedUsers);
+         localStorage.setItem('medi-stock-users', JSON.stringify(updatedUsers));
     };
 
 
-    const value = { user, login, logout, loading, permissions, setPermissions, hasPermission, createUser, deleteUser, fetchUsers };
+    const value = { user, users: usersState, login, logout, loading, permissions, setPermissions, hasPermission, createUser, deleteUser };
 
     return (
         <AuthContext.Provider value={value}>
