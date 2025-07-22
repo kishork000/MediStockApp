@@ -20,6 +20,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { ScrollArea } from "./scroll-area"
 
 const SIDEBAR_STATE_KEY = "sidebar_state"
 
@@ -229,17 +230,18 @@ SidebarSeparator.displayName = "SidebarSeparator"
 const SidebarContent = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div">
->(({ className, ...props }, ref) => {
+>(({ className, children, ...props }, ref) => {
   return (
-    <div
-      ref={ref}
+    <ScrollArea
+      ref={ref as any}
       data-sidebar="content"
-      className={cn(
-        "flex min-h-0 flex-1 flex-col gap-4 p-2 overflow-y-auto",
-        className
-      )}
+      className={cn("flex-1", className)}
       {...props}
-    />
+    >
+        <div className="flex min-h-0 flex-1 flex-col gap-4 p-2">
+            {children}
+        </div>
+    </ScrollArea>
   )
 })
 SidebarContent.displayName = "SidebarContent"

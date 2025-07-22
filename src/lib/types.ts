@@ -35,7 +35,7 @@ export const allAppRoutes: AppRoute[] = [
     { path: "/inventory/reports", name: "Inventory Reports", inSidebar: true },
     { path: "/inventory/valuation", name: "Valuation Report", inSidebar: true },
     { path: "/diseases", name: "Diseases", inSidebar: true },
-    { path: "/admin", name: "Admin", inSidebar: false },
+    { path: "/admin", name: "Admin", inSidebar: true },
     { path: "/admin/roles", name: "Role Management", inSidebar: false },
     { path: "/admin/units", name: "Unit Management", inSidebar: false },
     { path: "/admin/packaging", name: "Packaging Management", inSidebar: false },
