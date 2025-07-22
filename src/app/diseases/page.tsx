@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, MoreHorizontal, Trash2, TrendingUp } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, MoreHorizontal, Trash2, TrendingUp, Building, Pill, Undo } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
@@ -33,13 +33,8 @@ interface Disease {
     description: string;
 }
 
-const initialDiseases: Disease[] = [
-    { id: "DIS001", name: "Fever", description: "Characterized by a body temperature higher than normal." },
-    { id: "DIS002", name: "Headache", description: "Pain in any part of the head, ranging from sharp to dull." },
-    { id: "DIS003", name: "Diabetes", description: "A chronic disease related to high blood sugar levels." },
-    { id: "DIS004", name: "Hypertension", description: "Also known as high blood pressure." },
-    { id: "DIS005", name: "Common Cold", description: "A viral infectious disease of the upper respiratory tract." },
-];
+// Mock data removed, to be replaced by a database service in the future.
+const initialDiseases: Disease[] = [];
 
 export default function DiseasesPage() {
     const { user, logout, loading, hasPermission } = useAuth();
@@ -98,7 +93,10 @@ export default function DiseasesPage() {
             case 'Sales Reports': return <BarChart />;
             case 'Warehouse Stock': return <Warehouse />;
             case 'Store Stock': return <Package />;
-            case 'Add Medicine': return <PlusSquare />;
+            case 'Medicine Master': return <Pill />;
+            case 'Manufacturer Master': return <Building />;
+            case 'Add Stock': return <PlusSquare />;
+            case 'Return to Manufacturer': return <Undo />;
             case 'Stock Transfer': return <GitBranch />;
             case 'Inventory Reports': return <BarChart />;
             case 'Valuation Report': return <TrendingUp />;
@@ -108,7 +106,7 @@ export default function DiseasesPage() {
         }
     };
 
-    const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory') && r.inSidebar);
+    const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory/') && r.inSidebar);
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -130,7 +128,7 @@ export default function DiseasesPage() {
                     </SidebarMenuItem>
                 )}
 
-                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path)).map((route) => (
+                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path) && r.path !== '/admin').map((route) => (
                     <SidebarMenuItem key={route.path}>
                         <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}>
                             {getIcon(route.name)}
@@ -164,6 +162,15 @@ export default function DiseasesPage() {
                         </CollapsibleContent>
                     </Collapsible>
                 )}
+
+                 {hasPermission('/admin') && (
+                    <SidebarMenuItem>
+                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname === '/admin'}>
+                            {getIcon('Admin')}
+                            <span>Admin</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                 )}
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>
@@ -212,7 +219,7 @@ export default function DiseasesPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {diseases.map((disease) => (
+                                    {diseases.length > 0 ? diseases.map((disease) => (
                                         <TableRow key={disease.id}>
                                             <TableCell className="hidden sm:table-cell font-medium">{disease.id}</TableCell>
                                             <TableCell>{disease.name}</TableCell>
@@ -235,7 +242,11 @@ export default function DiseasesPage() {
                                                 </DropdownMenu>
                                             </TableCell>
                                         </TableRow>
-                                    ))}
+                                    )) : (
+                                       <TableRow>
+                                         <TableCell colSpan={4} className="h-24 text-center">No diseases added yet. Add one to get started.</TableCell>
+                                       </TableRow>
+                                    )}
                                 </TableBody>
                             </Table>
                         </CardContent>

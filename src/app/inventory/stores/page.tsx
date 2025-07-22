@@ -32,27 +32,13 @@ const allStores = [
     { id: "STR003", name: "Uptown Health" },
 ];
 
-const storeInventory = {
-    "STR002": [
-        { name: "Aspirin", value: "aspirin", opening: 100, received: 70, sales: 20, quantity: 150, minStockLevel: 50, status: "In Stock", date: new Date(2024, 6, 28) },
-        { name: "Ibuprofen", value: "ibuprofen", opening: 50, received: 0, sales: 30, quantity: 20, minStockLevel: 25, status: "Low Stock", date: new Date(2024, 6, 27) },
-        { name: "Paracetamol", value: "paracetamol", opening: 80, received: 50, sales: 30, quantity: 100, minStockLevel: 100, status: "In Stock", date: new Date(2024, 6, 26) },
-    ],
-    "STR003": [
-        { name: "Amoxicillin", value: "amoxicillin", opening: 50, received: 50, sales: 20, quantity: 80, minStockLevel: 40, status: "In Stock", date: new Date(2024, 6, 28) },
-        { name: "Lisinopril", value: "lisinopril", opening: 100, received: 40, sales: 20, quantity: 120, minStockLevel: 60, status: "In Stock", date: new Date(2024, 6, 27) },
-        { name: "Metformin", value: "metformin", opening: 25, received: 0, sales: 25, quantity: 0, minStockLevel: 30, status: "Out of Stock", date: new Date(2024, 6, 25) },
-    ],
+const storeInventory: { [key: string]: any[] } = {
+    "STR002": [],
+    "STR003": [],
 };
 
 const medicineOptions = [
     { value: "all", name: "All Medicines" },
-    { value: "aspirin", name: "Aspirin" },
-    { value: "ibuprofen", name: "Ibuprofen" },
-    { value: "paracetamol", name: "Paracetamol" },
-    { value: "amoxicillin", name: "Amoxicillin" },
-    { value: "lisinopril", name: "Lisinopril" },
-    { value: "metformin", name: "Metformin" },
 ];
 
 const getStatus = (quantity: number, minStockLevel: number) => {
@@ -130,6 +116,7 @@ export default function StoreInventoryPage() {
             case 'Dashboard': return <HomeIcon />;
             case 'Patients': return <Users2 />;
             case 'Sales': return <ShoppingCart />;
+            case 'Sales Reports': return <BarChart />;
             case 'Warehouse Stock': return <Warehouse />;
             case 'Store Stock': return <Package />;
             case 'Medicine Master': return <Pill />;
@@ -165,7 +152,7 @@ export default function StoreInventoryPage() {
                     </SidebarMenuItem>
                 )}
                 
-                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path)).map((route) => (
+                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path) && r.path !== '/admin').map((route) => (
                     <SidebarMenuItem key={route.path}>
                         <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}>
                             {getIcon(route.name)}
@@ -199,6 +186,15 @@ export default function StoreInventoryPage() {
                         </CollapsibleContent>
                     </Collapsible>
                 )}
+
+                 {hasPermission('/admin') && (
+                    <SidebarMenuItem>
+                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname === '/admin'}>
+                            {getIcon('Admin')}
+                            <span>Admin</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                 )}
             </SidebarMenu>
           </SidebarContent>
            <SidebarFooter>

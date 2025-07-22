@@ -11,29 +11,23 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, Pill, Undo, Building } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, Pill, Undo, Building, MoreHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const inventoryData = [
-    { name: "Aspirin", quantity: 1500, minStockLevel: 500, manufacturer: "Bayer", expiry: "2025-12-31" },
-    { name: "Ibuprofen", quantity: 200, minStockLevel: 250, manufacturer: "Advil", expiry: "2026-06-30" },
-    { name: "Paracetamol", quantity: 450, minStockLevel: 1000, manufacturer: "Tylenol", expiry: "2024-10-31" },
-    { name: "Amoxicillin", quantity: 800, minStockLevel: 300, manufacturer: "Generic", expiry: "2025-08-01" },
-    { name: "Lisinopril", quantity: 1200, minStockLevel: 400, manufacturer: "Zestril", expiry: "2026-02-28" },
-    { name: "Metformin", quantity: 0, minStockLevel: 500, manufacturer: "Glucophage", expiry: "2024-09-15" },
-    { name: "Atorvastatin", quantity: 900, minStockLevel: 350, manufacturer: "Lipitor", expiry: "2025-11-20" },
-];
+
+// Mock data removed. Will be replaced by live data.
+const inventoryData: any[] = [];
 
 const getStatus = (quantity: number, minStockLevel: number) => {
     if (quantity === 0) return "Out of Stock";
@@ -45,6 +39,7 @@ export default function WarehouseInventoryPage() {
     const { user, logout, loading, hasPermission } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
+    const [pageLoading, setPageLoading] = useState(true);
 
     const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
     const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && route.inSidebar && hasPermission(route.path)), [hasPermission]);
@@ -53,9 +48,12 @@ export default function WarehouseInventoryPage() {
         if (!loading && !user) {
             router.push('/login');
         }
+         if (!loading && user) {
+            setPageLoading(false);
+        }
     }, [user, loading, router]);
 
-    if (loading || !user) {
+    if (loading || pageLoading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
                 <div className="text-2xl">Loading...</div>
@@ -179,7 +177,7 @@ export default function WarehouseInventoryPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {inventoryData.map((item) => {
+                        {inventoryData.length > 0 ? inventoryData.map((item) => {
                             const status = getStatus(item.quantity, item.minStockLevel);
                             return (
                             <TableRow key={item.name}>
@@ -209,7 +207,13 @@ export default function WarehouseInventoryPage() {
                                     </DropdownMenu>
                                 </TableCell>
                             </TableRow>
-                        )})}
+                        )}) : (
+                            <TableRow>
+                                <TableCell colSpan={6} className="h-24 text-center">
+                                    No inventory data found. Add stock to see it here.
+                                </TableCell>
+                            </TableRow>
+                        )}
                     </TableBody>
                 </Table>
                 </CardContent>

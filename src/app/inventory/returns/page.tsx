@@ -23,7 +23,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useToast } from "@/hooks/use-toast";
 
 interface ReturnItem {
@@ -33,12 +33,7 @@ interface ReturnItem {
     quantity: number;
 }
 
-const medicineOptions = [
-    { value: "aspirin", label: "Aspirin (WH Stock: 500)" },
-    { value: "ibuprofen", label: "Ibuprofen (WH Stock: 800)" },
-    { value: "paracetamol", label: "Paracetamol (WH Stock: 1200)" },
-    { value: "amoxicillin", label: "Amoxicillin (WH Stock: 300)" },
-];
+const medicineOptions: any[] = [];
 
 
 export default function ReturnToManufacturerPage() {

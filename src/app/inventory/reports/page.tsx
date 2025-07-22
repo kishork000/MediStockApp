@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, Download, TrendingUp, Undo } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, Download, TrendingUp, Undo, Pill, Building } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -21,7 +21,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 
@@ -32,45 +32,20 @@ const allStores = [
     { id: "STR003", name: "Uptown Health" },
 ];
 
-const allTransferData = {
-    "STR002": [
-        { id: "TINV-2024-001", from: "Main Warehouse", to: "Downtown Pharmacy", date: "2024-07-28", items: 2, status: "Completed" },
-        { id: "CNR-2024-001", from: "Downtown Pharmacy", to: "Main Warehouse", date: "2024-07-26", items: 1, status: "Returned" },
-    ],
-    "STR003": [
-        { id: "TINV-2024-002", from: "Main Warehouse", to: "Uptown Health", date: "2024-07-27", items: 5, status: "Completed" },
-    ],
-    "all": [
-        { id: "TINV-2024-001", from: "Main Warehouse", to: "Downtown Pharmacy", date: "2024-07-28", items: 2, status: "Completed" },
-        { id: "TINV-2024-002", from: "Main Warehouse", to: "Uptown Health", date: "2024-07-27", items: 5, status: "Completed" },
-        { id: "CNR-2024-001", from: "Downtown Pharmacy", to: "Main Warehouse", date: "2024-07-26", items: 1, status: "Returned" },
-    ]
+const allTransferData: { [key: string]: any[] } = {
+    "STR002": [],
+    "STR003": [],
+    "all": []
 };
 
 const allPurchaseData = {
-    "all": [
-        { id: "INV-2024-123", date: "2024-07-25", items: 5, amount: "₹15,450.00", type: "Purchase" },
-        { id: "INV-2024-120", date: "2024-07-20", items: 2, amount: "₹8,500.00", type: "Purchase (Backdated)" },
-        { id: "DN-2024-015", date: "2024-07-22", items: 1, amount: "₹2,300.00", type: "Return" },
-    ]
+    "all": []
 };
 
-
-const allStockLevelData = {
-    "STR002": [
-        { medicine: "Aspirin", warehouse: 1500, storeStock: 150, total: 1650 },
-        { medicine: "Ibuprofen", warehouse: 2000, storeStock: 20, total: 2020 },
-        { medicine: "Paracetamol", warehouse: 450, storeStock: 100, total: 550 },
-    ],
-    "STR003": [
-        { medicine: "Amoxicillin", warehouse: 800, storeStock: 80, total: 880 },
-        { medicine: "Atorvastatin", warehouse: 900, storeStock: 120, total: 1020 },
-    ],
-     "all": [
-        { medicine: "Aspirin", warehouse: 1500, downtown: 150, uptown: 120, total: 1770 },
-        { medicine: "Ibuprofen", warehouse: 2000, downtown: 20, uptown: 50, total: 2070 },
-        { medicine: "Paracetamol", warehouse: 450, downtown: 100, uptown: 80, total: 630 },
-    ]
+const allStockLevelData: { [key: string]: any[] } = {
+    "STR002": [],
+    "STR003": [],
+     "all": []
 };
 
 
@@ -140,7 +115,9 @@ export default function StockReportsPage() {
             case 'Sales Reports': return <BarChart />;
             case 'Warehouse Stock': return <Warehouse />;
             case 'Store Stock': return <Package />;
-            case 'Add Medicine': return <PlusSquare />;
+            case 'Medicine Master': return <Pill />;
+            case 'Manufacturer Master': return <Building />;
+            case 'Add Stock': return <PlusSquare />;
             case 'Return to Manufacturer': return <Undo />;
             case 'Stock Transfer': return <GitBranch />;
             case 'Inventory Reports': return <BarChart />;
@@ -171,7 +148,7 @@ export default function StockReportsPage() {
                     </SidebarMenuItem>
                 )}
                 
-                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path)).map((route) => (
+                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path) && r.path !== '/admin').map((route) => (
                     <SidebarMenuItem key={route.path}>
                         <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}>
                             {getIcon(route.name)}
@@ -205,6 +182,14 @@ export default function StockReportsPage() {
                         </CollapsibleContent>
                     </Collapsible>
                 )}
+                 {hasPermission('/admin') && (
+                    <SidebarMenuItem>
+                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname === '/admin'}>
+                            {getIcon('Admin')}
+                            <span>Admin</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                 )}
             </SidebarMenu>
           </SidebarContent>
            <SidebarFooter>
@@ -279,7 +264,7 @@ export default function StockReportsPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                     {stockLevelData.map((item: any) => (
+                                     {stockLevelData.length > 0 ? stockLevelData.map((item: any) => (
                                         <TableRow key={item.medicine}>
                                             <TableCell className="font-medium">{item.medicine}</TableCell>
                                             {selectedStore === 'all' ? (
@@ -296,7 +281,9 @@ export default function StockReportsPage() {
                                             )}
                                             <TableCell className="text-right font-bold">{item.total}</TableCell>
                                         </TableRow>
-                                    ))}
+                                    )) : (
+                                      <TableRow><TableCell colSpan={5} className="h-24 text-center">No data to display.</TableCell></TableRow>
+                                    )}
                                 </TableBody>
                             </Table>
                         </CardContent>
@@ -324,7 +311,7 @@ export default function StockReportsPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {transferReportData.map((report) => (
+                                    {transferReportData.length > 0 ? transferReportData.map((report) => (
                                         <TableRow key={report.id}>
                                             <TableCell className="font-medium">{report.id}</TableCell>
                                             <TableCell>{report.from}</TableCell>
@@ -333,7 +320,9 @@ export default function StockReportsPage() {
                                             <TableCell className="text-center">{report.items}</TableCell>
                                             <TableCell className="text-right">{report.status}</TableCell>
                                         </TableRow>
-                                    ))}
+                                    )) : (
+                                      <TableRow><TableCell colSpan={6} className="h-24 text-center">No data to display.</TableCell></TableRow>
+                                    )}
                                 </TableBody>
                             </Table>
                         </CardContent>
@@ -360,7 +349,7 @@ export default function StockReportsPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {allPurchaseData.all.map((report) => (
+                                    {allPurchaseData.all.length > 0 ? allPurchaseData.all.map((report) => (
                                         <TableRow key={report.id}>
                                             <TableCell className="font-medium">{report.id}</TableCell>
                                             <TableCell>{report.date}</TableCell>
@@ -370,7 +359,9 @@ export default function StockReportsPage() {
                                             <TableCell className="text-center">{report.items}</TableCell>
                                             <TableCell className="text-right">{report.amount}</TableCell>
                                         </TableRow>
-                                    ))}
+                                    )) : (
+                                      <TableRow><TableCell colSpan={5} className="h-24 text-center">No data to display.</TableCell></TableRow>
+                                    )}
                                 </TableBody>
                             </Table>
                         </CardContent>

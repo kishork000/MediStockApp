@@ -29,6 +29,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ChevronDown } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import Link from "next/link";
+import { Building, Undo } from "lucide-react";
 
 
 const emptyDashboardData: DashboardData = {
@@ -43,14 +44,8 @@ const emptyDashboardData: DashboardData = {
     overview: [],
 };
 
-
-const salesData = [
-    { id: "SALE001", customer: "John Doe", date: "2024-07-20", amount: "₹1245.50", status: "Paid" },
-    { id: "SALE002", customer: "Jane Smith", date: "2024-07-20", amount: "₹3360.00", status: "Paid" },
-    { id: "SALE003", customer: "Robert Brown", date: "2024-07-19", amount: "₹2000.00", status: "Paid" },
-    { id: "SALE004", customer: "Emily White", date: "2024-07-19", amount: "₹700.75", status: "Pending" },
-    { id: "SALE005", customer: "Michael Green", date: "2024-07-18", amount: "₹8984.30", status: "Paid" },
-];
+// Mock data removed, will be replaced by backend logic later.
+const salesData: any[] = [];
 
 
 export default function Home() {
@@ -94,7 +89,10 @@ export default function Home() {
         case 'Sales Reports': return <BarChart />;
         case 'Warehouse Stock': return <Warehouse />;
         case 'Store Stock': return <Package />;
-        case 'Add Medicine': return <PlusSquare />;
+        case 'Medicine Master': return <Pill />;
+        case 'Manufacturer Master': return <Building />;
+        case 'Add Stock': return <PlusSquare />;
+        case 'Return to Manufacturer': return <Undo />;
         case 'Stock Transfer': return <GitBranch />;
         case 'Inventory Reports': return <BarChart />;
         case 'Valuation Report': return <TrendingUp />;
@@ -119,7 +117,7 @@ export default function Home() {
           <SidebarContent>
             <SidebarMenu>
                 
-                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path)).map((route) => (
+                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path) && r.path !== '/admin').map((route) => (
                     <SidebarMenuItem key={route.path}>
                         <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}>
                             {getIcon(route.name)}
@@ -153,6 +151,14 @@ export default function Home() {
                         </CollapsibleContent>
                     </Collapsible>
                 )}
+                 {hasPermission('/admin') && (
+                    <SidebarMenuItem>
+                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname === '/admin'}>
+                            {getIcon('Admin')}
+                            <span>Admin</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                 )}
             </SidebarMenu>
           </SidebarContent>
            <SidebarFooter>
@@ -237,7 +243,7 @@ export default function Home() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {salesData.map((sale) => (
+                                    {salesData.length > 0 ? salesData.map((sale) => (
                                         <TableRow key={sale.id}>
                                             <TableCell className="hidden sm:table-cell font-medium">{sale.id}</TableCell>
                                             <TableCell>{sale.customer}</TableCell>
@@ -249,7 +255,11 @@ export default function Home() {
                                                 </Badge>
                                             </TableCell>
                                         </TableRow>
-                                    ))}
+                                    )) : (
+                                      <TableRow>
+                                        <TableCell colSpan={5} className="text-center h-24">No recent sales data available.</TableCell>
+                                      </TableRow>
+                                    )}
                                 </TableBody>
                             </Table>
                         </CardContent>
@@ -289,5 +299,3 @@ export default function Home() {
     </div>
   );
 }
-
-    

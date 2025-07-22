@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, Download, TrendingUp, Filter } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, Download, TrendingUp, Filter, Pill, Building, Undo } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -27,15 +27,7 @@ import { DateRange } from "react-day-picker";
 import { addDays, isWithinInterval } from "date-fns";
 
 
-const valuationData = [
-    { medicine: "Aspirin 100mg Tablet", price: 10, opening: 100, received: 50, sales: 30, balance: 120, date: new Date(2023, 0, 25) },
-    { medicine: "Ibuprofen 200mg Capsule", price: 15.5, opening: 50, received: 10, sales: 40, balance: 20, date: new Date(2023, 1, 5) },
-    { medicine: "Paracetamol 500mg Tablet", price: 5.75, opening: 200, received: 0, sales: 100, balance: 100, date: new Date(2023, 1, 10) },
-    { medicine: "Amoxicillin 250mg Syrup", price: 55.2, opening: 60, received: 20, sales: 0, balance: 80, date: new Date(2023, 1, 15) },
-    { medicine: "Atorvastatin 20mg Tablet", price: 45, opening: 150, received: 0, sales: 30, balance: 120, date: new Date(2023, 1, 20) },
-    // Backdated entry example
-    { medicine: "Aspirin 100mg Tablet", price: 9.8, opening: 0, received: 100, sales: 0, balance: 100, date: new Date(2023, 0, 15) },
-];
+const valuationData: any[] = [];
 
 const allStores = [
     { id: "all", name: "All Locations" },
@@ -101,9 +93,13 @@ export default function ValuationReportPage() {
             case 'Dashboard': return <HomeIcon />;
             case 'Patients': return <Users2 />;
             case 'Sales': return <ShoppingCart />;
+            case 'Sales Reports': return <BarChart />;
             case 'Warehouse Stock': return <Warehouse />;
             case 'Store Stock': return <Package />;
-            case 'Add Medicine': return <PlusSquare />;
+            case 'Medicine Master': return <Pill />;
+            case 'Manufacturer Master': return <Building />;
+            case 'Add Stock': return <PlusSquare />;
+            case 'Return to Manufacturer': return <Undo />;
             case 'Stock Transfer': return <GitBranch />;
             case 'Inventory Reports': return <BarChart />;
             case 'Valuation Report': return <TrendingUp />;
@@ -136,7 +132,7 @@ export default function ValuationReportPage() {
                     </SidebarMenuItem>
                 )}
                 
-                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path)).map((route) => (
+                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path) && r.path !== '/admin').map((route) => (
                     <SidebarMenuItem key={route.path}>
                         <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}>
                             {getIcon(route.name)}
@@ -170,6 +166,14 @@ export default function ValuationReportPage() {
                         </CollapsibleContent>
                     </Collapsible>
                 )}
+                 {hasPermission('/admin') && (
+                    <SidebarMenuItem>
+                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname === '/admin'}>
+                            {getIcon('Admin')}
+                            <span>Admin</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                 )}
             </SidebarMenu>
           </SidebarContent>
            <SidebarFooter>
@@ -232,7 +236,7 @@ export default function ValuationReportPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredValuationData.map((item, index) => (
+                                {filteredValuationData.length > 0 ? filteredValuationData.map((item, index) => (
                                     <TableRow key={`${item.medicine}-${index}`}>
                                         <TableCell className="font-medium">{item.medicine}</TableCell>
                                         <TableCell className="text-right">{item.opening}</TableCell>
@@ -241,7 +245,9 @@ export default function ValuationReportPage() {
                                         <TableCell className="text-right font-semibold">{item.balance}</TableCell>
                                         <TableCell className="text-right font-bold">{(item.balance * item.price).toFixed(2)}</TableCell>
                                     </TableRow>
-                                ))}
+                                )) : (
+                                  <TableRow><TableCell colSpan={6} className="h-24 text-center">No data to display.</TableCell></TableRow>
+                                )}
                             </TableBody>
                         </Table>
                     </div>

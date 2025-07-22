@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, ArrowRightLeft, Undo2, PlusCircle, Trash2, LogOut, ChevronDown, Warehouse, TrendingUp } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, ArrowRightLeft, Undo2, PlusCircle, Trash2, LogOut, ChevronDown, Warehouse, TrendingUp, Pill, Building, Undo } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -34,12 +34,7 @@ interface TransferItem {
     quantity: number;
 }
 
-const medicineOptions = [
-    { value: "aspirin", label: "Aspirin (WH Stock: 500)" },
-    { value: "ibuprofen", label: "Ibuprofen (WH Stock: 800)" },
-    { value: "paracetamol", label: "Paracetamol (WH Stock: 1200)" },
-    { value: "amoxicillin", label: "Amoxicillin (WH Stock: 300)" },
-];
+const medicineOptions: any[] = [];
 
 const storeOptions = [
     { value: "store1", label: "Downtown Pharmacy" },
@@ -124,9 +119,13 @@ export default function StockTransferPage() {
             case 'Dashboard': return <HomeIcon />;
             case 'Patients': return <Users2 />;
             case 'Sales': return <ShoppingCart />;
+            case 'Sales Reports': return <BarChart />;
             case 'Warehouse Stock': return <Warehouse />;
             case 'Store Stock': return <Package />;
-            case 'Add Medicine': return <PlusSquare />;
+            case 'Medicine Master': return <Pill />;
+            case 'Manufacturer Master': return <Building />;
+            case 'Add Stock': return <PlusSquare />;
+            case 'Return to Manufacturer': return <Undo />;
             case 'Stock Transfer': return <GitBranch />;
             case 'Inventory Reports': return <BarChart />;
             case 'Valuation Report': return <TrendingUp />;
@@ -136,7 +135,7 @@ export default function StockTransferPage() {
         }
     };
     
-    const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory') && r.inSidebar);
+    const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory/') && r.inSidebar);
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -158,7 +157,7 @@ export default function StockTransferPage() {
                     </SidebarMenuItem>
                 )}
                 
-                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path)).map((route) => (
+                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path) && r.path !== '/admin').map((route) => (
                     <SidebarMenuItem key={route.path}>
                         <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}>
                             {getIcon(route.name)}
@@ -192,6 +191,15 @@ export default function StockTransferPage() {
                         </CollapsibleContent>
                     </Collapsible>
                 )}
+
+                 {hasPermission('/admin') && (
+                    <SidebarMenuItem>
+                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname === '/admin'}>
+                            {getIcon('Admin')}
+                            <span>Admin</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                 )}
             </SidebarMenu>
           </SidebarContent>
            <SidebarFooter>
@@ -250,7 +258,7 @@ export default function StockTransferPage() {
                                 
                                 <div className="p-4 border rounded-lg space-y-4">
                                     <h3 className="font-semibold">Add Medicine to Transfer</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                                         <div className="space-y-2">
                                             <Label htmlFor="transfer-medicine">Medicine (from WH)</Label>
                                             <Select value={currentTransferItem.medicine} onValueChange={(value) => setCurrentTransferItem({...currentTransferItem, medicine: value})}>
@@ -324,7 +332,7 @@ export default function StockTransferPage() {
 
                                 <div className="p-4 border rounded-lg space-y-4">
                                     <h3 className="font-semibold">Add Medicine to Return</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                                         <div className="space-y-2">
                                             <Label htmlFor="return-medicine">Medicine (from Store)</Label>
                                             <Select value={currentReturnItem.medicine} onValueChange={(value) => setCurrentReturnItem({...currentReturnItem, medicine: value})}>
