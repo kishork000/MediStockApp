@@ -21,7 +21,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -149,16 +149,20 @@ export default function StockReportsPage() {
     const applyFilters = (tab: string) => {
         if (tab === 'levels') {
             let filtered = [...stockLevels];
-            if (stockFiltersRef.current.store !== 'all') {
-                const storeKey = storeIdToKeyMap[stockFiltersRef.current.store];
+            const storeFilter = stockFiltersRef.current.store;
+            const manufacturerFilter = stockFiltersRef.current.manufacturer;
+
+            if (storeFilter !== 'all') {
+                const storeKey = storeIdToKeyMap[storeFilter];
                 if (storeKey) {
                     filtered = filtered.filter(item => item[storeKey] > 0);
                 }
             }
-            if (stockFiltersRef.current.manufacturer !== 'all') {
-                filtered = filtered.filter(item => item.manufacturerId === stockFiltersRef.current.manufacturer);
+            if (manufacturerFilter !== 'all') {
+                filtered = filtered.filter(item => item.manufacturerId === manufacturerFilter);
             }
             setFilteredStockLevels(filtered);
+
         } else if (tab === 'transfers') {
             let filtered = [...transfers];
             if (transferFiltersRef.current.store !== 'all') {
@@ -490,3 +494,4 @@ export default function StockReportsPage() {
     </div>
   );
 }
+
