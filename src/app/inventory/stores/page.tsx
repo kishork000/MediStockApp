@@ -70,7 +70,6 @@ export default function StoreInventoryPage() {
     const [pageLoading, setPageLoading] = useState(true);
     const [storeInventory, setStoreInventory] = useState<EnrichedInventoryItem[]>([]);
     
-    // For Desktop Ledger
     const [allSales, setAllSales] = useState<Sale[]>([]);
     const [allTransfers, setAllTransfers] = useState<Transfer[]>([]);
     const [stockLedger, setStockLedger] = useState<StockLedgerItem[]>([]);
@@ -82,6 +81,13 @@ export default function StoreInventoryPage() {
         if (user?.role === 'Pharmacist' && user.assignedStore) return allStores.filter(s => s.id === user.assignedStore);
         return [];
     }, [user]);
+    
+    const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
+    const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory') && route.inSidebar && hasPermission(route.path)), [hasPermission]);
+
+    useEffect(() => {
+        if (!loading && !user) router.push('/login');
+    }, [user, loading, router]);
 
     useEffect(() => {
         if (availableStores.length > 0 && !selectedStore) {
@@ -187,23 +193,6 @@ export default function StoreInventoryPage() {
         document.body.removeChild(link);
     };
 
-    const filteredInventory = useMemo(() => {
-        let inventory = [...storeInventory];
-        if (searchQuery) {
-            inventory = inventory.filter(item => item.medicineName.toLowerCase().includes(searchQuery.toLowerCase()));
-        }
-        return inventory;
-
-    }, [storeInventory, searchQuery]);
-
-
-    const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
-    const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory') && route.inSidebar && hasPermission(route.path)), [hasPermission]);
-
-    useEffect(() => {
-        if (!loading && !user) router.push('/login');
-    }, [user, loading, router]);
-
     if (loading || !user) {
         return (
             <div className="flex items-center justify-center min-h-screen">
@@ -307,8 +296,8 @@ export default function StoreInventoryPage() {
                 <CardHeader>
                      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
                         <div className="flex-shrink-0">
-                            <CardTitle>View Store Inventory</CardTitle>
-                            <CardDescription>Select a store to view its current stock levels.</CardDescription>
+                            <CardTitle>Detailed Stock Ledger</CardTitle>
+                            <CardDescription>Generate a detailed report of stock movement for the selected store.</CardDescription>
                         </div>
                         <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:flex-row sm:flex-wrap">
                              <Select 
@@ -338,114 +327,68 @@ export default function StoreInventoryPage() {
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent>
-                    {/* Mobile View */}
-                    <div className="relative w-full overflow-auto rounded-lg border md:hidden">
+                <CardContent className="space-y-4">
+                    <Card>
+                        <CardHeader>
+                           <CardTitle>Filter Report</CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex flex-wrap gap-4 items-end">
+                            <div className="space-y-2">
+                                <p className="text-sm font-medium">Date Range</p>
+                                <DateRangePicker onUpdate={(v) => (filtersRef.current.dateRange = v.range)} />
+                            </div>
+                            <Button onClick={calculateStockLedger} disabled={isLedgerLoading}>
+                                {isLedgerLoading ? 'Generating...' : 'Apply Filters'}
+                            </Button>
+                            <Button variant="outline" onClick={() => { setStockLedger([]); filtersRef.current = {}; }}>Reset</Button>
+                            <Button variant="outline" size="sm" onClick={handleDownloadReport} className="ml-auto">
+                                <Download className="mr-2 h-4 w-4" />
+                                Download Report
+                            </Button>
+                        </CardContent>
+                    </Card>
+                    <div className="relative w-full overflow-auto rounded-lg border">
                         <Table>
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Medicine</TableHead>
-                                    <TableHead className="text-right font-bold">Available</TableHead>
-                                    <TableHead className="text-right">Status</TableHead>
+                                    <TableHead className="text-right">Opening</TableHead>
+                                    <TableHead className="text-right">Received</TableHead>
+                                    <TableHead className="text-right">Returned</TableHead>
+                                    <TableHead className="text-right">Sales</TableHead>
+                                    <TableHead className="text-right font-bold">Balance</TableHead>
                                 </TableRow>
                             </TableHeader>
-                            <TableBody>
-                                {pageLoading ? (
-                                    Array.from({ length: 5 }).map((_, i) => (
-                                        <TableRow key={i}>
-                                            <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                                            <TableCell><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
-                                            <TableCell><Skeleton className="h-6 w-24 ml-auto" /></TableCell>
-                                        </TableRow>
-                                    ))
-                                ) : filteredInventory.length > 0 ? filteredInventory.map((item) => {
-                                    const status = getStatus(item.quantity, item.minStockLevel);
-                                    return (
-                                    <TableRow key={item.id}>
-                                        <TableCell className="font-medium">{item.medicineName}</TableCell>
-                                        <TableCell className="text-right font-bold">{item.quantity}</TableCell>
-                                        <TableCell className="text-right">
-                                            <Badge variant={status === 'In Stock' ? 'default' : status === 'Low Stock' ? 'secondary' : 'destructive'}>
-                                                {status}
-                                            </Badge>
-                                        </TableCell>
+                             <TableBody>
+                            {isLedgerLoading ? (
+                                Array.from({ length: 5 }).map((_, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
                                     </TableRow>
-                                )}) : (
-                                    <TableRow>
-                                        <TableCell colSpan={3} className="text-center h-24">
-                                            No stock data available for the selected store.
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
+                                ))
+                            ) : stockLedger.length > 0 ? stockLedger.filter(item => item.medicineName.toLowerCase().includes(searchQuery.toLowerCase())).map((item) => (
+                                <TableRow key={item.medicineId}>
+                                    <TableCell className="font-medium">{item.medicineName}</TableCell>
+                                    <TableCell className="text-right">{item.opening}</TableCell>
+                                    <TableCell className="text-right text-green-600">+{item.received}</TableCell>
+                                    <TableCell className="text-right text-orange-600">-{item.returned}</TableCell>
+                                    <TableCell className="text-right text-red-600">-{item.sales}</TableCell>
+                                    <TableCell className="text-right font-bold">{item.balance}</TableCell>
+                                </TableRow>
+                            )) : (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="text-center h-24">
+                                        {pageLoading ? 'Loading store data...' : (filtersRef.current.dateRange ? 'No stock movement data for this period.' : 'Please select a date range and apply filters to see the report.')}
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
                         </Table>
-                    </div>
-
-                    {/* Desktop View */}
-                    <div className="hidden md:block space-y-4">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Detailed Stock Ledger</CardTitle>
-                                <CardDescription>Generate a detailed report of stock movement for the selected store.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="flex flex-wrap gap-4 items-end">
-                                <div className="space-y-2">
-                                    <p className="text-sm font-medium">Date Range</p>
-                                    <DateRangePicker onUpdate={(v) => (filtersRef.current.dateRange = v.range)} />
-                                </div>
-                                <Button onClick={calculateStockLedger} disabled={isLedgerLoading}>
-                                    {isLedgerLoading ? 'Generating...' : 'Apply Filters'}
-                                </Button>
-                                <Button variant="outline" onClick={() => { setStockLedger([]); filtersRef.current = {}; }}>Reset</Button>
-                                <Button variant="outline" size="sm" onClick={handleDownloadReport} className="ml-auto">
-                                    <Download className="mr-2 h-4 w-4" />
-                                    Download Report
-                                </Button>
-                            </CardContent>
-                        </Card>
-                        <div className="relative w-full overflow-auto rounded-lg border">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Medicine</TableHead>
-                                        <TableHead className="text-right">Opening</TableHead>
-                                        <TableHead className="text-right">Received</TableHead>
-                                        <TableHead className="text-right">Returned</TableHead>
-                                        <TableHead className="text-right">Sales</TableHead>
-                                        <TableHead className="text-right font-bold">Balance</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                 <TableBody>
-                                {isLedgerLoading ? (
-                                    Array.from({ length: 5 }).map((_, i) => (
-                                        <TableRow key={i}>
-                                            <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                                            <TableCell><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
-                                            <TableCell><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
-                                            <TableCell><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
-                                            <TableCell><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
-                                            <TableCell><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
-                                        </TableRow>
-                                    ))
-                                ) : stockLedger.length > 0 ? stockLedger.filter(item => item.medicineName.toLowerCase().includes(searchQuery.toLowerCase())).map((item) => (
-                                    <TableRow key={item.medicineId}>
-                                        <TableCell className="font-medium">{item.medicineName}</TableCell>
-                                        <TableCell className="text-right">{item.opening}</TableCell>
-                                        <TableCell className="text-right text-green-600">+{item.received}</TableCell>
-                                        <TableCell className="text-right text-orange-600">-{item.returned}</TableCell>
-                                        <TableCell className="text-right text-red-600">-{item.sales}</TableCell>
-                                        <TableCell className="text-right font-bold">{item.balance}</TableCell>
-                                    </TableRow>
-                                )) : (
-                                    <TableRow>
-                                        <TableCell colSpan={6} className="text-center h-24">
-                                            {filtersRef.current.dateRange ? 'No stock movement data for this period.' : 'Please select a date range and apply filters to see the report.'}
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                            </Table>
-                        </div>
                     </div>
                 </CardContent>
             </Card>
