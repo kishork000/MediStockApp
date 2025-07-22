@@ -29,10 +29,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-
+import { findPatientByMobile, addPatient } from "@/services/patient-service";
+import type { Patient } from "@/services/patient-service";
 
 interface SaleItem {
     id: number;
@@ -56,17 +57,6 @@ interface BlindReturnItem {
     quantity: number;
 }
 
-interface Patient {
-    id: string;
-    name: string;
-    age: number;
-    gender: "Female" | "Male" | "Other";
-    mobile: string;
-    lastVisit: string;
-    bp?: string;
-    sugar?: string;
-    address?: string;
-}
 
 interface Medicine {
     value: string;
@@ -75,13 +65,6 @@ interface Medicine {
     gst: number;
     stock: number;
 }
-
-const initialPatients: Patient[] = [
-    { id: "PAT001", name: "Alice Johnson", age: 58, gender: "Female", mobile: "9876543210", lastVisit: "2024-07-15", bp: "120/80", sugar: "98 mg/dL", address: "123 Maple St, Springfield" },
-    { id: "PAT002", name: "Bob Williams", age: 45, gender: "Male", mobile: "9876543211", lastVisit: "2024-07-12", bp: "130/85", sugar: "110 mg/dL", address: "456 Oak Ave, Springfield" },
-    { id: "PAT003", name: "Charlie Brown", age: 62, gender: "Male", mobile: "9876543212", lastVisit: "2024-07-20", bp: "140/90", sugar: "150 mg/dL", address: "789 Pine Ln, Springfield" },
-];
-
 
 const initialMedicineStock: Medicine[] = [
     { value: "aspirin", label: "Aspirin", price: 10.00, gst: 5, stock: 150 },
@@ -146,7 +129,7 @@ export default function SalesPage() {
   const [currentStore, setCurrentStore] = useState(storeOptions[0].value);
   
   // Patient form state
-  const [patientForm, setPatientForm] = useState({ name: "", mobile: "", age: "", gender: "", bp: "", sugar: "", address: "", });
+  const [patientForm, setPatientForm] = useState({ name: "", mobile: "", age: "", gender: "" as Patient['gender'], bp: "", sugar: "", address: "", });
   
   // Return state
   const [searchQuery, setSearchQuery] = useState("");
@@ -202,7 +185,31 @@ export default function SalesPage() {
     return saleItems.every(item => item.quantity <= item.stock);
   }, [saleItems, patientForm]);
 
-  const handleRecordSale = (e: React.FormEvent) => { e.preventDefault(); if (isSaleValid) { setPaymentModalOpen(true); } }
+  const handleRecordSale = async (e: React.FormEvent) => { 
+      e.preventDefault(); 
+      if (!isSaleValid) return;
+
+      let patientId;
+      const existingPatient = await findPatientByMobile(patientForm.mobile);
+
+      if (!existingPatient) {
+          const newPatientData = {
+              ...patientForm,
+              age: parseInt(patientForm.age, 10) || 0,
+              lastVisit: new Date().toISOString().split('T')[0],
+          };
+          const newPatientRef = await addPatient(newPatientData);
+          patientId = newPatientRef.id;
+          toast({ title: "New Patient Created", description: "A new patient record has been added to the database." });
+      } else {
+          patientId = existingPatient.id;
+      }
+      
+      // Here you would proceed to save the sale with the patientId
+      console.log("Proceeding to payment for patient ID:", patientId);
+
+      setPaymentModalOpen(true); 
+  }
   
   const processSale = () => {
     const newMedicineOptions = [...medicineOptions];
@@ -215,16 +222,20 @@ export default function SalesPage() {
   }
 
   const handlePrint = () => { processSale(); setTimeout(() => { window.print(); setPaymentModalOpen(false); resetSaleForm(); }, 100); }
-  const resetSaleForm = () => { setSaleItems([]); setSelectedDiseases([]); setPatientForm({ name: "", mobile: "", age: "", gender: "", bp: "", sugar: "", address: "" }); }
+  const resetSaleForm = () => { setSaleItems([]); setSelectedDiseases([]); setPatientForm({ name: "", mobile: "", age: "", gender: "" as Patient['gender'], bp: "", sugar: "", address: "" }); }
   
   const handlePatientFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => { const { id, value } = e.target; setPatientForm(prev => ({ ...prev, [id]: value })); };
-  const handlePatientSelectChange = (value: string) => { setPatientForm(prev => ({ ...prev, gender: value })); };
+  const handlePatientSelectChange = (value: Patient['gender']) => { setPatientForm(prev => ({ ...prev, gender: value })); };
 
-  const handleSearchPatient = () => {
+  const handleSearchPatient = async () => {
     if (!patientForm.mobile) { toast({ variant: "destructive", title: "Error", description: "Please enter a mobile number to search." }); return; }
-    const foundPatient = initialPatients.find(p => p.mobile === patientForm.mobile);
-    if (foundPatient) { setPatientForm({ name: foundPatient.name, mobile: foundPatient.mobile, age: foundPatient.age.toString(), gender: foundPatient.gender, bp: foundPatient.bp || "", sugar: foundPatient.sugar || "", address: foundPatient.address || "", }); toast({ title: "Patient Found", description: `${foundPatient.name}'s details have been filled in.` });
-    } else { toast({ variant: "destructive", title: "Patient Not Found", description: "No existing patient with this mobile number. Please fill in the details." }); }
+    const foundPatient = await findPatientByMobile(patientForm.mobile);
+    if (foundPatient) { 
+        setPatientForm({ name: foundPatient.name, mobile: foundPatient.mobile, age: foundPatient.age.toString(), gender: foundPatient.gender, bp: foundPatient.bp || "", sugar: foundPatient.sugar || "", address: foundPatient.address || "", }); 
+        toast({ title: "Patient Found", description: `${foundPatient.name}'s details have been filled in.` });
+    } else { 
+        toast({ variant: "destructive", title: "Patient Not Found", description: "No existing patient with this mobile number. Please fill in the details." }); 
+    }
   };
 
   const handleSearchReturns = () => {
@@ -787,3 +798,5 @@ export default function SalesPage() {
 </>
   );
 }
+
+    

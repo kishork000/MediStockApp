@@ -40,49 +40,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-
-interface Patient {
-    id: string;
-    name: string;
-    age: number;
-    gender: "Female" | "Male" | "Other";
-    mobile: string;
-    lastVisit: string;
-    bp?: string;
-    sugar?: string;
-    address?: string;
-    medicineHistory?: { date: string; medicine: string; dosage: string }[];
-    reports?: { date: string; name: string; url: string }[];
-}
-
-const initialPatients: Patient[] = [
-    { 
-        id: "PAT001", name: "Alice Johnson", age: 58, gender: "Female", mobile: "9876543210", lastVisit: "2024-07-15", bp: "120/80", sugar: "98 mg/dL", address: "123 Maple St, Springfield",
-        medicineHistory: [
-            { date: "2024-07-15", medicine: "Lisinopril", dosage: "10mg daily" },
-            { date: "2024-06-10", medicine: "Atorvastatin", dosage: "20mg daily" },
-        ],
-        reports: [ { date: "2024-07-15", name: "Blood Test Report", url: "#" } ]
-    },
-    { 
-        id: "PAT002", name: "Bob Williams", age: 45, gender: "Male", mobile: "9876543211", lastVisit: "2024-07-12", bp: "130/85", sugar: "110 mg/dL", address: "456 Oak Ave, Springfield",
-        medicineHistory: [
-            { date: "2024-07-12", medicine: "Ibuprofen", dosage: "200mg as needed" }
-        ],
-        reports: []
-    },
-    { 
-        id: "PAT003", name: "Charlie Brown", age: 62, gender: "Male", mobile: "9876543212", lastVisit: "2024-07-20", bp: "140/90", sugar: "150 mg/dL", address: "789 Pine Ln, Springfield",
-        medicineHistory: [
-            { date: "2024-07-20", medicine: "Metformin", dosage: "500mg twice daily" },
-            { date: "2024-07-20", medicine: "Aspirin", dosage: "81mg daily" },
-        ],
-        reports: [ { date: "2024-07-20", name: "ECG Report", url: "#" } ]
-    },
-    { id: "PAT004", name: "Diana Miller", age: 34, gender: "Female", mobile: "9876543213", lastVisit: "2024-06-30", bp: "110/70", sugar: "85 mg/dL", address: "101 Elm Ct, Springfield", medicineHistory: [], reports: [] },
-    { id: "PAT005", name: "Ethan Davis", age: 71, gender: "Male", mobile: "9876543214", lastVisit: "2024-07-18", bp: "135/88", sugar: "125 mg/dL", address: "212 Birch Rd, Springfield", medicineHistory: [], reports: [] },
-];
+import { Patient, getPatients, updatePatient, deletePatient } from "@/services/patient-service";
+import { Skeleton } from "@/components/ui/skeleton";
 
 
 export default function PatientsPage() {
@@ -90,7 +49,8 @@ export default function PatientsPage() {
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
-  const [patients, setPatients] = useState<Patient[]>(initialPatients);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -103,6 +63,23 @@ export default function PatientsPage() {
   const sidebarRoutes = useMemo(() => {
     return allAppRoutes.filter(route => route.path !== '/');
   }, []);
+
+  const fetchPatients = async () => {
+    setDataLoading(true);
+    try {
+        const patientsFromDb = await getPatients();
+        setPatients(patientsFromDb);
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch patients.' });
+    }
+    setDataLoading(false);
+  };
+
+  useEffect(() => {
+    if (user) {
+        fetchPatients();
+    }
+  }, [user]);
   
   const filteredPatients = useMemo(() => {
     if (!searchQuery) return patients;
@@ -120,10 +97,17 @@ export default function PatientsPage() {
     }
   }, [user, loading, router]);
 
-  const handleDelete = (id: string) => {
-    setPatients(patients.filter(p => p.id !== id));
-    setIsDeleteConfirmOpen(false);
-    setPatientToDelete(null);
+  const handleDelete = async (id: string) => {
+    try {
+        await deletePatient(id);
+        await fetchPatients();
+        toast({ title: 'Success', description: 'Patient record deleted.' });
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete patient.' });
+    } finally {
+        setIsDeleteConfirmOpen(false);
+        setPatientToDelete(null);
+    }
   };
   
   const handleViewDetails = (patient: Patient) => {
@@ -141,13 +125,12 @@ export default function PatientsPage() {
     setIsDeleteConfirmOpen(true);
   };
 
-  const handleUpdatePatient = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleUpdatePatient = async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
       if (!selectedPatient) return;
 
       const formData = new FormData(e.currentTarget);
-      const updatedPatient: Patient = {
-          ...selectedPatient,
+      const updatedPatientData: Omit<Patient, 'id'> = {
           name: formData.get('name') as string,
           mobile: formData.get('mobile') as string,
           age: parseInt(formData.get('age') as string, 10),
@@ -155,11 +138,19 @@ export default function PatientsPage() {
           bp: formData.get('bp') as string,
           sugar: formData.get('sugar') as string,
           address: formData.get('address') as string,
+          lastVisit: selectedPatient.lastVisit, // This should probably be updated on sale, not here.
+          // History and reports are managed separately
       };
-
-      setPatients(patients.map(p => p.id === updatedPatient.id ? updatedPatient : p));
-      setIsEditModalOpen(false);
-      setSelectedPatient(null);
+      
+      try {
+        await updatePatient(selectedPatient.id, updatedPatientData);
+        await fetchPatients();
+        toast({ title: 'Success', description: 'Patient details updated.' });
+        setIsEditModalOpen(false);
+        setSelectedPatient(null);
+      } catch (error) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to update patient.' });
+      }
   }
 
   const handleSelectPatient = (patientId: string, checked: boolean | 'indeterminate') => {
@@ -221,7 +212,7 @@ export default function PatientsPage() {
         }
     };
     
-    const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory') && r.inSidebar);
+    const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory/') && r.inSidebar);
 
 
   return (
@@ -348,7 +339,18 @@ export default function PatientsPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredPatients.map((patient) => (
+                           {dataLoading ? (
+                                Array.from({ length: 5 }).map((_, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell><Skeleton className="h-4 w-4" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                                        <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
+                                        <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-10" /></TableCell>
+                                        <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
+                                        <TableCell><Skeleton className="h-8 w-8" /></TableCell>
+                                    </TableRow>
+                                ))
+                            ) : filteredPatients.map((patient) => (
                                 <TableRow key={patient.id} data-state={selectedPatientIds.includes(patient.id) ? "selected" : ""}>
                                     <TableCell>
                                         <Checkbox 
@@ -494,7 +496,7 @@ export default function PatientsPage() {
                 <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
                     <DialogContent className="sm:max-w-lg">
                         <DialogHeader>
-                            <DialogTitle>Edit Patient: {selectedPatient.name}</DialogTitle>
+                            <DialogTitle>Edit Patient: {selectedPatient?.name}</DialogTitle>
                             <DialogDescription>
                                 Update the patient's information below.
                             </DialogDescription>
@@ -503,21 +505,21 @@ export default function PatientsPage() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="edit-name">Name</Label>
-                                    <Input id="edit-name" name="name" defaultValue={selectedPatient.name} />
+                                    <Input id="edit-name" name="name" defaultValue={selectedPatient?.name} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="edit-mobile">Mobile Number</Label>
-                                    <Input id="edit-mobile" name="mobile" defaultValue={selectedPatient.mobile} />
+                                    <Input id="edit-mobile" name="mobile" defaultValue={selectedPatient?.mobile} />
                                 </div>
                             </div>
                              <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="edit-age">Age</Label>
-                                    <Input id="edit-age" name="age" type="number" defaultValue={selectedPatient.age} />
+                                    <Input id="edit-age" name="age" type="number" defaultValue={selectedPatient?.age} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="edit-gender">Gender</Label>
-                                    <Select name="gender" defaultValue={selectedPatient.gender}>
+                                    <Select name="gender" defaultValue={selectedPatient?.gender}>
                                         <SelectTrigger id="edit-gender">
                                             <SelectValue placeholder="Select gender" />
                                         </SelectTrigger>
@@ -532,16 +534,16 @@ export default function PatientsPage() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="edit-bp">Blood Pressure</Label>
-                                    <Input id="edit-bp" name="bp" defaultValue={selectedPatient.bp} />
+                                    <Input id="edit-bp" name="bp" defaultValue={selectedPatient?.bp} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="edit-sugar">Blood Sugar</Label>
-                                    <Input id="edit-sugar" name="sugar" defaultValue={selectedPatient.sugar} />
+                                    <Input id="edit-sugar" name="sugar" defaultValue={selectedPatient?.sugar} />
                                 </div>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="edit-address">Address</Label>
-                                <Textarea id="edit-address" name="address" defaultValue={selectedPatient.address} />
+                                <Textarea id="edit-address" name="address" defaultValue={selectedPatient?.address} />
                             </div>
                             <DialogFooter>
                                 <DialogClose asChild>
@@ -581,3 +583,5 @@ export default function PatientsPage() {
     </div>
   );
 }
+
+    
