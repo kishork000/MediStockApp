@@ -90,6 +90,29 @@ export async function addStockToInventory(locationId: string, items: { medicineI
 }
 
 /**
+ * Removes stock from a single location, e.g. for manufacturer returns.
+ * @param locationId The ID of the store or 'warehouse'.
+ * @param items The items to remove.
+ */
+export async function removeStockFromInventory(locationId: string, items: { medicineId: string, quantity: number }[]) {
+    const batch = writeBatch(db);
+
+    for (const item of items) {
+        const docRef = doc(db, 'inventory', `${locationId}_${item.medicineId}`);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists() && docSnap.data().quantity >= item.quantity) {
+            batch.update(docRef, { quantity: increment(-item.quantity) });
+        } else {
+            throw new Error(`Insufficient stock to remove for medicine ID ${item.medicineId}.`);
+        }
+    }
+
+    await batch.commit();
+}
+
+
+/**
  * Moves stock from one location to another.
  * @param from The source location ID.
  * @param to The destination location ID.

@@ -32,6 +32,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Manufacturer, getManufacturers } from "@/services/manufacturer-service";
 import { Purchase, getPurchases } from "@/services/purchase-service";
 import { Transfer, getTransfers } from "@/services/transfer-service";
+import { getManufacturerReturns, ManufacturerReturn } from "@/services/return-service";
 import { isWithinInterval, startOfDay, endOfDay, parseISO, format } from "date-fns";
 import type { WarehouseLedgerItem } from "@/lib/report-types";
 
@@ -48,20 +49,17 @@ export default function WarehouseInventoryPage() {
     const pathname = usePathname();
     const { toast } = useToast();
     
-    // Page state
     const [pageLoading, setPageLoading] = useState(true);
     const [isLedgerLoading, setIsLedgerLoading] = useState(false);
     
-    // Master Data
     const [medicines, setMedicines] = useState<Medicine[]>([]);
     const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
     
-    // Transactional Data
     const [inventory, setInventory] = useState<InventoryItem[]>([]);
     const [purchases, setPurchases] = useState<Purchase[]>([]);
     const [transfers, setTransfers] = useState<Transfer[]>([]);
+    const [manufacturerReturns, setManufacturerReturns] = useState<ManufacturerReturn[]>([]);
     
-    // Report State
     const [stockLedger, setStockLedger] = useState<WarehouseLedgerItem[]>([]);
     const filtersRef = useRef<{dateRange?: DateRange; manufacturerId: string; medicineId: string}>({
         manufacturerId: 'all',
@@ -69,23 +67,25 @@ export default function WarehouseInventoryPage() {
     });
 
     const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
-    const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && r.inSidebar && hasPermission(route.path)), [hasPermission]);
+    const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && route.inSidebar && hasPermission(route.path)), [hasPermission]);
 
     const fetchWarehouseData = useCallback(async () => {
         setPageLoading(true);
         try {
-            const [stockItems, meds, mans, pur, trans] = await Promise.all([
+            const [stockItems, meds, mans, pur, trans, mfrReturns] = await Promise.all([
                 getAvailableStockForLocation('warehouse'),
                 getMedicines(),
                 getManufacturers(),
                 getPurchases(),
                 getTransfers(),
+                getManufacturerReturns(),
             ]);
             setInventory(stockItems);
             setMedicines(meds);
             setManufacturers(mans);
             setPurchases(pur);
             setTransfers(trans);
+            setManufacturerReturns(mfrReturns);
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error', description: 'Failed to load warehouse data.' });
         }
@@ -110,6 +110,7 @@ export default function WarehouseInventoryPage() {
 
         const purchasesInDateRange = purchases.filter(p => isWithinInterval(parseISO(p.date), { start: startDate, end: endDate }));
         const transfersInDateRange = transfers.filter(t => isWithinInterval(parseISO(t.date), { start: startDate, end: endDate }));
+        const returnsInDateRange = manufacturerReturns.filter(r => isWithinInterval(parseISO(r.date), { start: startDate, end: endDate }));
         
         const medicineMap = new Map<string, Medicine>(medicines.map(m => [m.id, m]));
         let medicineIds = new Set(inventory.map(i => i.medicineId));
@@ -132,10 +133,10 @@ export default function WarehouseInventoryPage() {
 
             const receivedDuringPeriod = purchasesInDateRange.flatMap(p => p.items).filter(i => i.medicineId === medId).reduce((sum, i) => sum + i.quantity, 0);
             const transferredDuringPeriod = transfersInDateRange.filter(t => t.from === 'warehouse').flatMap(t => t.items).filter(i => i.medicineId === medId).reduce((sum, i) => sum + i.quantity, 0);
-            const returnedDuringPeriod = transfersInDateRange.filter(t => t.to === 'warehouse').flatMap(t => t.items).filter(i => i.medicineId === medId).reduce((sum, i) => sum + i.quantity, 0);
-            
-            const opening = balance - receivedDuringPeriod - returnedDuringPeriod + transferredDuringPeriod;
-            const total = opening + receivedDuringPeriod + returnedDuringPeriod;
+            const returnedFromStoreDuringPeriod = transfersInDateRange.filter(t => t.to === 'warehouse').flatMap(t => t.items).filter(i => i.medicineId === medId).reduce((sum, i) => sum + i.quantity, 0);
+            const returnedToMfrDuringPeriod = returnsInDateRange.flatMap(r => r.items).filter(i => i.medicineId === medId).reduce((sum, i) => sum + i.quantity, 0);
+
+            const opening = balance - receivedDuringPeriod - returnedFromStoreDuringPeriod + transferredDuringPeriod + returnedToMfrDuringPeriod;
             
             ledger.push({
                 medicineId: medId,
@@ -143,15 +144,15 @@ export default function WarehouseInventoryPage() {
                 manufacturerName: medicineDetails.manufacturerName,
                 opening,
                 received: receivedDuringPeriod,
-                returned: returnedDuringPeriod,
+                returnedFromStore: returnedFromStoreDuringPeriod,
+                returnedToManufacturer: returnedToMfrDuringPeriod,
                 transferred: transferredDuringPeriod,
-                total,
                 balance,
             });
         }
         setStockLedger(ledger);
         setIsLedgerLoading(false);
-    }, [inventory, medicines, purchases, transfers, toast]);
+    }, [inventory, medicines, purchases, transfers, manufacturerReturns, toast]);
 
     const handleDownloadReport = () => {
         if (stockLedger.length === 0) {
@@ -159,11 +160,11 @@ export default function WarehouseInventoryPage() {
             return;
         }
         let csvContent = "data:text/csv;charset=utf-8,";
-        const headers = ["Medicine", "Manufacturer", "Opening", "Received", "Returned", "Transferred", "Total", "Balance"];
+        const headers = ["Medicine", "Manufacturer", "Opening", "Received", "Returned (Stores)", "Returned (MFR)", "Transferred", "Balance"];
         csvContent += headers.join(",") + "\r\n";
 
         stockLedger.forEach(item => {
-            const row = [`"${item.medicineName}"`, `"${item.manufacturerName}"`, item.opening, item.received, item.returned, item.transferred, item.total, item.balance];
+            const row = [`"${item.medicineName}"`, `"${item.manufacturerName}"`, item.opening, item.received, item.returnedFromStore, item.returnedToManufacturer, item.transferred, item.balance];
             csvContent += row.join(",") + "\r\n";
         });
 
@@ -351,9 +352,9 @@ export default function WarehouseInventoryPage() {
                                     <TableHead className="hidden lg:table-cell">Manufacturer</TableHead>
                                     <TableHead className="text-right">Opening</TableHead>
                                     <TableHead className="text-right">Received</TableHead>
-                                    <TableHead className="text-right">Returned</TableHead>
+                                    <TableHead className="text-right">Returned (Stores)</TableHead>
+                                    <TableHead className="text-right">Returned (MFR)</TableHead>
                                     <TableHead className="text-right">Transferred</TableHead>
-                                    <TableHead className="text-right">Total</TableHead>
                                     <TableHead className="text-right font-bold">Balance</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -369,9 +370,9 @@ export default function WarehouseInventoryPage() {
                                             <TableCell className="hidden lg:table-cell">{item.manufacturerName}</TableCell>
                                             <TableCell className="text-right">{item.opening}</TableCell>
                                             <TableCell className="text-right text-green-600">+{item.received}</TableCell>
-                                            <TableCell className="text-right text-blue-600">+{item.returned}</TableCell>
+                                            <TableCell className="text-right text-blue-600">+{item.returnedFromStore}</TableCell>
+                                            <TableCell className="text-right text-red-600">-{item.returnedToManufacturer}</TableCell>
                                             <TableCell className="text-right text-orange-600">-{item.transferred}</TableCell>
-                                            <TableCell className="text-right">{item.total}</TableCell>
                                             <TableCell className="text-right font-bold">{item.balance}</TableCell>
                                         </TableRow>
                                     ))
@@ -392,5 +393,3 @@ export default function WarehouseInventoryPage() {
     </div>
   );
 }
-
-  

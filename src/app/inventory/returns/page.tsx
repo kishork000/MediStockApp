@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -25,16 +25,9 @@ import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useToast } from "@/hooks/use-toast";
-
-interface ReturnItem {
-    id: number;
-    medicine: string;
-    medicineLabel: string;
-    quantity: number;
-}
-
-const medicineOptions: any[] = [];
-
+import { Manufacturer, getManufacturers } from "@/services/manufacturer-service";
+import { getAvailableStockForLocation, InventoryItem, removeStockFromInventory } from "@/services/inventory-service";
+import { recordManufacturerReturn, ReturnItem as ManufacturerReturnItem } from "@/services/return-service";
 
 export default function ReturnToManufacturerPage() {
     const { user, logout, loading, hasPermission } = useAuth();
@@ -42,12 +35,36 @@ export default function ReturnToManufacturerPage() {
     const pathname = usePathname();
     const { toast } = useToast();
     
-    const [returnItems, setReturnItems] = useState<ReturnItem[]>([]);
-    const [currentReturnItem, setCurrentReturnItem] = useState({ medicine: "", quantity: 1 });
+    const [returnItems, setReturnItems] = useState<ManufacturerReturnItem[]>([]);
     const [debitNoteNumber, setDebitNoteNumber] = useState("");
+    const [selectedManufacturer, setSelectedManufacturer] = useState("");
+
+    const [warehouseStock, setWarehouseStock] = useState<InventoryItem[]>([]);
+    const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
+    const [currentReturnItem, setCurrentReturnItem] = useState({ medicineId: "", quantity: 1 });
 
     const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
     const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && route.inSidebar && hasPermission(route.path)), [hasPermission]);
+
+    const fetchPrerequisites = useCallback(async () => {
+        try {
+            const [stock, mans] = await Promise.all([
+                getAvailableStockForLocation('warehouse'),
+                getManufacturers()
+            ]);
+            setWarehouseStock(stock);
+            setManufacturers(mans);
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to load master data.' });
+        }
+    }, [toast]);
+
+    useEffect(() => {
+        if (user) {
+            fetchPrerequisites();
+        }
+    }, [user, fetchPrerequisites]);
+
 
     useEffect(() => {
         if (!loading && !user) {
@@ -57,28 +74,45 @@ export default function ReturnToManufacturerPage() {
 
 
     const handleAddReturnItem = () => {
-        const selectedMedicine = medicineOptions.find(m => m.value === currentReturnItem.medicine);
-        if (!selectedMedicine || currentReturnItem.quantity <= 0) return;
+        const stockItem = warehouseStock.find(m => m.medicineId === currentReturnItem.medicineId);
+        if (!stockItem || currentReturnItem.quantity <= 0) {
+            toast({ variant: 'destructive', title: 'Invalid Item', description: 'Please select a valid medicine and quantity.' });
+            return;
+        }
 
-        const newItem: ReturnItem = {
-            id: Date.now(),
-            medicine: selectedMedicine.value,
-            medicineLabel: selectedMedicine.label,
+        if(returnItems.some(i => i.medicineId === stockItem.medicineId)) {
+            toast({ variant: 'destructive', title: 'Item Exists', description: 'This medicine is already in the return list.' });
+            return;
+        }
+
+        if (currentReturnItem.quantity > stockItem.quantity) {
+             toast({ variant: 'destructive', title: 'Stock Exceeded', description: `Cannot return more than available: ${stockItem.quantity}` });
+            return;
+        }
+
+        const newItem: ManufacturerReturnItem = {
+            id: Date.now().toString(),
+            medicineId: stockItem.medicineId,
+            medicineName: stockItem.medicineName,
             quantity: currentReturnItem.quantity,
         };
 
         setReturnItems(prevItems => [...prevItems, newItem]);
-        setCurrentReturnItem({ medicine: "", quantity: 1 });
+        setCurrentReturnItem({ medicineId: "", quantity: 1 });
     };
 
-    const handleRemoveReturnItem = (id: number) => {
+    const handleRemoveReturnItem = (id: string) => {
         setReturnItems(returnItems.filter(item => item.id !== id));
     };
 
-    const handleProcessReturn = (e: React.FormEvent<HTMLFormElement>) => {
+    const handleProcessReturn = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!debitNoteNumber) {
             toast({ variant: 'destructive', title: 'Error', description: 'Please enter a Debit Note number.' });
+            return;
+        }
+        if (!selectedManufacturer) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Please select a manufacturer.' });
             return;
         }
         if (returnItems.length === 0) {
@@ -86,11 +120,28 @@ export default function ReturnToManufacturerPage() {
             return;
         }
 
-        // In a real app, this would be an API call
-        console.log({ debitNoteNumber, items: returnItems });
-        toast({ title: 'Success', description: 'Return processed and stock updated.' });
-        setReturnItems([]);
-        setDebitNoteNumber("");
+        try {
+            const manufacturer = manufacturers.find(m => m.id === selectedManufacturer);
+            if (!manufacturer) throw new Error("Manufacturer not found");
+
+            await recordManufacturerReturn({
+                debitNoteId: debitNoteNumber,
+                date: new Date().toISOString(),
+                manufacturerId: selectedManufacturer,
+                manufacturerName: manufacturer.name,
+                items: returnItems,
+            });
+            
+            await removeStockFromInventory('warehouse', returnItems);
+
+            toast({ title: 'Success', description: 'Return processed and stock updated.' });
+            setReturnItems([]);
+            setDebitNoteNumber("");
+            setSelectedManufacturer("");
+            await fetchPrerequisites();
+        } catch(error: any) {
+            toast({ variant: 'destructive', title: 'Error', description: error.message || 'Failed to process return.' });
+        }
     }
 
     if (loading || !user) {
@@ -212,9 +263,24 @@ export default function ReturnToManufacturerPage() {
                 </CardHeader>
                 <CardContent>
                      <form className="space-y-6" onSubmit={handleProcessReturn}>
-                        <div className="space-y-2">
-                            <Label htmlFor="debit-note-number">Debit Note (DN) Number</Label>
-                            <Input id="debit-note-number" placeholder="e.g., DN-2024-001" value={debitNoteNumber} onChange={e => setDebitNoteNumber(e.target.value)} required />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="debit-note-number">Debit Note (DN) Number</Label>
+                                <Input id="debit-note-number" placeholder="e.g., DN-2024-001" value={debitNoteNumber} onChange={e => setDebitNoteNumber(e.target.value)} required />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="manufacturer">Manufacturer</Label>
+                                <Select value={selectedManufacturer} onValueChange={setSelectedManufacturer} required>
+                                    <SelectTrigger id="manufacturer">
+                                        <SelectValue placeholder="Select a manufacturer" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {manufacturers.map(man => (
+                                            <SelectItem key={man.id} value={man.id}>{man.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                         
                         <div className="p-4 border rounded-lg space-y-4">
@@ -222,9 +288,11 @@ export default function ReturnToManufacturerPage() {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="return-medicine">Medicine (from WH)</Label>
-                                    <Select value={currentReturnItem.medicine} onValueChange={(value) => setCurrentReturnItem({...currentReturnItem, medicine: value})}>
+                                    <Select value={currentReturnItem.medicineId} onValueChange={(value) => setCurrentReturnItem({...currentReturnItem, medicineId: value})}>
                                         <SelectTrigger id="return-medicine"><SelectValue placeholder="Select medicine" /></SelectTrigger>
-                                        <SelectContent>{medicineOptions.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}</SelectContent>
+                                        <SelectContent>
+                                            {warehouseStock.map(item => <SelectItem key={item.medicineId} value={item.medicineId}>{item.medicineName} (Avail: {item.quantity})</SelectItem>)}
+                                        </SelectContent>
                                     </Select>
                                 </div>
                                  <div className="space-y-2">
@@ -249,7 +317,7 @@ export default function ReturnToManufacturerPage() {
                                 <TableBody>
                                     {returnItems.map(item => (
                                         <TableRow key={item.id}>
-                                            <TableCell>{item.medicineLabel}</TableCell>
+                                            <TableCell>{item.medicineName}</TableCell>
                                             <TableCell className="text-center">{item.quantity}</TableCell>
                                             <TableCell className="text-right">
                                                 <Button variant="ghost" size="icon" onClick={() => handleRemoveReturnItem(item.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>

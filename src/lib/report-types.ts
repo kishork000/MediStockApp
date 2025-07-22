@@ -5,10 +5,8 @@ export interface WarehouseLedgerItem {
     manufacturerName: string;
     opening: number;
     received: number;
-    returned: number;
+    returnedFromStore: number;
+    returnedToManufacturer: number;
     transferred: number;
-    total: number;
     balance: number;
 }
-
-  
