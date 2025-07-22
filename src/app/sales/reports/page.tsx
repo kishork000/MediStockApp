@@ -319,7 +319,7 @@ export default function SalesReportPage() {
       </Sidebar>
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
         <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
-           <SidebarTrigger className="sm:hidden" />
+           <SidebarTrigger />
            <div className="flex w-full items-center justify-between">
               <h1 className="text-xl font-semibold">Sales Reports</h1>
               <ThemeToggle />
@@ -329,44 +329,48 @@ export default function SalesReportPage() {
             <div className="space-y-4">
                 <Card>
                     <CardHeader>
-                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                            <div>
-                                <CardTitle>Sales Performance</CardTitle>
-                                <CardDescription>Analyze sales data with powerful filters.</CardDescription>
-                            </div>
-                            <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
-                                <Select 
-                                    defaultValue={filtersRef.current.store}
-                                    onValueChange={(v) => (filtersRef.current.store = v)}
-                                    disabled={user?.role === 'Pharmacist'}
-                                >
-                                    <SelectTrigger className="w-full sm:w-[180px]">
-                                        <SelectValue placeholder="Select Store" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {availableStores.map(store => (
-                                            <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <Select defaultValue={filtersRef.current.pharmacist} onValueChange={(v) => (filtersRef.current.pharmacist = v)}>
-                                    <SelectTrigger className="w-full sm:w-[180px]">
-                                        <SelectValue placeholder="Select Pharmacist" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {pharmacists.map(p => (
-                                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <DateRangePicker onUpdate={(values) => (filtersRef.current.dateRange = values.range)} />
-                            </div>
-                        </div>
+                        <CardTitle>Sales Performance</CardTitle>
+                        <CardDescription>Analyze sales data with powerful filters.</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                         <div className="flex items-center gap-4">
-                            <Button onClick={handleApplyFilters}>Apply Filters</Button>
-                            <Button onClick={handleResetFilters} variant="outline">Reset Filters</Button>
+                    <CardContent className="space-y-4">
+                        <div className="flex flex-col md:flex-row md:items-end gap-4">
+                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 flex-grow">
+                                <div className="space-y-2">
+                                    <Select 
+                                        defaultValue={filtersRef.current.store}
+                                        onValueChange={(v) => (filtersRef.current.store = v)}
+                                        disabled={user?.role === 'Pharmacist'}
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Select Store" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {availableStores.map(store => (
+                                                <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                     <Select defaultValue={filtersRef.current.pharmacist} onValueChange={(v) => (filtersRef.current.pharmacist = v)}>
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Select Pharmacist" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {pharmacists.map(p => (
+                                                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <DateRangePicker onUpdate={(values) => (filtersRef.current.dateRange = values.range)} />
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <Button onClick={handleApplyFilters}>Apply Filters</Button>
+                                <Button onClick={handleResetFilters} variant="outline">Reset Filters</Button>
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
