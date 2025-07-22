@@ -259,7 +259,7 @@ export default function UniversalReportPage() {
                     </SidebarMenu>
                 </SidebarFooter>
             </Sidebar>
-            <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
+            <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14 group-[[data-sidebar-state=expanded]]:sm:pl-56">
                 <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
                     <SidebarTrigger />
                     <div className="flex w-full items-center justify-between">
@@ -274,47 +274,41 @@ export default function UniversalReportPage() {
                             <CardDescription>Use any combination of filters to generate a sales report. All sales data is shown by default.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                             <div className="flex flex-col gap-4">
-                                <div className="flex flex-col md:flex-row gap-4">
-                                    <div className="flex-1 space-y-2">
-                                        <Label>Date Range</Label>
-                                        <DateRangePicker onUpdate={(values) => (filtersRef.current.dateRange = values.range)} className="w-full" />
-                                    </div>
-                                    <div className="flex-1 space-y-2">
-                                        <Label htmlFor="invoiceNo">Invoice No.</Label>
-                                        <Input id="invoiceNo" placeholder="INV-..." defaultValue={filtersRef.current.invoiceNo} onChange={e => (filtersRef.current.invoiceNo = e.target.value)} />
-                                    </div>
-                                </div>
-                                <div className="flex flex-col md:flex-row gap-4">
-                                    <div className="flex-1 space-y-2">
-                                        <Label htmlFor="patientId">Patient ID</Label>
-                                        <Input id="patientId" placeholder="PAT-..." defaultValue={filtersRef.current.patientId} onChange={e => (filtersRef.current.patientId = e.target.value)} />
-                                    </div>
-                                    <div className="flex-1 space-y-2">
-                                        <Label htmlFor="patientMobile">Patient Mobile</Label>
-                                        <Input id="patientMobile" placeholder="987..." defaultValue={filtersRef.current.patientMobile} onChange={e => (filtersRef.current.patientMobile = e.target.value)} />
-                                    </div>
-                                </div>
-                                <div className="flex flex-col md:flex-row gap-4">
-                                    <div className="flex-1 space-y-2">
-                                        <Label htmlFor="storeId">Store</Label>
-                                        <Select value={filtersRef.current.storeId} onValueChange={v => (filtersRef.current.storeId = v)}>
-                                            <SelectTrigger id="storeId"><SelectValue /></SelectTrigger>
-                                            <SelectContent>{allStores.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="flex-1 space-y-2">
-                                        <Label htmlFor="pharmacistName">Pharmacist</Label>
-                                        <Select value={filtersRef.current.pharmacistName} onValueChange={v => (filtersRef.current.pharmacistName = v)}>
-                                            <SelectTrigger id="pharmacistName"><SelectValue /></SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="all">All Pharmacists</SelectItem>
-                                                {pharmacists.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
+                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <div className="space-y-2">
+                                    <Label>Date Range</Label>
+                                    <DateRangePicker onUpdate={(values) => (filtersRef.current.dateRange = values.range)} className="w-full" />
                                 </div>
                                 <div className="space-y-2">
+                                    <Label htmlFor="invoiceNo">Invoice No.</Label>
+                                    <Input id="invoiceNo" placeholder="INV-..." defaultValue={filtersRef.current.invoiceNo} onChange={e => (filtersRef.current.invoiceNo = e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="patientId">Patient ID</Label>
+                                    <Input id="patientId" placeholder="PAT-..." defaultValue={filtersRef.current.patientId} onChange={e => (filtersRef.current.patientId = e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="patientMobile">Patient Mobile</Label>
+                                    <Input id="patientMobile" placeholder="987..." defaultValue={filtersRef.current.patientMobile} onChange={e => (filtersRef.current.patientMobile = e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="storeId">Store</Label>
+                                    <Select value={filtersRef.current.storeId} onValueChange={v => (filtersRef.current.storeId = v)}>
+                                        <SelectTrigger id="storeId"><SelectValue /></SelectTrigger>
+                                        <SelectContent>{allStores.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="pharmacistName">Pharmacist</Label>
+                                    <Select value={filtersRef.current.pharmacistName} onValueChange={v => (filtersRef.current.pharmacistName = v)}>
+                                        <SelectTrigger id="pharmacistName"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Pharmacists</SelectItem>
+                                            {pharmacists.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2 lg:col-span-2">
                                     <Label htmlFor="medicineId">Medicine</Label>
                                     <Select value={filtersRef.current.medicineId} onValueChange={v => (filtersRef.current.medicineId = v)}>
                                         <SelectTrigger id="medicineId"><SelectValue /></SelectTrigger>
