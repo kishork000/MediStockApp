@@ -118,6 +118,20 @@ export default function UniversalReportPage() {
         });
     }, [allSales, activeFilters]);
     
+    const reportItems = useMemo(() => {
+        return filteredSales.flatMap(sale => 
+            sale.items.map(item => ({
+                ...item,
+                invoiceId: sale.invoiceId,
+                date: sale.createdAt,
+                patientName: sale.patientName,
+                patientMobile: sale.patientMobile,
+                storeName: sale.storeName,
+                soldBy: sale.soldBy,
+            }))
+        );
+    }, [filteredSales]);
+
     const handleApplyFilters = () => {
         setActiveFilters({...filtersRef.current});
     };
@@ -128,7 +142,7 @@ export default function UniversalReportPage() {
     };
 
     const handleDownload = () => {
-        if (filteredSales.length === 0) {
+        if (reportItems.length === 0) {
             toast({ variant: 'destructive', title: 'No Data', description: 'There is no data to download for the current filters.' });
             return;
         }
@@ -137,23 +151,21 @@ export default function UniversalReportPage() {
         const headers = ["Invoice ID", "Date", "Patient Name", "Patient Mobile", "Store", "Pharmacist", "Medicine", "Quantity", "Price", "GST %", "Total"];
         csvContent += headers.join(",") + "\r\n";
 
-        filteredSales.forEach(sale => {
-            sale.items.forEach(item => {
-                const row = [
-                    sale.invoiceId,
-                    format(parseISO(sale.createdAt), 'yyyy-MM-dd HH:mm'),
-                    `"${sale.patientName}"`,
-                    sale.patientMobile,
-                    sale.storeName,
-                    sale.soldBy,
-                    `"${item.medicine}"`,
-                    item.quantity,
-                    item.price.toFixed(2),
-                    item.gst,
-                    item.total.toFixed(2),
-                ];
-                csvContent += row.join(",") + "\r\n";
-            });
+        reportItems.forEach(item => {
+            const row = [
+                item.invoiceId,
+                format(parseISO(item.date), 'yyyy-MM-dd HH:mm'),
+                `"${item.patientName}"`,
+                item.patientMobile,
+                item.storeName,
+                item.soldBy,
+                `"${item.medicine}"`,
+                item.quantity,
+                item.price.toFixed(2),
+                item.gst,
+                item.total.toFixed(2),
+            ];
+            csvContent += row.join(",") + "\r\n";
         });
 
         const encodedUri = encodeURI(csvContent);
@@ -205,9 +217,9 @@ export default function UniversalReportPage() {
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                         )}
-                        {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path) && r.path !== '/admin').map((route) => (
+                        {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path)).map((route) => (
                             <SidebarMenuItem key={route.path}>
-                                <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}>
+                                <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname.startsWith(route.path)}>
                                     {getIcon(route.name)}
                                     <span>{route.name}</span>
                                 </SidebarMenuButton>
@@ -238,14 +250,6 @@ export default function UniversalReportPage() {
                                 </CollapsibleContent>
                             </Collapsible>
                         )}
-                        {hasPermission('/admin') && (
-                            <SidebarMenuItem>
-                                <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname.startsWith('/admin')}>
-                                    {getIcon('Admin')}
-                                    <span>Admin</span>
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
-                        )}
                     </SidebarMenu>
                 </SidebarContent>
                 <SidebarFooter>
@@ -259,7 +263,7 @@ export default function UniversalReportPage() {
                     </SidebarMenu>
                 </SidebarFooter>
             </Sidebar>
-            <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14 group-[[data-sidebar-state=expanded]]:sm:pl-56">
+            <div className="flex flex-col sm:gap-4 sm:py-4">
                 <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
                     <SidebarTrigger />
                     <div className="flex w-full items-center justify-between">
@@ -293,15 +297,15 @@ export default function UniversalReportPage() {
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="storeId">Store</Label>
-                                    <Select value={filtersRef.current.storeId} onValueChange={v => (filtersRef.current.storeId = v)}>
-                                        <SelectTrigger id="storeId"><SelectValue /></SelectTrigger>
+                                    <Select defaultValue={filtersRef.current.storeId} onValueChange={v => (filtersRef.current.storeId = v)}>
+                                        <SelectTrigger id="storeId"><SelectValue placeholder="Select Store" /></SelectTrigger>
                                         <SelectContent>{allStores.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="pharmacistName">Pharmacist</Label>
-                                    <Select value={filtersRef.current.pharmacistName} onValueChange={v => (filtersRef.current.pharmacistName = v)}>
-                                        <SelectTrigger id="pharmacistName"><SelectValue /></SelectTrigger>
+                                    <Select defaultValue={filtersRef.current.pharmacistName} onValueChange={v => (filtersRef.current.pharmacistName = v)}>
+                                        <SelectTrigger id="pharmacistName"><SelectValue placeholder="Select Pharmacist" /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="all">All Pharmacists</SelectItem>
                                             {pharmacists.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
@@ -310,8 +314,8 @@ export default function UniversalReportPage() {
                                 </div>
                                 <div className="space-y-2 lg:col-span-2">
                                     <Label htmlFor="medicineId">Medicine</Label>
-                                    <Select value={filtersRef.current.medicineId} onValueChange={v => (filtersRef.current.medicineId = v)}>
-                                        <SelectTrigger id="medicineId"><SelectValue /></SelectTrigger>
+                                    <Select defaultValue={filtersRef.current.medicineId} onValueChange={v => (filtersRef.current.medicineId = v)}>
+                                        <SelectTrigger id="medicineId"><SelectValue placeholder="Select Medicine" /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="all">All Medicines</SelectItem>
                                             {medicines.map(m => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
@@ -330,7 +334,7 @@ export default function UniversalReportPage() {
                         <CardHeader className="flex flex-row items-center justify-between">
                             <div>
                                 <CardTitle>Report Results</CardTitle>
-                                <CardDescription>Found {filteredSales.length} matching sale records.</CardDescription>
+                                <CardDescription>Found {reportItems.length} matching sale items.</CardDescription>
                             </div>
                             <Button onClick={handleDownload} variant="outline" size="sm">
                                 <Download className="mr-2" /> Download Report
@@ -341,38 +345,36 @@ export default function UniversalReportPage() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Invoice</TableHead>
-                                        <TableHead>Date</TableHead>
+                                        <TableHead className="hidden md:table-cell">Date</TableHead>
                                         <TableHead>Patient</TableHead>
                                         <TableHead>Medicine</TableHead>
-                                        <TableHead>Store</TableHead>
+                                        <TableHead className="text-center">Qty</TableHead>
+                                        <TableHead className="text-center">GST%</TableHead>
                                         <TableHead className="text-right">Total (₹)</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {dataLoading ? (
-                                        Array.from({ length: 5 }).map((_, i) => (
+                                        Array.from({ length: 10 }).map((_, i) => (
                                             <TableRow key={i}>
-                                                <TableCell colSpan={6}><Skeleton className="h-5 w-full" /></TableCell>
+                                                <TableCell colSpan={7}><Skeleton className="h-5 w-full" /></TableCell>
                                             </TableRow>
                                         ))
-                                    ) : filteredSales.length > 0 ? (
-                                        filteredSales.map(sale => (
-                                            <TableRow key={sale.invoiceId}>
-                                                <TableCell className="font-medium">{sale.invoiceId}</TableCell>
-                                                <TableCell>{format(parseISO(sale.createdAt), 'dd MMM, yyyy')}</TableCell>
-                                                <TableCell>{sale.patientName} <span className="text-muted-foreground text-xs block">{sale.patientMobile}</span></TableCell>
-                                                <TableCell>
-                                                    <ul className="list-disc list-inside">
-                                                        {sale.items.map((item, index) => <li key={index}>{item.medicine} (x{item.quantity})</li>)}
-                                                    </ul>
-                                                </TableCell>
-                                                <TableCell>{sale.storeName}</TableCell>
-                                                <TableCell className="text-right font-bold">{sale.grandTotal.toFixed(2)}</TableCell>
+                                    ) : reportItems.length > 0 ? (
+                                        reportItems.map((item, index) => (
+                                            <TableRow key={`${item.invoiceId}-${index}`}>
+                                                <TableCell className="font-medium">{item.invoiceId}</TableCell>
+                                                <TableCell className="hidden md:table-cell">{format(parseISO(item.date), 'dd MMM, yyyy')}</TableCell>
+                                                <TableCell>{item.patientName}</TableCell>
+                                                <TableCell>{item.medicine}</TableCell>
+                                                <TableCell className="text-center">{item.quantity}</TableCell>
+                                                <TableCell className="text-center">{item.gst}%</TableCell>
+                                                <TableCell className="text-right font-bold">{item.total.toFixed(2)}</TableCell>
                                             </TableRow>
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={6} className="h-24 text-center">No sales data found for the selected filters.</TableCell>
+                                            <TableCell colSpan={7} className="h-24 text-center">No sales data found for the selected filters.</TableCell>
                                         </TableRow>
                                     )}
                                 </TableBody>
