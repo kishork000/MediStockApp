@@ -94,16 +94,7 @@ export default function WarehouseInventoryPage() {
           </SidebarHeader>
           <SidebarContent>
              <SidebarMenu>
-                {hasPermission('/') && (
-                    <SidebarMenuItem>
-                        <SidebarMenuButton href="/" tooltip="Dashboard">
-                            <HomeIcon />
-                            <span>Dashboard</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                )}
-                
-                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path)).map((route) => (
+                 {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path) && r.path !== '/admin').map((route) => (
                     <SidebarMenuItem key={route.path}>
                         <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}>
                             {getIcon(route.name)}
@@ -137,6 +128,14 @@ export default function WarehouseInventoryPage() {
                         </CollapsibleContent>
                     </Collapsible>
                 )}
+                 {hasPermission('/admin') && (
+                    <SidebarMenuItem>
+                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname === '/admin'}>
+                            {getIcon('Admin')}
+                            <span>Admin</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                 )}
             </SidebarMenu>
           </SidebarContent>
            <SidebarFooter>
@@ -169,10 +168,10 @@ export default function WarehouseInventoryPage() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>Medicine</TableHead>
-                            <TableHead>Manufacturer</TableHead>
+                            <TableHead className="hidden sm:table-cell">Manufacturer</TableHead>
                             <TableHead className="text-right">Stock</TableHead>
-                            <TableHead className="text-right">Status</TableHead>
-                            <TableHead>Expiry Date</TableHead>
+                            <TableHead className="text-right hidden sm:table-cell">Status</TableHead>
+                            <TableHead className="hidden md:table-cell">Expiry Date</TableHead>
                             <TableHead>
                                 <span className="sr-only">Actions</span>
                             </TableHead>
@@ -184,14 +183,14 @@ export default function WarehouseInventoryPage() {
                             return (
                             <TableRow key={item.name}>
                                 <TableCell className="font-medium">{item.name}</TableCell>
-                                <TableCell>{item.manufacturer}</TableCell>
+                                <TableCell className="hidden sm:table-cell">{item.manufacturer}</TableCell>
                                 <TableCell className="text-right">{item.quantity}</TableCell>
-                                <TableCell className="text-right">
+                                <TableCell className="text-right hidden sm:table-cell">
                                     <Badge variant={status === 'In Stock' ? 'default' : status === 'Low Stock' ? 'secondary' : 'destructive'}>
                                         {status}
                                     </Badge>
                                 </TableCell>
-                                <TableCell>{item.expiry}</TableCell>
+                                <TableCell className="hidden md:table-cell">{item.expiry}</TableCell>
                                 <TableCell className="text-right">
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
