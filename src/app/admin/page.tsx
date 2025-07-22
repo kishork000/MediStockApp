@@ -30,9 +30,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { allAppRoutes, AppRoute, UserRole } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useToast } from "@/hooks/use-toast";
 
 
 interface User {
+    id: string;
     name: string;
     email: string;
     role: UserRole;
@@ -53,12 +55,12 @@ const initialStores: Store[] = [
     { id: "STR003", name: "Uptown Health", address: "789 Cure Blvd, Healthfield", gstin: "23CCCCC0000C1Z7"},
 ];
 
-// This local user list was causing the issue. It's now removed.
 
 export default function AdminPage() {
-    const { user, logout, loading, permissions, setPermissions, hasPermission } = useAuth();
+    const { user, logout, loading, permissions, setPermissions, hasPermission, createUser, deleteUser, fetchUsers } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
+    const { toast } = useToast();
 
     const [companyName, setCompanyName] = useState("MediStock Pharmacy");
     const [companyAddress, setCompanyAddress] = useState("123 Health St, Wellness City, State 12345");
@@ -66,17 +68,26 @@ export default function AdminPage() {
     const [stores, setStores] = useState<Store[]>(initialStores);
     const [isAddStoreModalOpen, setIsAddStoreModalOpen] = useState(false);
     
-    // The user state now comes from a single source of truth: the Auth context
-    const [users, setUsers] = useState<User[]>([
-        { name: "Admin User", email: "admin@medistock.com", role: "Admin", assignedStore: "STR001", password: "password" },
-        { name: "Pharmacist One", email: "pharmacist1@medistock.com", role: "Pharmacist", assignedStore: "STR002", password: "password" },
-        { name: "Pharmacist Two", email: "pharmacist2@medistock.com", role: "Pharmacist", assignedStore: "STR003", password: "password" },
-        { name: "Supervisor One", email: "supervisor1@medistock.com", role: "Supervisor", password: "password" },
-    ]);
+    const [users, setUsers] = useState<User[]>([]);
+    const [dataLoading, setDataLoading] = useState(true);
 
     const sidebarRoutes = useMemo(() => {
         return allAppRoutes.filter(route => route.path !== '/');
     }, []);
+
+    const refreshUsers = async () => {
+        setDataLoading(true);
+        const userList = await fetchUsers();
+        setUsers(userList);
+        setDataLoading(false);
+    }
+    
+    useEffect(() => {
+        if (!loading && user) {
+           refreshUsers();
+        }
+    }, [user, loading]);
+
 
      useEffect(() => {
         if (!loading && (!user || user.role !== 'Admin')) {
@@ -91,7 +102,7 @@ export default function AdminPage() {
         setCompanyName(formData.get("company-name") as string);
         setCompanyAddress(formData.get("company-address") as string);
         setGstin(formData.get("gstin") as string);
-        alert("Settings Saved!");
+        toast({ title: "Success", description: "Settings saved successfully." });
     };
     
     const handleAddStore = (e: React.FormEvent<HTMLFormElement>) => {
@@ -112,27 +123,39 @@ export default function AdminPage() {
         setStores(stores.filter(s => s.id !== id));
     };
 
-    const handleAddUser = (e: React.FormEvent<HTMLFormElement>) => {
+    const handleAddUser = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
-        const newUser: User = {
+        const newUser = {
             name: formData.get("name") as string,
             email: formData.get("email") as string,
-            role: formData.get("role") as User['role'],
-            assignedStore: formData.get("assignedStore") as string | undefined,
+            role: formData.get("role") as UserRole,
+            assignedStore: formData.get("assignedStore") as string || undefined,
             password: formData.get("password") as string,
         };
+        
         if (newUser.name && newUser.email && newUser.role && newUser.password) {
-            setUsers([...users, newUser]);
-            alert("User created successfully!");
-            e.currentTarget.reset();
+            try {
+                await createUser(newUser);
+                toast({ title: "Success", description: "User created successfully!" });
+                await refreshUsers();
+                e.currentTarget.reset();
+            } catch (error: any) {
+                toast({ variant: "destructive", title: "Error", description: error.message || "Failed to create user." });
+            }
         } else {
-            alert("Please fill all user details including password.");
+            toast({ variant: "destructive", title: "Error", description: "Please fill all user details including password." });
         }
     };
 
-    const handleDeleteUser = (email: string) => {
-        setUsers(users.filter(u => u.email !== email));
+    const handleDeleteUser = async (userToDelete: User) => {
+        try {
+            await deleteUser(userToDelete.id, userToDelete.email);
+            toast({ title: "Success", description: `User ${userToDelete.name} has been deleted.`});
+            await refreshUsers();
+        } catch (error: any) {
+             toast({ variant: "destructive", title: "Error", description: error.message || "Failed to delete user." });
+        }
     };
 
     const handlePermissionChange = (role: UserRole, route: string, checked: boolean | 'indeterminate') => {
@@ -305,28 +328,36 @@ export default function AdminPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {users.map((user) => (
-                                        <TableRow key={user.email}>
-                                            <TableCell className="font-medium">{user.name}</TableCell>
-                                            <TableCell className="hidden sm:table-cell">{user.email}</TableCell>
+                                    {dataLoading ? (
+                                        Array.from({length: 3}).map((_, i) => (
+                                            <TableRow key={i}>
+                                                <TableCell colSpan={5} className="p-0">
+                                                     <div className="h-12 w-full bg-muted animate-pulse" />
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : users.map((u) => (
+                                        <TableRow key={u.id}>
+                                            <TableCell className="font-medium">{u.name}</TableCell>
+                                            <TableCell className="hidden sm:table-cell">{u.email}</TableCell>
                                             <TableCell>
-                                                <Badge variant={user.role === 'Admin' ? 'destructive' : user.role === 'Supervisor' ? 'secondary' : 'default'}>
-                                                    {user.role}
+                                                <Badge variant={u.role === 'Admin' ? 'destructive' : u.role === 'Supervisor' ? 'secondary' : 'default'}>
+                                                    {u.role}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className="hidden md:table-cell">{stores.find(s => s.id === user.assignedStore)?.name || 'N/A'}</TableCell>
+                                            <TableCell className="hidden md:table-cell">{stores.find(s => s.id === u.assignedStore)?.name || 'N/A'}</TableCell>
                                             <TableCell>
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
-                                                        <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                        <Button aria-haspopup="true" size="icon" variant="ghost" disabled={u.email === user.email}>
                                                             <MoreHorizontal className="h-4 w-4" />
                                                             <span className="sr-only">Toggle menu</span>
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                        <DropdownMenuItem>Edit</DropdownMenuItem>
-                                                        <DropdownMenuItem onSelect={() => handleDeleteUser(user.email)} className="text-destructive">Delete</DropdownMenuItem>
+                                                        <DropdownMenuItem disabled>Edit</DropdownMenuItem>
+                                                        <DropdownMenuItem onSelect={() => handleDeleteUser(u)} className="text-destructive">Delete</DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </TableCell>

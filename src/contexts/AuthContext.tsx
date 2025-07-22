@@ -4,23 +4,24 @@
 import React, { createContext, useState, useContext, useEffect, useCallback, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { User, UserRole, RolePermissions, allAppRoutes } from '@/lib/types';
-import { auth } from '@/lib/firebase-config'; // Import auth from firebase-config
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut, User as FirebaseAuthUser } from 'firebase/auth';
-
-const userRoleMapping: { [email: string]: Omit<User, 'email'> } = {
-    'admin@medistock.com': { name: "Admin User", role: "Admin", assignedStore: "STR001" },
-    'pharmacist1@medistock.com': { name: "Pharmacist One", role: "Pharmacist", assignedStore: "STR002" },
-    'pharmacist2@medistock.com': { name: "Pharmacist Two", role: "Pharmacist", assignedStore: "STR003" },
-    'supervisor1@medistock.com': { name: "Supervisor One", role: "Supervisor" },
-};
+import { auth, db } from '@/lib/firebase-config';
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, User as FirebaseAuthUser } from 'firebase/auth';
+import { collection, query, where, getDocs, doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 
 
 const initialPermissions: RolePermissions = {
-    Admin: allAppRoutes.map(r => r.path), // Admin has all permissions
+    Admin: allAppRoutes.map(r => r.path),
     Pharmacist: ['/', '/patients', '/sales', '/inventory/stores', '/inventory/reports', '/inventory/transfer', '/inventory/valuation'],
     Supervisor: ['/', '/patients', '/sales', '/sales/reports', '/inventory', '/inventory/warehouse', '/inventory/stores', '/inventory/master', '/inventory/manufacturer', '/inventory/add', '/inventory/returns', '/inventory/transfer', '/inventory/reports', '/inventory/valuation' ]
 };
 
+interface NewUser {
+    name: string;
+    email: string;
+    role: UserRole;
+    assignedStore?: string;
+    password?: string;
+}
 
 interface AuthContextType {
     user: User | null;
@@ -30,6 +31,10 @@ interface AuthContextType {
     permissions: RolePermissions;
     setPermissions: (permissions: RolePermissions) => void;
     hasPermission: (path: string) => boolean;
+    // User management functions, only available to Admin
+    createUser: (newUser: NewUser) => Promise<void>;
+    deleteUser: (userId: string, email: string) => Promise<void>;
+    fetchUsers: () => Promise<User[]>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -41,24 +46,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const router = useRouter();
     const pathname = usePathname();
 
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-            if (firebaseUser && firebaseUser.email) {
-                // In a real app, you'd fetch user role & details from your Firestore database here
-                // For this project, we'll map the firebase email to our mock user details
-                const userDetails = userRoleMapping[firebaseUser.email];
+    const fetchUserDetails = async (firebaseUser: FirebaseAuthUser): Promise<User | null> => {
+        const usersRef = collection(db, "users");
+        const q = query(usersRef, where("email", "==", firebaseUser.email));
+        const querySnapshot = await getDocs(q);
+        
+        if (querySnapshot.empty) {
+            console.warn("No user document found for email:", firebaseUser.email);
+            return null;
+        }
 
+        const userDoc = querySnapshot.docs[0];
+        const userData = userDoc.data() as Omit<User, 'id'>;
+        
+        return {
+            id: userDoc.id,
+            ...userData,
+        };
+    };
+    
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            if (firebaseUser) {
+                const userDetails = await fetchUserDetails(firebaseUser);
                 if (userDetails) {
-                    const appUser: User = {
-                        email: firebaseUser.email,
-                        ...userDetails,
-                    };
-                    setUser(appUser);
-                    localStorage.setItem('medi-stock-user', JSON.stringify(appUser));
+                    setUser(userDetails);
+                    localStorage.setItem('medi-stock-user', JSON.stringify(userDetails));
                 } else {
-                    // If user is authenticated with Firebase but not in our mapping, treat as logged out
                     setUser(null);
                     localStorage.removeItem('medi-stock-user');
+                    await signOut(auth); // Log out from Firebase if no user document
                 }
             } else {
                 setUser(null);
@@ -114,7 +131,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const login = async (email: string, pass: string): Promise<boolean> => {
         try {
             await signInWithEmailAndPassword(auth, email, pass);
-            // onAuthStateChanged will handle setting the user state
             return true;
         } catch (error) {
             console.error("Firebase Authentication Error:", error);
@@ -124,7 +140,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const logout = async () => {
         await signOut(auth);
-        // onAuthStateChanged will handle clearing user state
         router.push('/login');
     };
 
@@ -132,8 +147,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setPermissionsState(newPermissions);
         localStorage.setItem('medi-stock-permissions', JSON.stringify(newPermissions));
     }
+    
+    // Admin user management functions
+    const createUser = async (newUser: NewUser) => {
+        if (user?.role !== 'Admin') throw new Error("Only admins can create users.");
+        if (!newUser.password) throw new Error("Password is required to create a user.");
+        
+        // This is a temporary way to create a user in Firebase Auth from the client.
+        // In a real production app, this should be handled by a secure backend function.
+        const userCredential = await createUserWithEmailAndPassword(auth, newUser.email, newUser.password);
+        const { password, ...userData } = newUser;
+        
+        // Now save the user's role and other details in Firestore
+        const userDocRef = doc(db, 'users', userCredential.user.uid);
+        await setDoc(userDocRef, {
+            ...userData,
+            id: userCredential.user.uid
+        });
+    };
 
-    const value = { user, login, logout, loading, permissions, setPermissions, hasPermission };
+    const deleteUser = async (userId: string, email: string) => {
+         if (user?.role !== 'Admin') throw new Error("Only admins can delete users.");
+         // This is a placeholder. Deleting a user requires backend privileges (e.g., a Firebase Function).
+         // It cannot be done securely from the client-side SDK.
+         console.warn("User deletion from Firebase Auth must be done from a backend environment.");
+
+         // We can, however, delete their data from Firestore.
+         const userDocRef = doc(db, 'users', userId);
+         await deleteDoc(userDocRef);
+    };
+
+    const fetchUsers = async (): Promise<User[]> => {
+        if (user?.role !== 'Admin') return [];
+        const usersCollectionRef = collection(db, 'users');
+        const querySnapshot = await getDocs(usersCollectionRef);
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+    };
+
+
+    const value = { user, login, logout, loading, permissions, setPermissions, hasPermission, createUser, deleteUser, fetchUsers };
 
     return (
         <AuthContext.Provider value={value}>
@@ -149,3 +201,5 @@ export const useAuth = (): AuthContextType => {
     }
     return context;
 };
+
+    

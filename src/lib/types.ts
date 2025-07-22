@@ -2,6 +2,7 @@
 export type UserRole = "Admin" | "Pharmacist" | "Supervisor";
 
 export interface User {
+    id: string;
     name: string;
     email: string;
     role: UserRole;
@@ -35,3 +36,5 @@ export const allAppRoutes: AppRoute[] = [
     { path: "/diseases", name: "Diseases", inSidebar: true },
     { path: "/admin", name: "Admin", inSidebar: true },
 ];
+
+    
