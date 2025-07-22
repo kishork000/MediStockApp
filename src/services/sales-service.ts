@@ -59,7 +59,12 @@ export async function recordSale(saleData: Omit<Sale, 'createdAt' | 'invoiceId' 
     
     try {
         // 1. Update inventory levels first
-        await updateInventoryAfterSale(saleData.storeId, saleData.items);
+        const saleItemsForInventoryUpdate = saleData.items.map(item => ({
+            medicineId: item.medicineValue,
+            quantity: item.quantity,
+            medicineName: item.medicine, // Pass name for potential error messages
+        }));
+        await updateInventoryAfterSale(saleData.storeId, saleItemsForInventoryUpdate);
 
         // 2. Record the sale document
         await addDoc(salesCollectionRef, {

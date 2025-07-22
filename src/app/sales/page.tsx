@@ -286,7 +286,23 @@ export default function SalesPage() {
     
     const getIcon = (name: string) => {
         switch (name) {
-            case 'Dashboard': return <HomeIcon />; case 'Patients': return <Users2 />; case 'Sales': return <ShoppingCart />; case 'Universal Report': return <BarChart />; case 'Warehouse Stock': return <Warehouse />; case 'Store Stock': return <Package />; case 'Add Medicine': return <PlusSquare />; case 'Stock Transfer': return <GitBranch />; case 'Inventory Reports': return <BarChart />; case 'Valuation Report': return <TrendingUp />; case 'Diseases': return <Activity />; case 'Admin': return <Settings />; default: return <LayoutGrid />;
+            case 'Dashboard': return <HomeIcon />;
+            case 'Patients': return <Users2 />;
+            case 'Sales': return <ShoppingCart />;
+            case 'Universal Report': return <BarChart />;
+            case 'Sales Reports': return <BarChart />;
+            case 'Warehouse Stock': return <Warehouse />;
+            case 'Store Stock': return <Package />;
+            case 'Medicine Master': return <Pill />;
+            case 'Manufacturer Master': return <Building />;
+            case 'Add Stock': return <PlusSquare />;
+            case 'Return to Manufacturer': return <Undo />;
+            case 'Stock Transfer': return <GitBranch />;
+            case 'Inventory Reports': return <BarChart />;
+            case 'Valuation Report': return <TrendingUp />;
+            case 'Diseases': return <Activity />;
+            case 'Admin': return <Settings />;
+            default: return <LayoutGrid />;
         }
     };
     
@@ -313,7 +329,7 @@ export default function SalesPage() {
                 
                 {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path)).map((route) => ( 
                     <SidebarMenuItem key={route.path}> 
-                        <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}> 
+                        <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname.startsWith(route.path)}> 
                             {getIcon(route.name)} 
                             <span>{route.name}</span> 
                         </SidebarMenuButton> 

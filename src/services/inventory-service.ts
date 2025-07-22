@@ -1,7 +1,6 @@
 
 import { db } from '@/lib/firebase-config';
 import { collection, doc, getDocs, query, where, writeBatch, increment, getDoc, setDoc } from 'firebase/firestore';
-import type { SaleItem } from './sales-service';
 
 export interface InventoryItem {
     id: string; // Composite key like `${locationId}_${medicineId}`
@@ -9,6 +8,13 @@ export interface InventoryItem {
     medicineId: string;
     quantity: number;
     medicineName: string; // Denormalized for easier display
+}
+
+// Defining a type for the items passed to updateInventoryAfterSale for clarity
+export interface SaleItemForInventory {
+    medicineId: string;
+    quantity: number;
+    medicineName: string;
 }
 
 const inventoryCollectionRef = collection(db, 'inventory');
@@ -44,17 +50,17 @@ export async function getAvailableStockForLocation(locationId: string): Promise<
  * @param locationId The ID of the store where the sale occurred.
  * @param items The items that were sold.
  */
-export async function updateInventoryAfterSale(locationId: string, items: SaleItem[]) {
+export async function updateInventoryAfterSale(locationId: string, items: SaleItemForInventory[]) {
     const batch = writeBatch(db);
 
     for (const item of items) {
-        const docRef = doc(db, 'inventory', `${locationId}_${item.medicineValue}`);
+        const docRef = doc(db, 'inventory', `${locationId}_${item.medicineId}`);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists() && docSnap.data().quantity >= item.quantity) {
              batch.update(docRef, { quantity: increment(-item.quantity) });
         } else {
-            throw new Error(`Insufficient stock for ${item.medicine}. Cannot record sale.`);
+            throw new Error(`Insufficient stock for ${item.medicineName}. Cannot record sale.`);
         }
     }
 
