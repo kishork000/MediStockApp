@@ -38,7 +38,9 @@ const defaultFormState: Omit<Medicine, 'id'> = {
     sellingPrice: 0,
     gstSlab: "",
     minStockLevel: 0,
-    unitType: "",
+    baseUnit: "",
+    packType: "",
+    unitsPerPack: 0,
 };
 
 
@@ -98,18 +100,20 @@ export default function MedicineMasterPage() {
             sellingPrice: medicine.sellingPrice,
             gstSlab: medicine.gstSlab,
             minStockLevel: medicine.minStockLevel,
-            unitType: medicine.unitType,
+            baseUnit: medicine.baseUnit,
+            packType: medicine.packType || "",
+            unitsPerPack: medicine.unitsPerPack || 0,
         });
         setIsModalOpen(true);
     }
     
     const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        const isNumberField = ['purchasePrice', 'sellingPrice', 'minStockLevel'].includes(name);
+        const isNumberField = ['purchasePrice', 'sellingPrice', 'minStockLevel', 'unitsPerPack'].includes(name);
         setFormState(prev => ({ ...prev, [name]: isNumberField ? parseFloat(value) || 0 : value }));
     };
 
-    const handleSelectChange = (name: 'gstSlab' | 'unitType', value: string) => {
+    const handleSelectChange = (name: 'gstSlab' | 'baseUnit' | 'packType', value: string) => {
         setFormState(prev => ({...prev, [name]: value}));
     }
 
@@ -126,9 +130,9 @@ export default function MedicineMasterPage() {
     const handleAddOrUpdateMedicine = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         
-        const { name, hsnCode, purchasePrice, sellingPrice, gstSlab, minStockLevel, unitType } = formState;
+        const { name, hsnCode, purchasePrice, sellingPrice, gstSlab, minStockLevel, baseUnit } = formState;
 
-        if (name && hsnCode && purchasePrice > 0 && sellingPrice > 0 && gstSlab && minStockLevel > 0 && unitType) {
+        if (name && hsnCode && purchasePrice > 0 && sellingPrice > 0 && gstSlab && minStockLevel > 0 && baseUnit) {
             try {
                 if(modalMode === 'edit' && selectedMedicine) {
                     await updateMedicine(selectedMedicine.id, formState);
@@ -143,7 +147,7 @@ export default function MedicineMasterPage() {
                 toast({ variant: "destructive", title: "Error", description: "Failed to save medicine." });
             }
         } else {
-            toast({ variant: "destructive", title: "Error", description: "Please fill all fields correctly. Prices and stock must be greater than zero." });
+            toast({ variant: "destructive", title: "Error", description: "Please fill all required fields correctly. Prices and stock must be greater than zero." });
         }
     };
     
@@ -293,7 +297,7 @@ export default function MedicineMasterPage() {
                                     <TableCell className="font-medium">{med.name}</TableCell>
                                     <TableCell className="hidden md:table-cell">{med.hsnCode}</TableCell>
                                     <TableCell className="hidden md:table-cell text-right">{med.sellingPrice.toFixed(2)}</TableCell>
-                                    <TableCell className="hidden md:table-cell text-right">{med.unitType}</TableCell>
+                                    <TableCell className="hidden md:table-cell text-right">{med.baseUnit}</TableCell>
                                     <TableCell className="hidden md:table-cell text-right">{med.minStockLevel}</TableCell>
                                     <TableCell>
                                         <DropdownMenu>
@@ -366,23 +370,42 @@ export default function MedicineMasterPage() {
                                 <Input id="sellingPrice" name="sellingPrice" value={formState.sellingPrice} onChange={handleFormChange} type="number" step="0.01" placeholder="10.50" required />
                             </div>
                         </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="packType">Packaging Type</Label>
+                                <Select name="packType" value={formState.packType} onValueChange={(v) => handleSelectChange('packType', v)}>
+                                    <SelectTrigger id="packType">
+                                        <SelectValue placeholder="e.g., Box" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="STRIP">Strip</SelectItem>
+                                        <SelectItem value="BOX">Box</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="unitsPerPack">Units Per Pack</Label>
+                                <Input id="unitsPerPack" name="unitsPerPack" value={formState.unitsPerPack || ''} onChange={handleFormChange} type="number" placeholder="e.g., 10"/>
+                            </div>
+                        </div>
+                        
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="minStockLevel">Minimum Stock Level</Label>
                                 <Input id="minStockLevel" name="minStockLevel" value={formState.minStockLevel} onChange={handleFormChange} type="number" placeholder="50" required />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="unitType">Unit Type</Label>
-                                <Select name="unitType" value={formState.unitType} onValueChange={(v) => handleSelectChange('unitType', v)} required>
-                                    <SelectTrigger id="unitType">
+                                <Label htmlFor="baseUnit">Base Unit</Label>
+                                <Select name="baseUnit" value={formState.baseUnit} onValueChange={(v) => handleSelectChange('baseUnit', v)} required>
+                                    <SelectTrigger id="baseUnit">
                                         <SelectValue placeholder="Select Unit" />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="PCS">Pieces (PCS)</SelectItem>
-                                        <SelectItem value="BOX">Box</SelectItem>
-                                        <SelectItem value="STRIP">Strip</SelectItem>
                                         <SelectItem value="BTL">Bottle (BTL)</SelectItem>
                                         <SelectItem value="TUBE">Tube</SelectItem>
+                                        <SelectItem value="ML">Milliliter (ml)</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
