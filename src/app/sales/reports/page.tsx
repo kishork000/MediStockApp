@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -73,9 +73,16 @@ export default function SalesReportPage() {
     const pathname = usePathname();
 
     const [filteredData, setFilteredData] = useState(salesData);
-    const [selectedStore, setSelectedStore] = useState("all");
-    const [selectedPharmacist, setSelectedPharmacist] = useState("all");
-    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+    
+    const initialFilters = {
+        store: "all",
+        pharmacist: "all",
+        dateRange: undefined as DateRange | undefined,
+    };
+    
+    const [activeFilters, setActiveFilters] = useState(initialFilters);
+    const filtersRef = useRef(initialFilters);
+
     
     const [isSalesDetailModalOpen, setIsSalesDetailModalOpen] = useState(false);
     const [modalView, setModalView] = useState<'summary' | 'cash' | 'online'>('summary');
@@ -94,21 +101,23 @@ export default function SalesReportPage() {
     
     const handleApplyFilters = () => {
         let data = [...salesData];
+        const currentFilters = filtersRef.current;
+        setActiveFilters(currentFilters);
 
-        if (selectedStore !== "all") {
-            const store = allStores.find(s => s.id === selectedStore);
+        if (currentFilters.store !== "all") {
+            const store = allStores.find(s => s.id === currentFilters.store);
             if (store) {
                  data = data.filter(sale => sale.storeId === store.storeId);
             }
         }
 
-        if (selectedPharmacist !== "all") {
-            data = data.filter(sale => sale.pharmacist === selectedPharmacist);
+        if (currentFilters.pharmacist !== "all") {
+            data = data.filter(sale => sale.pharmacist === currentFilters.pharmacist);
         }
 
-        if (dateRange?.from && dateRange?.to) {
-            const fromDate = startOfDay(dateRange.from);
-            const toDate = endOfDay(dateRange.to);
+        if (currentFilters.dateRange?.from && currentFilters.dateRange?.to) {
+            const fromDate = startOfDay(currentFilters.dateRange.from);
+            const toDate = endOfDay(currentFilters.dateRange.to);
             data = data.filter(sale => {
                 const saleDate = parseISO(sale.date);
                 return saleDate >= fromDate && saleDate <= toDate;
@@ -117,23 +126,25 @@ export default function SalesReportPage() {
         
         setFilteredData(data);
     };
+
+    const handleResetFilters = () => {
+        filtersRef.current = initialFilters;
+        handleApplyFilters();
+    };
     
     // Apply filters on initial load and when user changes
     useEffect(() => {
         if (user?.role === 'Pharmacist' && user.assignedStore) {
             const assignedStore = allStores.find(s => s.storeId === user.assignedStore);
             if(assignedStore) {
-                setSelectedStore(assignedStore.id);
+                filtersRef.current.store = assignedStore.id;
             }
         } else if (user?.role === 'Admin') {
-            setSelectedStore('all');
+            filtersRef.current.store = 'all';
         }
-    }, [user]);
-
-    useEffect(() => {
         handleApplyFilters();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedStore, selectedPharmacist, dateRange, user]);
+    }, [user]);
 
 
     const analytics = useMemo(() => {
@@ -325,8 +336,8 @@ export default function SalesReportPage() {
                             </div>
                             <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
                                 <Select 
-                                    value={selectedStore} 
-                                    onValueChange={setSelectedStore}
+                                    defaultValue={filtersRef.current.store}
+                                    onValueChange={(v) => (filtersRef.current.store = v)}
                                     disabled={user?.role === 'Pharmacist'}
                                 >
                                     <SelectTrigger className="w-full sm:w-[180px]">
@@ -338,7 +349,7 @@ export default function SalesReportPage() {
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                <Select value={selectedPharmacist} onValueChange={setSelectedPharmacist}>
+                                <Select defaultValue={filtersRef.current.pharmacist} onValueChange={(v) => (filtersRef.current.pharmacist = v)}>
                                     <SelectTrigger className="w-full sm:w-[180px]">
                                         <SelectValue placeholder="Select Pharmacist" />
                                     </SelectTrigger>
@@ -348,10 +359,16 @@ export default function SalesReportPage() {
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                <DateRangePicker onUpdate={(values) => setDateRange(values.range)} />
+                                <DateRangePicker onUpdate={(values) => (filtersRef.current.dateRange = values.range)} />
                             </div>
                         </div>
                     </CardHeader>
+                    <CardContent>
+                         <div className="flex items-center gap-4">
+                            <Button onClick={handleApplyFilters}>Apply Filters</Button>
+                            <Button onClick={handleResetFilters} variant="outline">Reset Filters</Button>
+                        </div>
+                    </CardContent>
                 </Card>
 
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

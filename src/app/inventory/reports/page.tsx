@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useMemo, useEffect, useState, useCallback } from "react";
+import { useMemo, useEffect, useState, useCallback, useRef } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -56,12 +56,17 @@ export default function StockReportsPage() {
     const [purchases, setPurchases] = useState<Purchase[]>([]);
     const [medicines, setMedicines] = useState<Medicine[]>([]);
     const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
-
-    // Filter states
-    const [selectedStore, setSelectedStore] = useState("all");
-    const [selectedManufacturer, setSelectedManufacturer] = useState("all");
-    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
-    const [searchId, setSearchId] = useState("");
+    
+    // Active filters state
+    const [activeTab, setActiveTab] = useState("levels");
+    const [filteredStockLevels, setFilteredStockLevels] = useState<any[]>([]);
+    const [filteredTransfers, setFilteredTransfers] = useState<Transfer[]>([]);
+    const [filteredPurchases, setFilteredPurchases] = useState<Purchase[]>([]);
+    
+    // Refs for pending filter values
+    const stockFiltersRef = useRef({ store: "all", manufacturer: "all" });
+    const transferFiltersRef = useRef({ store: "all", dateRange: undefined as DateRange | undefined, searchId: "" });
+    const purchaseFiltersRef = useRef({ manufacturer: "all", dateRange: undefined as DateRange | undefined, searchId: "" });
 
     const [dataLoading, setDataLoading] = useState(true);
 
@@ -118,6 +123,9 @@ export default function StockReportsPage() {
             }));
 
             setStockLevels(combinedStock);
+            setFilteredStockLevels(combinedStock);
+            setFilteredTransfers(transfersData);
+            setFilteredPurchases(purchasesData);
 
         } catch (error) {
             console.error(error)
@@ -132,49 +140,56 @@ export default function StockReportsPage() {
         }
     }, [user, fetchReportsData]);
 
-    // Apply filters
-    const filteredStockLevels = useMemo(() => {
-        let filtered = [...stockLevels];
-
-        if (selectedStore !== 'all') {
-             const storeKey = allStores.find(s => s.id === selectedStore)?.name.toLowerCase().replace(/ /g, '') === 'downtownpharmacy' ? 'downtown' : allStores.find(s => s.id === selectedStore)?.name.toLowerCase() === 'uptownhealth' ? 'uptown' : 'warehouse';
-             filtered = filtered.filter(item => item[storeKey] > 0);
+    const applyFilters = (tab: string) => {
+        if (tab === 'levels') {
+            let filtered = [...stockLevels];
+            if (stockFiltersRef.current.store !== 'all') {
+                const storeKey = allStores.find(s => s.id === stockFiltersRef.current.store)?.name.toLowerCase().replace(/ /g, '') === 'downtownpharmacy' ? 'downtown' : allStores.find(s => s.id === stockFiltersRef.current.store)?.name.toLowerCase() === 'uptownhealth' ? 'uptown' : 'warehouse';
+                filtered = filtered.filter(item => item[storeKey] > 0);
+            }
+            if (stockFiltersRef.current.manufacturer !== 'all') {
+                filtered = filtered.filter(item => item.manufacturerId === stockFiltersRef.current.manufacturer);
+            }
+            setFilteredStockLevels(filtered);
+        } else if (tab === 'transfers') {
+            let filtered = [...transfers];
+            if (transferFiltersRef.current.store !== 'all') {
+                filtered = filtered.filter(t => t.from === transferFiltersRef.current.store || t.to === transferFiltersRef.current.store);
+            }
+            if (transferFiltersRef.current.dateRange?.from && transferFiltersRef.current.dateRange.to) {
+                filtered = filtered.filter(t => isWithinInterval(parseISO(t.date), { start: transferFiltersRef.current.dateRange!.from!, end: transferFiltersRef.current.dateRange!.to! }));
+            }
+            if (transferFiltersRef.current.searchId) {
+                filtered = filtered.filter(t => t.id.toLowerCase().includes(transferFiltersRef.current.searchId.toLowerCase()));
+            }
+            setFilteredTransfers(filtered);
+        } else if (tab === 'purchase') {
+             let filtered = [...purchases];
+            if (purchaseFiltersRef.current.manufacturer !== 'all') {
+                filtered = filtered.filter(p => p.manufacturerId === purchaseFiltersRef.current.manufacturer);
+            }
+            if (purchaseFiltersRef.current.dateRange?.from && purchaseFiltersRef.current.dateRange.to) {
+                filtered = filtered.filter(p => isWithinInterval(parseISO(p.date), { start: purchaseFiltersRef.current.dateRange!.from!, end: purchaseFiltersRef.current.dateRange!.to! }));
+            }
+            if (purchaseFiltersRef.current.searchId) {
+                filtered = filtered.filter(p => p.invoiceId.toLowerCase().includes(purchaseFiltersRef.current.searchId.toLowerCase()));
+            }
+            setFilteredPurchases(filtered);
         }
-        
-        if (selectedManufacturer !== 'all') {
-            filtered = filtered.filter(item => item.manufacturerId === selectedManufacturer);
+    };
+    
+    const resetFilters = (tab: string) => {
+        if (tab === 'levels') {
+            stockFiltersRef.current = { store: "all", manufacturer: "all" };
+            setFilteredStockLevels(stockLevels);
+        } else if (tab === 'transfers') {
+            transferFiltersRef.current = { store: "all", dateRange: undefined, searchId: "" };
+            setFilteredTransfers(transfers);
+        } else if (tab === 'purchase') {
+            purchaseFiltersRef.current = { manufacturer: "all", dateRange: undefined, searchId: "" };
+            setFilteredPurchases(purchases);
         }
-        
-        return filtered;
-    }, [selectedStore, selectedManufacturer, stockLevels]);
-
-    const filteredTransfers = useMemo(() => {
-        let filtered = [...transfers];
-        if (selectedStore !== 'all') {
-            filtered = filtered.filter(t => t.from === selectedStore || t.to === selectedStore);
-        }
-        if (dateRange?.from && dateRange.to) {
-            filtered = filtered.filter(t => isWithinInterval(parseISO(t.date), { start: dateRange.from!, end: dateRange.to! }));
-        }
-         if (searchId) {
-            filtered = filtered.filter(t => t.id.toLowerCase().includes(searchId.toLowerCase()));
-        }
-        return filtered;
-    }, [selectedStore, dateRange, searchId, transfers]);
-
-    const filteredPurchases = useMemo(() => {
-        let filtered = [...purchases];
-         if (selectedManufacturer !== 'all') {
-            filtered = filtered.filter(p => p.manufacturerId === selectedManufacturer);
-        }
-        if (dateRange?.from && dateRange.to) {
-            filtered = filtered.filter(p => isWithinInterval(parseISO(p.date), { start: dateRange.from!, end: dateRange.to! }));
-        }
-        if (searchId) {
-            filtered = filtered.filter(p => p.invoiceId.toLowerCase().includes(searchId.toLowerCase()));
-        }
-        return filtered;
-    }, [selectedManufacturer, dateRange, searchId, purchases]);
+    }
 
 
     const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
@@ -215,12 +230,6 @@ export default function StockReportsPage() {
         }
     };
     
-    const handleClearFilters = () => {
-        setSelectedStore('all');
-        setSelectedManufacturer('all');
-        setDateRange(undefined);
-        setSearchId('');
-    };
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -308,7 +317,7 @@ export default function StockReportsPage() {
            </div>
         </header>
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
-            <Tabs defaultValue="levels" onValueChange={handleClearFilters}>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList>
                     <TabsTrigger value="levels">Overall Stock Levels</TabsTrigger>
                     <TabsTrigger value="transfers">Inter-Store Transfers</TabsTrigger>
@@ -317,25 +326,25 @@ export default function StockReportsPage() {
                 <TabsContent value="levels">
                      <Card>
                         <CardHeader>
-                             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                                <CardTitle>Overall Stock Levels</CardTitle>
-                                <div className="flex items-center gap-2">
-                                     <Select value={selectedStore} onValueChange={setSelectedStore} disabled={user?.role === 'Pharmacist' && availableStores.length === 1}>
-                                        <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Select Store" /></SelectTrigger>
-                                        <SelectContent>{availableStores.map(store => (<SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>))}</SelectContent>
-                                    </Select>
-                                     <Select value={selectedManufacturer} onValueChange={setSelectedManufacturer}>
-                                        <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Select Manufacturer" /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">All Manufacturers</SelectItem>
-                                            {manufacturers.map(m => (<SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                             </div>
+                             <CardTitle>Overall Stock Levels</CardTitle>
                              <CardDescription>Aggregated stock counts across locations. Filter by store or manufacturer.</CardDescription>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="space-y-4">
+                            <div className="flex flex-col sm:flex-row gap-4">
+                                <Select defaultValue={stockFiltersRef.current.store} onValueChange={(v) => (stockFiltersRef.current.store = v)} disabled={user?.role === 'Pharmacist' && availableStores.length === 1}>
+                                    <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Select Store" /></SelectTrigger>
+                                    <SelectContent>{availableStores.map(store => (<SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>))}</SelectContent>
+                                </Select>
+                                <Select defaultValue={stockFiltersRef.current.manufacturer} onValueChange={(v) => (stockFiltersRef.current.manufacturer = v)}>
+                                    <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Select Manufacturer" /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Manufacturers</SelectItem>
+                                        {manufacturers.map(m => (<SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>))}
+                                    </SelectContent>
+                                </Select>
+                                <Button onClick={() => applyFilters('levels')}>Apply Filters</Button>
+                                <Button onClick={() => resetFilters('levels')} variant="outline">Reset</Button>
+                            </div>
                             <Table>
                                 <TableHeader>
                                      <TableRow>
@@ -367,23 +376,23 @@ export default function StockReportsPage() {
                 <TabsContent value="transfers">
                     <Card>
                         <CardHeader>
-                             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                                <CardTitle>Transfer &amp; Return Report</CardTitle>
-                                <div className="flex flex-wrap items-center gap-2">
-                                     <div className="relative">
-                                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                        <Input type="search" placeholder="Search by Invoice/CNR ID..." className="pl-8 w-full sm:w-[200px]" value={searchId} onChange={e => setSearchId(e.target.value)} />
-                                    </div>
-                                     <Select value={selectedStore} onValueChange={setSelectedStore} disabled={user?.role === 'Pharmacist' && availableStores.length === 1}>
-                                        <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Select Store" /></SelectTrigger>
-                                        <SelectContent>{availableStores.map(store => (<SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>))}</SelectContent>
-                                    </Select>
-                                     <DateRangePicker onUpdate={(values) => setDateRange(values.range)} />
-                                </div>
-                            </div>
+                            <CardTitle>Transfer &amp; Return Report</CardTitle>
                             <CardDescription>History of all stock movements between warehouse and stores.</CardDescription>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="space-y-4">
+                            <div className="flex flex-col sm:flex-row flex-wrap gap-4">
+                                <div className="relative">
+                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input type="search" placeholder="Search by Invoice/CNR ID..." className="pl-8 w-full sm:w-[200px]" defaultValue={transferFiltersRef.current.searchId} onChange={e => (transferFiltersRef.current.searchId = e.target.value)} />
+                                </div>
+                                <Select defaultValue={transferFiltersRef.current.store} onValueChange={(v) => (transferFiltersRef.current.store = v)} disabled={user?.role === 'Pharmacist' && availableStores.length === 1}>
+                                    <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Select Store" /></SelectTrigger>
+                                    <SelectContent>{availableStores.map(store => (<SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>))}</SelectContent>
+                                </Select>
+                                <DateRangePicker onUpdate={(values) => (transferFiltersRef.current.dateRange = values.range)} />
+                                <Button onClick={() => applyFilters('transfers')}>Apply Filters</Button>
+                                <Button onClick={() => resetFilters('transfers')} variant="outline">Reset</Button>
+                            </div>
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -419,26 +428,26 @@ export default function StockReportsPage() {
                 <TabsContent value="purchase">
                     <Card>
                          <CardHeader>
-                            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                               <CardTitle>Purchase History</CardTitle>
-                               <div className="flex flex-wrap items-center gap-2">
-                                     <div className="relative">
-                                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                        <Input type="search" placeholder="Search by Invoice ID..." className="pl-8 w-full sm:w-[200px]" value={searchId} onChange={e => setSearchId(e.target.value)} />
-                                    </div>
-                                     <Select value={selectedManufacturer} onValueChange={setSelectedManufacturer}>
-                                        <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Select Manufacturer" /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">All Manufacturers</SelectItem>
-                                            {manufacturers.map(m => (<SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>))}
-                                        </SelectContent>
-                                    </Select>
-                                     <DateRangePicker onUpdate={(values) => setDateRange(values.range)} />
-                               </div>
-                           </div>
+                           <CardTitle>Purchase History</CardTitle>
                            <CardDescription>History of all stock purchases from manufacturers.</CardDescription>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="space-y-4">
+                             <div className="flex flex-col sm:flex-row flex-wrap gap-4">
+                                <div className="relative">
+                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input type="search" placeholder="Search by Invoice ID..." className="pl-8 w-full sm:w-[200px]" defaultValue={purchaseFiltersRef.current.searchId} onChange={e => (purchaseFiltersRef.current.searchId = e.target.value)} />
+                                </div>
+                                <Select defaultValue={purchaseFiltersRef.current.manufacturer} onValueChange={(v) => (purchaseFiltersRef.current.manufacturer = v)}>
+                                    <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Select Manufacturer" /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Manufacturers</SelectItem>
+                                        {manufacturers.map(m => (<SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>))}
+                                    </SelectContent>
+                                </Select>
+                                <DateRangePicker onUpdate={(values) => (purchaseFiltersRef.current.dateRange = values.range)} />
+                                <Button onClick={() => applyFilters('purchase')}>Apply Filters</Button>
+                                <Button onClick={() => resetFilters('purchase')} variant="outline">Reset</Button>
+                           </div>
                             <Table>
                                 <TableHeader>
                                     <TableRow>

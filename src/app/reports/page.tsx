@@ -275,7 +275,7 @@ export default function UniversalReportPage() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                <div className="col-span-2 md:col-span-1">
+                                <div className="col-span-2 md:col-span-1 lg:col-span-2">
                                     <Label>Date Range</Label>
                                     <DateRangePicker onUpdate={(values) => (filtersRef.current.dateRange = values.range)} className="w-full" />
                                 </div>
@@ -308,7 +308,7 @@ export default function UniversalReportPage() {
                                         </SelectContent>
                                     </Select>
                                 </div>
-                                <div className="col-span-2 md:col-span-3 lg:col-span-1">
+                                <div className="col-span-2 md:col-span-3 lg:col-span-4">
                                     <Label htmlFor="medicineId">Medicine</Label>
                                     <Select defaultValue={filtersRef.current.medicineId} onValueChange={v => (filtersRef.current.medicineId = v)}>
                                         <SelectTrigger id="medicineId"><SelectValue /></SelectTrigger>
