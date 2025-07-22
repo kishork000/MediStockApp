@@ -24,27 +24,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { fetchGstDetails } from "@/services/gstin-service";
+import { Manufacturer, addManufacturer, getManufacturers, updateManufacturer, deleteManufacturer } from "@/services/manufacturer-service";
+import { Skeleton } from "@/components/ui/skeleton";
 
-interface Manufacturer {
-    id: string;
-    name: string;
-    contactPerson: string;
-    email: string;
-    phone: string;
-    address: string;
-    gstin: string;
-}
-
-const initialManufacturers: Manufacturer[] = [
-    { id: "MAN001", name: "Bayer Pharmaceuticals", contactPerson: "Anil Kapoor", email: "anil.k@bayer.com", phone: "9876543210", address: "Bayer House, Hiranandani Estate, Mumbai", gstin: "27AAFCT6913H1Z3" },
-    { id: "MAN002", name: "Pfizer India", contactPerson: "Sunita Reddy", email: "s.reddy@pfizer.co.in", phone: "9876543211", address: "The Capital, Bandra Kurla Complex, Mumbai", gstin: "27AABCP5871N1Z5" },
-    { id: "MAN003", name: "Sun Pharmaceutical Industries", contactPerson: "Rajesh Sharma", email: "rajesh.s@sunpharma.com", phone: "9876543212", address: "Sun House, Western Express Highway, Mumbai", gstin: "27AAACS1116L1ZG" },
-    { id: "MAN004", name: "Cipla Ltd", contactPerson: "Priya Singh", email: "priya.singh@cipla.com", phone: "9876543213", address: "Cipla House, Peninsula Business Park, Mumbai", gstin: "27AAACC2728D1Z2" },
-];
 
 const defaultFormState: Omit<Manufacturer, 'id'> = {
     name: "",
@@ -61,7 +47,8 @@ export default function ManufacturerMasterPage() {
     const router = useRouter();
     const pathname = usePathname();
     const { toast } = useToast();
-    const [manufacturers, setManufacturers] = useState<Manufacturer[]>(initialManufacturers);
+    const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
+    const [dataLoading, setDataLoading] = useState(true);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -72,6 +59,19 @@ export default function ManufacturerMasterPage() {
 
     const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
     const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && route.inSidebar && hasPermission(route.path)), [hasPermission]);
+
+    const fetchManufacturers = async () => {
+        setDataLoading(true);
+        const manufacturersFromDb = await getManufacturers();
+        setManufacturers(manufacturersFromDb);
+        setDataLoading(false);
+    };
+
+    useEffect(() => {
+        if (user) {
+            fetchManufacturers();
+        }
+    }, [user]);
 
     useEffect(() => {
         if (!loading && !user) {
@@ -100,35 +100,40 @@ export default function ManufacturerMasterPage() {
         setIsEditModalOpen(true);
     };
 
-    const handleDelete = (id: string) => {
-        setManufacturers(manufacturers.filter(m => m.id !== id));
-        toast({ title: "Success", description: "Manufacturer removed from master list." });
+    const handleDelete = async (id: string) => {
+        try {
+            await deleteManufacturer(id);
+            await fetchManufacturers();
+            toast({ title: "Success", description: "Manufacturer removed from master list." });
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: "Failed to remove manufacturer." });
+        }
     };
 
-    const handleAddOrUpdateManufacturer = (e: React.FormEvent<HTMLFormElement>) => {
+    const handleAddOrUpdateManufacturer = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         
         const { name, contactPerson, email, phone, address, gstin } = formState;
 
         if (name && contactPerson && email && phone && address && gstin) {
-            if(selectedManufacturer && isEditModalOpen) {
-                // Update
-                const updatedManufacturer = { ...selectedManufacturer, ...formState };
-                setManufacturers(manufacturers.map(m => m.id === updatedManufacturer.id ? updatedManufacturer : m));
-                toast({ title: "Success", description: "Manufacturer details updated." });
-                setIsEditModalOpen(false);
-            } else {
-                // Add
-                const newManufacturer: Manufacturer = {
-                    id: `MAN${(manufacturers.length + 1).toString().padStart(3, '0')}`,
-                    ...formState
-                };
-                setManufacturers([...manufacturers, newManufacturer]);
-                toast({ title: "Success", description: "Manufacturer added to master list." });
-                setIsAddModalOpen(false);
+            try {
+                if(selectedManufacturer && isEditModalOpen) {
+                    // Update
+                    await updateManufacturer(selectedManufacturer.id, formState);
+                    toast({ title: "Success", description: "Manufacturer details updated." });
+                    setIsEditModalOpen(false);
+                } else {
+                    // Add
+                    await addManufacturer(formState);
+                    toast({ title: "Success", description: "Manufacturer added to master list." });
+                    setIsAddModalOpen(false);
+                }
+                await fetchManufacturers();
+                setFormState(defaultFormState);
+                setSelectedManufacturer(null);
+            } catch (error) {
+                 toast({ variant: "destructive", title: "Error", description: "Failed to save manufacturer." });
             }
-            setFormState(defaultFormState);
-            setSelectedManufacturer(null);
         } else {
             toast({ variant: "destructive", title: "Error", description: "Please fill all fields." });
         }
@@ -288,7 +293,17 @@ export default function ManufacturerMasterPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {manufacturers.map((man) => (
+                            {dataLoading ? (
+                                Array.from({length: 5}).map((_, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                                        <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
+                                        <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-36" /></TableCell>
+                                        <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-48" /></TableCell>
+                                        <TableCell><Skeleton className="h-8 w-8" /></TableCell>
+                                    </TableRow>
+                                ))
+                            ) : manufacturers.map((man) => (
                                 <TableRow key={man.id}>
                                     <TableCell className="font-medium">{man.name}</TableCell>
                                     <TableCell className="hidden sm:table-cell">{man.contactPerson}</TableCell>
