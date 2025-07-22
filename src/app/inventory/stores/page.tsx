@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, Search, Undo, Pill, Building } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, Search, Undo, Pill, Building, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -21,18 +21,31 @@ import { useRouter, usePathname } from "next/navigation";
 import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { DateRangePicker } from "@/components/dashboard/DateRangePicker";
 import { DateRange } from "react-day-picker";
-import { isWithinInterval, startOfDay, endOfDay } from "date-fns";
+import { isWithinInterval, startOfDay, endOfDay, parseISO, format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { InventoryItem, getAvailableStockForLocation } from "@/services/inventory-service";
 import { Medicine, getMedicines } from "@/services/medicine-service";
+import { Sale, getSales } from "@/services/sales-service";
+import { Transfer, getTransfers } from "@/services/transfer-service";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface EnrichedInventoryItem extends InventoryItem {
     minStockLevel: number;
+}
+
+interface StockLedgerItem {
+    medicineId: string;
+    medicineName: string;
+    opening: number;
+    received: number;
+    returned: number;
+    sales: number;
+    balance: number;
 }
 
 const allStores = [
@@ -56,7 +69,13 @@ export default function StoreInventoryPage() {
 
     const [pageLoading, setPageLoading] = useState(true);
     const [storeInventory, setStoreInventory] = useState<EnrichedInventoryItem[]>([]);
-    const [medicineMaster, setMedicineMaster] = useState<Medicine[]>([]);
+    
+    // For Desktop Ledger
+    const [allSales, setAllSales] = useState<Sale[]>([]);
+    const [allTransfers, setAllTransfers] = useState<Transfer[]>([]);
+    const [stockLedger, setStockLedger] = useState<StockLedgerItem[]>([]);
+    const [isLedgerLoading, setIsLedgerLoading] = useState(false);
+    const filtersRef = useRef<{dateRange?: DateRange}>({});
 
     const availableStores = useMemo(() => {
         if (user?.role === 'Admin') return allStores;
@@ -74,12 +93,16 @@ export default function StoreInventoryPage() {
         if (!selectedStore) return;
         setPageLoading(true);
         try {
-            const [stockItems, medicines] = await Promise.all([
+            const [stockItems, medicines, sales, transfers] = await Promise.all([
                 getAvailableStockForLocation(selectedStore),
-                getMedicines()
+                getMedicines(),
+                getSales(),
+                getTransfers(),
             ]);
 
             const medicineMap = new Map<string, Medicine>(medicines.map(m => [m.id, m]));
+            setAllSales(sales);
+            setAllTransfers(transfers);
 
             const enrichedStock = stockItems.map(item => {
                 const medicineDetails = medicineMap.get(item.medicineId);
@@ -98,6 +121,71 @@ export default function StoreInventoryPage() {
     useEffect(() => {
         fetchStoreData();
     }, [fetchStoreData]);
+    
+    const calculateStockLedger = () => {
+        if (!filtersRef.current.dateRange?.from || !filtersRef.current.dateRange?.to) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Please select a date range to generate the report.' });
+            return;
+        }
+        setIsLedgerLoading(true);
+
+        const startDate = startOfDay(filtersRef.current.dateRange.from);
+        const endDate = endOfDay(filtersRef.current.dateRange.to);
+
+        const salesInDateRange = allSales.filter(s => s.storeId === selectedStore && isWithinInterval(parseISO(s.createdAt), { start: startDate, end: endDate }));
+        const transfersInDateRange = allTransfers.filter(t => (t.to === selectedStore || t.from === selectedStore) && isWithinInterval(parseISO(t.date), { start: startDate, end: endDate }));
+
+        const medicineIds = new Set([...storeInventory.map(i => i.medicineId), ...salesInDateRange.flatMap(s => s.items.map(i => i.medicineValue)), ...transfersInDateRange.flatMap(t => t.items.map(i => i.medicineId))]);
+
+        const ledger: StockLedgerItem[] = [];
+
+        for(const medId of medicineIds) {
+            const currentItem = storeInventory.find(i => i.medicineId === medId);
+            if(!currentItem) continue;
+
+            const salesDuringPeriod = salesInDateRange.flatMap(s => s.items).filter(i => i.medicineValue === medId).reduce((sum, i) => sum + i.quantity, 0);
+            const transfersToStore = transfersInDateRange.filter(t => t.to === selectedStore).flatMap(t => t.items).filter(i => i.medicineId === medId).reduce((sum, i) => sum + i.quantity, 0);
+            const returnsFromStore = transfersInDateRange.filter(t => t.from === selectedStore).flatMap(t => t.items).filter(i => i.medicineId === medId).reduce((sum, i) => sum + i.quantity, 0);
+            
+            const balance = currentItem.quantity;
+            const opening = balance - transfersToStore + returnsFromStore + salesDuringPeriod;
+            
+            ledger.push({
+                medicineId: medId,
+                medicineName: currentItem.medicineName,
+                opening: opening,
+                received: transfersToStore,
+                returned: returnsFromStore,
+                sales: salesDuringPeriod,
+                balance: balance,
+            });
+        }
+        setStockLedger(ledger);
+        setIsLedgerLoading(false);
+    };
+
+    const handleDownloadReport = () => {
+        if (stockLedger.length === 0) {
+            toast({ variant: "destructive", title: "No data", description: "Generate a report before downloading." });
+            return;
+        }
+        let csvContent = "data:text/csv;charset=utf-8,";
+        const headers = ["Medicine", "Opening Stock", "Received", "Returned", "Sales", "Balance Stock"];
+        csvContent += headers.join(",") + "\r\n";
+
+        stockLedger.forEach(item => {
+            const row = [item.medicineName, item.opening, item.received, item.returned, item.sales, item.balance];
+            csvContent += row.join(",") + "\r\n";
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `store_stock_report_${selectedStore}_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
     const filteredInventory = useMemo(() => {
         let inventory = [...storeInventory];
@@ -206,7 +294,7 @@ export default function StoreInventoryPage() {
               </SidebarMenu>
           </SidebarFooter>
       </Sidebar>
-      <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14 group-[[data-sidebar-state=expanded]]:sm:pl-56">
+      <div className="flex flex-col sm:gap-4 sm:py-4">
         <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
            <SidebarTrigger />
            <div className="flex w-full items-center justify-between">
@@ -251,13 +339,13 @@ export default function StoreInventoryPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="relative w-full overflow-auto rounded-lg border">
+                    {/* Mobile View */}
+                    <div className="relative w-full overflow-auto rounded-lg border md:hidden">
                         <Table>
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Medicine</TableHead>
                                     <TableHead className="text-right font-bold">Available</TableHead>
-                                    <TableHead className="text-right hidden sm:table-cell">Min. Stock</TableHead>
                                     <TableHead className="text-right">Status</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -267,7 +355,6 @@ export default function StoreInventoryPage() {
                                         <TableRow key={i}>
                                             <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                                             <TableCell><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
-                                            <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
                                             <TableCell><Skeleton className="h-6 w-24 ml-auto" /></TableCell>
                                         </TableRow>
                                     ))
@@ -277,7 +364,6 @@ export default function StoreInventoryPage() {
                                     <TableRow key={item.id}>
                                         <TableCell className="font-medium">{item.medicineName}</TableCell>
                                         <TableCell className="text-right font-bold">{item.quantity}</TableCell>
-                                        <TableCell className="text-right hidden sm:table-cell">{item.minStockLevel}</TableCell>
                                         <TableCell className="text-right">
                                             <Badge variant={status === 'In Stock' ? 'default' : status === 'Low Stock' ? 'secondary' : 'destructive'}>
                                                 {status}
@@ -286,13 +372,80 @@ export default function StoreInventoryPage() {
                                     </TableRow>
                                 )}) : (
                                     <TableRow>
-                                        <TableCell colSpan={4} className="text-center h-24">
+                                        <TableCell colSpan={3} className="text-center h-24">
                                             No stock data available for the selected store.
                                         </TableCell>
                                     </TableRow>
                                 )}
                             </TableBody>
                         </Table>
+                    </div>
+
+                    {/* Desktop View */}
+                    <div className="hidden md:block space-y-4">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Detailed Stock Ledger</CardTitle>
+                                <CardDescription>Generate a detailed report of stock movement for the selected store.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="flex flex-wrap gap-4 items-end">
+                                <div className="space-y-2">
+                                    <p className="text-sm font-medium">Date Range</p>
+                                    <DateRangePicker onUpdate={(v) => (filtersRef.current.dateRange = v.range)} />
+                                </div>
+                                <Button onClick={calculateStockLedger} disabled={isLedgerLoading}>
+                                    {isLedgerLoading ? 'Generating...' : 'Apply Filters'}
+                                </Button>
+                                <Button variant="outline" onClick={() => { setStockLedger([]); filtersRef.current = {}; }}>Reset</Button>
+                                <Button variant="outline" size="sm" onClick={handleDownloadReport} className="ml-auto">
+                                    <Download className="mr-2 h-4 w-4" />
+                                    Download Report
+                                </Button>
+                            </CardContent>
+                        </Card>
+                        <div className="relative w-full overflow-auto rounded-lg border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Medicine</TableHead>
+                                        <TableHead className="text-right">Opening</TableHead>
+                                        <TableHead className="text-right">Received</TableHead>
+                                        <TableHead className="text-right">Returned</TableHead>
+                                        <TableHead className="text-right">Sales</TableHead>
+                                        <TableHead className="text-right font-bold">Balance</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                 <TableBody>
+                                {isLedgerLoading ? (
+                                    Array.from({ length: 5 }).map((_, i) => (
+                                        <TableRow key={i}>
+                                            <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : stockLedger.length > 0 ? stockLedger.filter(item => item.medicineName.toLowerCase().includes(searchQuery.toLowerCase())).map((item) => (
+                                    <TableRow key={item.medicineId}>
+                                        <TableCell className="font-medium">{item.medicineName}</TableCell>
+                                        <TableCell className="text-right">{item.opening}</TableCell>
+                                        <TableCell className="text-right text-green-600">+{item.received}</TableCell>
+                                        <TableCell className="text-right text-orange-600">-{item.returned}</TableCell>
+                                        <TableCell className="text-right text-red-600">-{item.sales}</TableCell>
+                                        <TableCell className="text-right font-bold">{item.balance}</TableCell>
+                                    </TableRow>
+                                )) : (
+                                    <TableRow>
+                                        <TableCell colSpan={6} className="text-center h-24">
+                                            {filtersRef.current.dateRange ? 'No stock movement data for this period.' : 'Please select a date range and apply filters to see the report.'}
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                            </Table>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
