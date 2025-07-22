@@ -24,7 +24,7 @@ export const allAppRoutes: AppRoute[] = [
     { path: "/patients", name: "Patients", inSidebar: true },
     { path: "/sales", name: "Sales", inSidebar: true },
     { path: "/reports", name: "Universal Report", inSidebar: true },
-    { path: "/sales/reports", name: "Sales Reports", inSidebar: true },
+    { path: "/sales/reports", name: "Sales Reports", inSidebar: false },
     { path: "/inventory/warehouse", name: "Warehouse Stock", inSidebar: true },
     { path: "/inventory/stores", name: "Store Stock", inSidebar: true },
     { path: "/inventory/master", name: "Medicine Master", inSidebar: true },
@@ -37,9 +37,8 @@ export const allAppRoutes: AppRoute[] = [
     { path: "/diseases", name: "Diseases", inSidebar: true },
     { path: "/documentation", name: "Documentation", inSidebar: true },
     { path: "/admin", name: "Admin", inSidebar: true },
-    { path: "/admin/roles", name: "Role Management", inSidebar: false },
-    { path: "/admin/units", name: "Unit Management", inSidebar: false },
-    { path: "/admin/packaging", name: "Packaging Management", inSidebar: false },
 ];
+
+    
 
     

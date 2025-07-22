@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Activity, Settings, Store, MoreHorizontal, Trash2, GitBranch, LogOut, ShieldCheck, ChevronDown, Warehouse, TrendingUp, Building, UserPlus, Layers, Box, KeyRound, Pill, Undo } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Activity, Settings, Store, MoreHorizontal, Trash2, GitBranch, LogOut, ShieldCheck, ChevronDown, Warehouse, TrendingUp, Building, UserPlus, Layers, Box, KeyRound, Pill, Undo, BookOpen } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -417,6 +417,7 @@ export default function AdminPage() {
             case 'Inventory Reports': return <BarChart />;
             case 'Valuation Report': return <TrendingUp />;
             case 'Diseases': return <Activity />;
+            case 'Documentation': return <BookOpen />;
             case 'Admin': return <Settings />;
             default: return <LayoutGrid />;
         }
@@ -1058,3 +1059,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    

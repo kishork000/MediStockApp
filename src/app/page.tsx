@@ -342,9 +342,9 @@ export default function Home() {
                     </CardHeader>
                     <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                        <Button variant="outline" asChild>
-                          <Link href="/sales/reports">
+                          <Link href="/reports">
                            <Download className="mr-2 h-4 w-4" />
-                           View Sales Report
+                           View Universal Report
                           </Link>
                        </Button>
                        <Button variant="outline" asChild>
@@ -368,3 +368,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
