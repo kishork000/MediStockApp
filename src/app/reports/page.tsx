@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -50,7 +50,7 @@ export default function UniversalReportPage() {
     const [pharmacists, setPharmacists] = useState<string[]>([]);
     const [dataLoading, setDataLoading] = useState(true);
 
-    const [filters, setFilters] = useState({
+    const initialFilters = {
         dateRange: undefined as DateRange | undefined,
         patientId: "",
         patientMobile: "",
@@ -58,7 +58,11 @@ export default function UniversalReportPage() {
         storeId: "all",
         pharmacistName: "all",
         invoiceNo: "",
-    });
+    };
+
+    const [activeFilters, setActiveFilters] = useState(initialFilters);
+    const filtersRef = useRef(initialFilters);
+
 
     const fetchReportData = useCallback(async () => {
         setDataLoading(true);
@@ -85,37 +89,42 @@ export default function UniversalReportPage() {
     const filteredSales = useMemo(() => {
         return allSales.filter(sale => {
             let matches = true;
-            if (filters.dateRange?.from && filters.dateRange?.to) {
-                if (!isWithinInterval(parseISO(sale.createdAt), { start: filters.dateRange.from, end: filters.dateRange.to })) {
+            if (activeFilters.dateRange?.from && activeFilters.dateRange?.to) {
+                if (!isWithinInterval(parseISO(sale.createdAt), { start: activeFilters.dateRange.from, end: activeFilters.dateRange.to })) {
                     matches = false;
                 }
             }
-            if (filters.patientId && !sale.patientId.toLowerCase().includes(filters.patientId.toLowerCase())) {
+            if (activeFilters.patientId && !sale.patientId.toLowerCase().includes(activeFilters.patientId.toLowerCase())) {
                 matches = false;
             }
-            if (filters.patientMobile && !sale.patientMobile.includes(filters.patientMobile)) {
+            if (activeFilters.patientMobile && !sale.patientMobile.includes(activeFilters.patientMobile)) {
                 matches = false;
             }
-            if (filters.storeId !== "all" && sale.storeId !== filters.storeId) {
+            if (activeFilters.storeId !== "all" && sale.storeId !== activeFilters.storeId) {
                 matches = false;
             }
-            if (filters.pharmacistName !== "all" && sale.soldBy !== filters.pharmacistName) {
+            if (activeFilters.pharmacistName !== "all" && sale.soldBy !== activeFilters.pharmacistName) {
                 matches = false;
             }
-             if (filters.invoiceNo && !sale.invoiceId.toLowerCase().includes(filters.invoiceNo.toLowerCase())) {
+             if (activeFilters.invoiceNo && !sale.invoiceId.toLowerCase().includes(activeFilters.invoiceNo.toLowerCase())) {
                 matches = false;
             }
-            if (filters.medicineId !== 'all') {
-                if (!sale.items.some(item => item.medicineValue === filters.medicineId)) {
+            if (activeFilters.medicineId !== 'all') {
+                if (!sale.items.some(item => item.medicineValue === activeFilters.medicineId)) {
                     matches = false;
                 }
             }
             return matches;
         });
-    }, [allSales, filters]);
+    }, [allSales, activeFilters]);
     
-    const handleFilterChange = (key: keyof typeof filters, value: any) => {
-        setFilters(prev => ({ ...prev, [key]: value }));
+    const handleApplyFilters = () => {
+        setActiveFilters(filtersRef.current);
+    };
+
+    const handleResetFilters = () => {
+        filtersRef.current = initialFilters;
+        setActiveFilters(initialFilters);
     };
 
     const handleDownload = () => {
@@ -268,30 +277,30 @@ export default function UniversalReportPage() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                                 <div>
                                     <Label>Date Range</Label>
-                                    <DateRangePicker onUpdate={(values) => handleFilterChange('dateRange', values.range)} className="w-full" />
+                                    <DateRangePicker onUpdate={(values) => (filtersRef.current.dateRange = values.range)} className="w-full" />
                                 </div>
                                 <div>
                                     <Label htmlFor="invoiceNo">Invoice No.</Label>
-                                    <Input id="invoiceNo" placeholder="INV-..." value={filters.invoiceNo} onChange={e => handleFilterChange('invoiceNo', e.target.value)} />
+                                    <Input id="invoiceNo" placeholder="INV-..." defaultValue={filtersRef.current.invoiceNo} onChange={e => (filtersRef.current.invoiceNo = e.target.value)} />
                                 </div>
                                 <div>
                                     <Label htmlFor="patientId">Patient ID</Label>
-                                    <Input id="patientId" placeholder="PAT-..." value={filters.patientId} onChange={e => handleFilterChange('patientId', e.target.value)} />
+                                    <Input id="patientId" placeholder="PAT-..." defaultValue={filtersRef.current.patientId} onChange={e => (filtersRef.current.patientId = e.target.value)} />
                                 </div>
                                 <div>
                                     <Label htmlFor="patientMobile">Patient Mobile</Label>
-                                    <Input id="patientMobile" placeholder="987..." value={filters.patientMobile} onChange={e => handleFilterChange('patientMobile', e.target.value)} />
+                                    <Input id="patientMobile" placeholder="987..." defaultValue={filtersRef.current.patientMobile} onChange={e => (filtersRef.current.patientMobile = e.target.value)} />
                                 </div>
                                 <div>
                                     <Label htmlFor="storeId">Store</Label>
-                                    <Select value={filters.storeId} onValueChange={v => handleFilterChange('storeId', v)}>
+                                    <Select defaultValue={filtersRef.current.storeId} onValueChange={v => (filtersRef.current.storeId = v)}>
                                         <SelectTrigger id="storeId"><SelectValue /></SelectTrigger>
                                         <SelectContent>{allStores.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
                                     </Select>
                                 </div>
                                 <div>
                                     <Label htmlFor="pharmacistName">Pharmacist</Label>
-                                    <Select value={filters.pharmacistName} onValueChange={v => handleFilterChange('pharmacistName', v)}>
+                                    <Select defaultValue={filtersRef.current.pharmacistName} onValueChange={v => (filtersRef.current.pharmacistName = v)}>
                                         <SelectTrigger id="pharmacistName"><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="all">All Pharmacists</SelectItem>
@@ -301,7 +310,7 @@ export default function UniversalReportPage() {
                                 </div>
                                 <div className="lg:col-span-2">
                                     <Label htmlFor="medicineId">Medicine</Label>
-                                    <Select value={filters.medicineId} onValueChange={v => handleFilterChange('medicineId', v)}>
+                                    <Select defaultValue={filtersRef.current.medicineId} onValueChange={v => (filtersRef.current.medicineId = v)}>
                                         <SelectTrigger id="medicineId"><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="all">All Medicines</SelectItem>
@@ -309,6 +318,10 @@ export default function UniversalReportPage() {
                                         </SelectContent>
                                     </Select>
                                 </div>
+                            </div>
+                            <div className="flex items-center gap-4 pt-2">
+                                <Button onClick={handleApplyFilters}>Apply Filters</Button>
+                                <Button onClick={handleResetFilters} variant="outline">Reset Filters</Button>
                             </div>
                         </CardContent>
                     </Card>
@@ -370,4 +383,3 @@ export default function UniversalReportPage() {
             </div>
         </div>
     );
-}
