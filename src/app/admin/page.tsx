@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Activity, Settings, Store, MoreHorizontal, Trash2, GitBranch, LogOut, ShieldCheck, ChevronDown, Warehouse, TrendingUp, Building, UserPlus, Layers, Box } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Activity, Settings, Store, MoreHorizontal, Trash2, GitBranch, LogOut, ShieldCheck, ChevronDown, Warehouse, TrendingUp, Building, UserPlus, Layers, Box, KeyRound } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -27,7 +27,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useAuth, NewUser } from "@/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
-import { allAppRoutes, AppRoute, UserRole } from "@/lib/types";
+import { allAppRoutes, AppRoute } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useToast } from "@/hooks/use-toast";
@@ -43,7 +43,7 @@ interface User {
     loginId: string;
     name: string;
     email: string;
-    role: UserRole;
+    role: string;
     assignedStore?: string;
     password?: string;
     altMobile?: string;
@@ -69,7 +69,7 @@ const initialStores: Store[] = [
 
 
 export default function AdminPage() {
-    const { user, logout, loading, permissions, setPermissions, hasPermission, users: userList, createUser, deleteUser: deleteUserFromContext } = useAuth();
+    const { user, logout, loading, permissions, setPermissions, hasPermission, users: userList, createUser, deleteUser: deleteUserFromContext, addRole, editRole, deleteRole } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
     const { toast } = useToast();
@@ -104,7 +104,13 @@ export default function AdminPage() {
     const [dataLoading, setDataLoading] = useState(true);
     
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-    const [itemToDelete, setItemToDelete] = useState<{ id: string; type: 'user' | 'store' | 'unit' | 'packaging' } | null>(null);
+    const [itemToDelete, setItemToDelete] = useState<{ id: string; type: 'user' | 'store' | 'unit' | 'packaging' | 'role' } | null>(null);
+
+    // State for Role Management
+    const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+    const [roleModalMode, setRoleModalMode] = useState<'add' | 'edit'>('add');
+    const [roleName, setRoleName] = useState("");
+    const [originalRoleName, setOriginalRoleName] = useState("");
 
 
     const sidebarRoutes = useMemo(() => {
@@ -187,7 +193,7 @@ export default function AdminPage() {
         toast({ title: "Success", description: "Store details updated." });
     };
 
-    const confirmDelete = (id: string, type: 'user' | 'store' | 'unit' | 'packaging') => {
+    const confirmDelete = (id: string, type: 'user' | 'store' | 'unit' | 'packaging' | 'role') => {
         setItemToDelete({ id, type });
         setIsDeleteConfirmOpen(true);
     };
@@ -212,9 +218,12 @@ export default function AdminPage() {
                 await deletePackagingType(id);
                 await fetchMasterData();
                 toast({ title: "Success", description: "Packaging type deleted." });
+            } else if (type === 'role') {
+                await deleteRole(id);
+                toast({ title: "Success", description: `Role "${id}" has been deleted.`});
             }
-        } catch (error) {
-            toast({ variant: "destructive", title: "Error", description: `Failed to delete ${type}.` });
+        } catch (error: any) {
+            toast({ variant: "destructive", title: "Error", description: error.message || `Failed to delete ${type}.` });
         } finally {
             setItemToDelete(null);
             setIsDeleteConfirmOpen(false);
@@ -241,7 +250,7 @@ export default function AdminPage() {
             name: formData.get("name") as string,
             email: formData.get("email") as string,
             loginId: formData.get("loginId") as string,
-            role: formData.get("role") as UserRole,
+            role: formData.get("role") as string,
             assignedStore: formData.get("assignedStore") as string || undefined,
             password: formData.get("password") as string,
             altMobile: formData.get("altMobile") as string || undefined,
@@ -262,7 +271,7 @@ export default function AdminPage() {
         }
     };
 
-    const handlePermissionChange = (role: UserRole, route: string, checked: boolean | 'indeterminate') => {
+    const handlePermissionChange = (role: string, route: string, checked: boolean | 'indeterminate') => {
         if (typeof checked !== 'boolean' || role === 'Admin') return;
         
         const newPermissions = { ...permissions };
@@ -305,6 +314,40 @@ export default function AdminPage() {
             }
         } else {
             toast({ variant: "destructive", title: "Error", description: "Please enter a name." });
+        }
+    };
+
+    const openAddRoleModal = () => {
+        setRoleModalMode('add');
+        setRoleName("");
+        setIsRoleModalOpen(true);
+    };
+
+    const openEditRoleModal = (role: string) => {
+        setRoleModalMode('edit');
+        setRoleName(role);
+        setOriginalRoleName(role);
+        setIsRoleModalOpen(true);
+    };
+
+    const handleRoleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        if (!roleName.trim()) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Role name cannot be empty.' });
+            return;
+        }
+
+        try {
+            if (roleModalMode === 'add') {
+                await addRole(roleName.trim());
+                toast({ title: 'Success', description: `Role "${roleName.trim()}" created.` });
+            } else {
+                await editRole(originalRoleName, roleName.trim());
+                toast({ title: 'Success', description: `Role "${originalRoleName}" renamed to "${roleName.trim()}".` });
+            }
+            setIsRoleModalOpen(false);
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Error', description: error.message });
         }
     };
 
@@ -429,6 +472,9 @@ export default function AdminPage() {
                             <TabsTrigger value="users"><Users className="md:hidden" /><span className="hidden md:inline">User Management</span></TabsTrigger>
                         </TooltipTrigger><TooltipContent>User Management</TooltipContent></Tooltip>
                         <Tooltip><TooltipTrigger asChild>
+                           <TabsTrigger value="roles"><KeyRound className="md:hidden" /><span className="hidden md:inline">Role Management</span></TabsTrigger>
+                        </TooltipTrigger><TooltipContent>Role Management</TooltipContent></Tooltip>
+                        <Tooltip><TooltipTrigger asChild>
                            <TabsTrigger value="permissions"><ShieldCheck className="md:hidden" /><span className="hidden md:inline">Permissions</span></TabsTrigger>
                         </TooltipTrigger><TooltipContent>Permissions</TooltipContent></Tooltip>
                          <Tooltip><TooltipTrigger asChild>
@@ -502,6 +548,40 @@ export default function AdminPage() {
                         </CardContent>
                     </Card>
                 </TabsContent>
+                <TabsContent value="roles">
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <div>
+                                <CardTitle>Role Management</CardTitle>
+                                <CardDescription>Define custom user roles for your application.</CardDescription>
+                            </div>
+                           <Button onClick={openAddRoleModal} size="sm"><PlusSquare className="mr-2 h-4 w-4" /> Add Role</Button>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Role Name</TableHead>
+                                        <TableHead>Assigned Users</TableHead>
+                                        <TableHead><span className="sr-only">Actions</span></TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {Object.keys(permissions).map((role) => (
+                                    <TableRow key={role}>
+                                        <TableCell className="font-medium">{role}</TableCell>
+                                        <TableCell>{users.filter(u => u.role === role).length}</TableCell>
+                                        <TableCell className="text-right">
+                                             <Button variant="ghost" size="sm" onClick={() => openEditRoleModal(role)} disabled={role === 'Admin'}>Edit</Button>
+                                             <Button variant="ghost" size="icon" onClick={() => confirmDelete(role, 'role')} disabled={role === 'Admin' || users.some(u => u.role === role)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                        </TableCell>
+                                    </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
                 <TabsContent value="permissions">
                     <Card>
                         <CardHeader>
@@ -509,32 +589,33 @@ export default function AdminPage() {
                             <CardDescription>Define which pages each role can access. Changes are saved automatically.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                {(Object.keys(permissions) as UserRole[]).map(role => (
-                                    <div key={role}>
-                                        <h3 className="font-semibold text-lg mb-4 flex items-center">
-                                            <ShieldCheck className="mr-2 h-5 w-5" /> {role}
-                                        </h3>
-                                        <div className="space-y-3">
-                                            {allAppRoutes.map(route => (
-                                                <div key={`${role}-${route.path}`} className="flex items-center space-x-2">
-                                                    <Checkbox 
-                                                        id={`${role}-${route.path}`}
-                                                        checked={role === 'Admin' ? true : permissions[role].includes(route.path)}
-                                                        onCheckedChange={(checked) => handlePermissionChange(role, route.path, checked)}
-                                                        disabled={role === 'Admin'}
-                                                    />
-                                                    <label
-                                                        htmlFor={`${role}-${route.path}`}
-                                                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                                    >
-                                                        {route.name}
-                                                    </label>
-                                                </div>
+                            <div className="overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="w-[250px]">Page / Feature</TableHead>
+                                            {Object.keys(permissions).map(role => (
+                                                <TableHead key={role} className="text-center">{role}</TableHead>
                                             ))}
-                                        </div>
-                                    </div>
-                                ))}
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {allAppRoutes.map(route => (
+                                            <TableRow key={route.path}>
+                                                <TableCell className="font-medium">{route.name}</TableCell>
+                                                {Object.keys(permissions).map(role => (
+                                                    <TableCell key={`${role}-${route.path}`} className="text-center">
+                                                        <Checkbox 
+                                                            checked={role === 'Admin' || permissions[role]?.includes(route.path)}
+                                                            onCheckedChange={(checked) => handlePermissionChange(role, route.path, checked)}
+                                                            disabled={role === 'Admin'}
+                                                        />
+                                                    </TableCell>
+                                                ))}
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
                             </div>
                         </CardContent>
                     </Card>
@@ -685,9 +766,9 @@ export default function AdminPage() {
                                                 <SelectValue placeholder="Select a role" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="Pharmacist">Pharmacist</SelectItem>
-                                                <SelectItem value="Supervisor">Supervisor</SelectItem>
-                                                <SelectItem value="Admin">Admin</SelectItem>
+                                                 {Object.keys(permissions).map(role => (
+                                                    <SelectItem key={role} value={role}>{role}</SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -828,6 +909,26 @@ export default function AdminPage() {
                     </form>
                 </DialogContent>
             </Dialog>
+            <Dialog open={isRoleModalOpen} onOpenChange={setIsRoleModalOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <form onSubmit={handleRoleSubmit}>
+                        <DialogHeader>
+                            <DialogTitle>{roleModalMode === 'add' ? 'Add New Role' : 'Edit Role'}</DialogTitle>
+                            <DialogDescription>{roleModalMode === 'add' ? 'Enter the name for the new role.' : 'Enter the new name for this role.'}</DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="role-name">Role Name</Label>
+                                <Input id="role-name" value={roleName} onChange={(e) => setRoleName(e.target.value)} required />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
+                            <Button type="submit">{roleModalMode === 'add' ? 'Add Role' : 'Save Changes'}</Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
             <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
@@ -845,3 +946,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    

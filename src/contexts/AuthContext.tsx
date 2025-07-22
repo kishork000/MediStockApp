@@ -54,6 +54,9 @@ interface AuthContextType {
     hasPermission: (path: string) => boolean;
     createUser: (newUser: NewUser) => Promise<void>;
     deleteUser: (userId: string) => Promise<void>;
+    addRole: (roleName: string) => Promise<void>;
+    editRole: (oldRoleName: string, newRoleName: string) => Promise<void>;
+    deleteRole: (roleName: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -106,6 +109,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return userPermissions.some(p => p.startsWith('/inventory/'));
         }
         
+        // Allow access to admin sub-pages if /admin is permitted
+        if (path.startsWith('/admin/') && userPermissions.includes('/admin')) {
+            return true;
+        }
+
         return userPermissions.includes(path);
 
     }, [user, permissions]);
@@ -180,8 +188,54 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
          localStorage.setItem('medi-stock-users', JSON.stringify(updatedUsers));
     };
 
+    const addRole = async (roleName: string) => {
+        if (permissions[roleName]) {
+            throw new Error(`Role "${roleName}" already exists.`);
+        }
+        const newPermissions = { ...permissions, [roleName]: [] };
+        setPermissions(newPermissions);
+    };
 
-    const value = { user, users: usersState, login, logout, loading, permissions, setPermissions, hasPermission, createUser, deleteUser };
+    const editRole = async (oldRoleName: string, newRoleName: string) => {
+        if (oldRoleName === 'Admin') {
+            throw new Error("Cannot rename the Admin role.");
+        }
+        if (permissions[newRoleName] && oldRoleName !== newRoleName) {
+            throw new Error(`Role "${newRoleName}" already exists.`);
+        }
+
+        const newPermissions = { ...permissions };
+        newPermissions[newRoleName] = newPermissions[oldRoleName];
+        delete newPermissions[oldRoleName];
+        setPermissions(newPermissions);
+
+        const updatedUsers = usersState.map(u => 
+            u.role === oldRoleName ? { ...u, role: newRoleName } : u
+        );
+        setUsersState(updatedUsers);
+        localStorage.setItem('medi-stock-users', JSON.stringify(updatedUsers));
+
+        if (user?.role === oldRoleName) {
+            const updatedCurrentUser = { ...user, role: newRoleName };
+            setUser(updatedCurrentUser);
+            localStorage.setItem('medi-stock-user', JSON.stringify(updatedCurrentUser));
+        }
+    };
+
+    const deleteRole = async (roleName: string) => {
+        if (roleName === 'Admin') {
+            throw new Error("Cannot delete the Admin role.");
+        }
+        if (usersState.some(u => u.role === roleName)) {
+            throw new Error("Cannot delete role as it is assigned to one or more users.");
+        }
+        const newPermissions = { ...permissions };
+        delete newPermissions[roleName];
+        setPermissions(newPermissions);
+    };
+
+
+    const value = { user, users: usersState, login, logout, loading, permissions, setPermissions, hasPermission, createUser, deleteUser, addRole, editRole, deleteRole };
 
     return (
         <AuthContext.Provider value={value}>
@@ -197,3 +251,5 @@ export const useAuth = (): AuthContextType => {
     }
     return context;
 };
+
+    
