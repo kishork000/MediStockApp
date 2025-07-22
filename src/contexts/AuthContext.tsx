@@ -16,6 +16,13 @@ const mockUserDetails: Omit<User, 'email'>[] = [
     { name: "Pharmacist Two", role: "Pharmacist" as UserRole, assignedStore: "STR003" },
 ];
 
+const userRoleMapping: { [emailPrefix: string]: Omit<User, 'email'> } = {
+    'admin': { name: "Admin User", role: "Admin", assignedStore: "STR001" },
+    'pharmacist1': { name: "Pharmacist One", role: "Pharmacist", assignedStore: "STR002" },
+    'pharmacist2': { name: "Pharmacist Two", role: "Pharmacist", assignedStore: "STR003" },
+    'supervisor1': { name: "Supervisor One", role: "Supervisor" },
+};
+
 
 const initialPermissions: RolePermissions = {
     Admin: allAppRoutes.map(r => r.path), // Admin has all permissions
@@ -48,7 +55,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (firebaseUser) {
                 // In a real app, you'd fetch user role & details from your Firestore database here
                 // For this project, we'll map the firebase email to our mock user details
-                const userDetails = mockUserDetails.find(u => u.name.toLowerCase().replace(' ', '') === firebaseUser.email?.split('@')[0]);
+                const emailPrefix = firebaseUser.email?.split('@')[0];
+                const userDetails = emailPrefix ? userRoleMapping[emailPrefix] : undefined;
 
                 if (userDetails) {
                     const appUser: User = {
@@ -57,6 +65,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     };
                     setUser(appUser);
                     localStorage.setItem('medi-stock-user', JSON.stringify(appUser));
+                } else {
+                    // If user is authenticated with Firebase but not in our mapping, treat as logged out
+                    setUser(null);
+                    localStorage.removeItem('medi-stock-user');
                 }
             } else {
                 setUser(null);
