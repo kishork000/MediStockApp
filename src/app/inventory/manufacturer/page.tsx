@@ -39,6 +39,7 @@ const defaultFormState: Omit<Manufacturer, 'id'> = {
     phone: "",
     address: "",
     gstin: "",
+    cin: "",
 };
 
 
@@ -362,6 +363,10 @@ export default function ManufacturerMasterPage() {
                             <Label htmlFor="name">Manufacturer Name</Label>
                             <Input id="name" name="name" value={formState.name} onChange={handleFormChange} placeholder="e.g., Cipla Inc." required />
                         </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="cin">CIN</Label>
+                            <Input id="cin" name="cin" value={formState.cin} onChange={handleFormChange} placeholder="Corporate Identification Number" />
+                        </div>
                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="contactPerson">Contact Person</Label>
@@ -402,6 +407,10 @@ export default function ManufacturerMasterPage() {
                         <div className="grid grid-cols-[120px_1fr] items-center gap-2">
                            <span className="font-semibold text-muted-foreground">GSTIN</span>
                            <span>{selectedManufacturer.gstin}</span>
+                        </div>
+                        <div className="grid grid-cols-[120px_1fr] items-center gap-2">
+                           <span className="font-semibold text-muted-foreground">CIN</span>
+                           <span>{selectedManufacturer.cin || 'N/A'}</span>
                         </div>
                         <div className="grid grid-cols-[120px_1fr] items-center gap-2">
                            <span className="font-semibold text-muted-foreground">Contact Person</span>

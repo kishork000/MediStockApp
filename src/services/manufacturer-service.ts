@@ -10,6 +10,7 @@ export interface Manufacturer {
     phone: string;
     address: string;
     gstin: string;
+    cin?: string;
 }
 
 const manufacturerCollectionRef = collection(db, 'manufacturers');

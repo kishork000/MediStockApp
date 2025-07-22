@@ -48,9 +48,12 @@ interface User {
 
 interface Store {
     id: string;
+    storeCode: string;
     name: string;
     address: string;
     gstin: string;
+    cin?: string;
+    disclaimer?: string;
 }
 
 const initialUsers: User[] = [
@@ -60,9 +63,9 @@ const initialUsers: User[] = [
 ];
 
 const initialStores: Store[] = [
-    { id: "STR001", name: "Main Warehouse", address: "456 Industrial Ave, Metro City", gstin: "29BBBBB1111B1Z6"},
-    { id: "STR002", name: "Downtown Pharmacy", address: "123 Main St, Wellness City", gstin: "22AAAAA0000A1Z5"},
-    { id: "STR003", name: "Uptown Health", address: "789 Cure Blvd, Healthfield", gstin: "23CCCCC0000C1Z7"},
+    { id: "STR001", storeCode: "WH01", name: "Main Warehouse", address: "456 Industrial Ave, Metro City", gstin: "29BBBBB1111B1Z6", cin: "U12345MH2024PTC123456" },
+    { id: "STR002", storeCode: "DP01", name: "Downtown Pharmacy", address: "123 Main St, Wellness City", gstin: "22AAAAA0000A1Z5", cin: "U12345MH2024PTC123457", disclaimer: "All sales are final." },
+    { id: "STR003", storeCode: "UH01", name: "Uptown Health", address: "789 Cure Blvd, Healthfield", gstin: "23CCCCC0000C1Z7", cin: "U12345MH2024PTC123458" },
 ];
 
 
@@ -75,6 +78,7 @@ export default function AdminPage() {
     const [companyName, setCompanyName] = useState("MediStock Pharmacy");
     const [companyAddress, setCompanyAddress] = useState("123 Health St, Wellness City, State 12345");
     const [gstin, setGstin] = useState("22AAAAA0000A1Z5");
+    const [cin, setCin] = useState("U12345MH2024PLC123456");
     const [stores, setStores] = useState<Store[]>(initialStores);
     const [isAddStoreModalOpen, setIsAddStoreModalOpen] = useState(false);
     
@@ -130,6 +134,7 @@ export default function AdminPage() {
         setCompanyName(formData.get("company-name") as string);
         setCompanyAddress(formData.get("company-address") as string);
         setGstin(formData.get("gstin") as string);
+        setCin(formData.get("cin") as string);
         toast({ title: "Success", description: "Settings saved successfully." });
     };
     
@@ -138,9 +143,12 @@ export default function AdminPage() {
         const formData = new FormData(e.currentTarget);
         const newStore: Store = {
             id: `STR${(stores.length + 1).toString().padStart(3, '0')}`,
+            storeCode: formData.get("store-code") as string,
             name: formData.get("store-name") as string,
             address: formData.get("store-address") as string,
             gstin: formData.get("store-gstin") as string,
+            cin: formData.get("store-cin") as string,
+            disclaimer: formData.get("disclaimer") as string,
         };
         setStores([...stores, newStore]);
         setIsAddStoreModalOpen(false);
@@ -487,6 +495,7 @@ export default function AdminPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
+                                        <TableHead>Store Code</TableHead>
                                         <TableHead>Store Name</TableHead>
                                         <TableHead className="hidden sm:table-cell">Address</TableHead>
                                         <TableHead className="hidden md:table-cell">GSTIN</TableHead>
@@ -498,6 +507,7 @@ export default function AdminPage() {
                                 <TableBody>
                                     {stores.map((store) => (
                                         <TableRow key={store.id}>
+                                            <TableCell className="font-medium">{store.storeCode}</TableCell>
                                             <TableCell className="font-medium">{store.name}</TableCell>
                                             <TableCell className="hidden sm:table-cell">{store.address}</TableCell>
                                             <TableCell className="hidden md:table-cell">{store.gstin}</TableCell>
@@ -634,9 +644,15 @@ export default function AdminPage() {
                                     <Label htmlFor="company-address">Company Address</Label>
                                     <Textarea id="company-address" name="company-address" defaultValue={companyAddress} />
                                 </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="gstin">GSTIN</Label>
-                                    <Input id="gstin" name="gstin" defaultValue={gstin} />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="gstin">GSTIN</Label>
+                                        <Input id="gstin" name="gstin" defaultValue={gstin} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="cin">CIN</Label>
+                                        <Input id="cin" name="cin" defaultValue={cin} />
+                                    </div>
                                 </div>
                                 <Button type="submit">Save Settings</Button>
                             </form>
@@ -658,17 +674,33 @@ export default function AdminPage() {
                       </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
-                      <div className="space-y-2">
-                          <Label htmlFor="store-name">Store Name</Label>
-                          <Input id="store-name" name="store-name" placeholder="e.g., Downtown Pharmacy" required />
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="store-code">Store Code</Label>
+                            <Input id="store-code" name="store-code" placeholder="e.g., DP01" required />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="store-name">Store Name</Label>
+                            <Input id="store-name" name="store-name" placeholder="e.g., Downtown Pharmacy" required />
+                        </div>
                       </div>
                       <div className="space-y-2">
                           <Label htmlFor="store-address">Address</Label>
                           <Textarea id="store-address" name="store-address" placeholder="123 Main St..." required />
                       </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="store-gstin">GSTIN</Label>
+                            <Input id="store-gstin" name="store-gstin" placeholder="Store's GST Number" required />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="store-cin">CIN</Label>
+                            <Input id="store-cin" name="store-cin" placeholder="Store's CIN" />
+                        </div>
+                      </div>
                       <div className="space-y-2">
-                          <Label htmlFor="store-gstin">GSTIN</Label>
-                          <Input id="store-gstin" name="store-gstin" placeholder="Store's GST Number" required />
+                            <Label htmlFor="disclaimer">Disclaimer</Label>
+                            <Textarea id="disclaimer" name="disclaimer" placeholder="e.g., All sales are final." />
                       </div>
                   </div>
                   <DialogFooter>
