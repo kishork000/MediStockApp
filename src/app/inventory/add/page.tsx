@@ -33,15 +33,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { getMedicines, Medicine } from "@/services/medicine-service";
 import { getManufacturers, Manufacturer } from "@/services/manufacturer-service";
 import { addStockToInventory } from "@/services/inventory-service";
+import { recordPurchase, PurchaseItem } from "@/services/purchase-service";
 
-interface PurchaseItem {
-    id: number;
-    medicineId: string;
-    medicineName: string;
-    quantity: number;
-    pricePerUnit: number;
-    expiryDate: string;
-}
 
 export default function AddStockPage() {
     const { user, logout, loading, hasPermission } = useAuth();
@@ -52,7 +45,7 @@ export default function AddStockPage() {
     const [purchaseItems, setPurchaseItems] = useState<PurchaseItem[]>([]);
     const [invoiceNumber, setInvoiceNumber] = useState("");
     const [invoiceDate, setInvoiceDate] = useState<Date | undefined>(new Date());
-    const [manufacturer, setManufacturer] = useState("");
+    const [manufacturerId, setManufacturerId] = useState("");
     const [destination, setDestination] = useState("warehouse");
 
     const [medicineMaster, setMedicineMaster] = useState<Medicine[]>([]);
@@ -89,7 +82,7 @@ export default function AddStockPage() {
     
     const handleAddItem = () => {
         const newItem: PurchaseItem = {
-            id: Date.now(),
+            id: Date.now().toString(),
             medicineId: "",
             medicineName: "",
             quantity: 1,
@@ -99,13 +92,13 @@ export default function AddStockPage() {
         setPurchaseItems([...purchaseItems, newItem]);
     };
 
-    const handleItemChange = (id: number, field: keyof PurchaseItem, value: string | number) => {
+    const handleItemChange = (id: string, field: keyof PurchaseItem, value: string | number) => {
         setPurchaseItems(purchaseItems.map(item =>
             item.id === id ? { ...item, [field]: value } : item
         ));
     };
 
-    const handleMedicineSelect = (id: number, medicineId: string) => {
+    const handleMedicineSelect = (id: string, medicineId: string) => {
         const selectedMedicine = medicineMaster.find(m => m.id === medicineId);
         if (!selectedMedicine) return;
 
@@ -119,7 +112,7 @@ export default function AddStockPage() {
         ));
     };
 
-    const handleRemoveItem = (id: number) => {
+    const handleRemoveItem = (id: string) => {
         setPurchaseItems(purchaseItems.filter(item => item.id !== id));
     };
 
@@ -137,7 +130,7 @@ export default function AddStockPage() {
             toast({ variant: 'destructive', title: 'Error', description: 'Please enter a purchase invoice date.' });
             return;
         }
-        if (!manufacturer) {
+        if (!manufacturerId) {
             toast({ variant: 'destructive', title: 'Error', description: 'Please select a manufacturer.' });
             return;
         }
@@ -161,10 +154,21 @@ export default function AddStockPage() {
             
             await addStockToInventory(destination, stockToAdd);
 
-            toast({ title: 'Success', description: 'Stock added to inventory successfully. Reports will be updated to reflect the backdated entry if applicable.' });
+            const manufacturer = manufacturerMaster.find(m => m.id === manufacturerId);
+
+            await recordPurchase({
+                invoiceId: invoiceNumber,
+                date: invoiceDate.toISOString(),
+                manufacturerId: manufacturerId,
+                manufacturerName: manufacturer?.name || 'N/A',
+                items: purchaseItems,
+                totalAmount: totalInvoiceValue,
+            });
+
+            toast({ title: 'Success', description: 'Stock added and purchase recorded successfully.' });
             setPurchaseItems([]);
             setInvoiceNumber("");
-            setManufacturer("");
+            setManufacturerId("");
             setInvoiceDate(new Date());
 
         } catch (error) {
@@ -341,13 +345,13 @@ export default function AddStockPage() {
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="manufacturer">Manufacturer</Label>
-                                        <Select value={manufacturer} onValueChange={setManufacturer} required>
+                                        <Select value={manufacturerId} onValueChange={setManufacturerId} required>
                                             <SelectTrigger id="manufacturer">
                                                 <SelectValue placeholder="Select Manufacturer" />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {manufacturerMaster.map(man => (
-                                                    <SelectItem key={man.id} value={man.name}>{man.name}</SelectItem>
+                                                    <SelectItem key={man.id} value={man.id}>{man.name}</SelectItem>
                                                 ))}
                                             </SelectContent>
                                         </Select>

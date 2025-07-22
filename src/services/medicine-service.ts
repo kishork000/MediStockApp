@@ -6,6 +6,8 @@ export interface Medicine {
     id: string;
     name: string;
     hsnCode: string;
+    manufacturerId: string;
+    manufacturerName: string;
     purchasePrice: number;
     sellingPrice: number;
     gstSlab: string;

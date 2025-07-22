@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useMemo, useEffect, useState } from "react";
+import { useMemo, useEffect, useState, useCallback } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -26,7 +26,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Transfer, getTransfers } from "@/services/transfer-service";
 import { InventoryItem, getAvailableStockForLocation } from "@/services/inventory-service";
+import { Medicine, getMedicines } from "@/services/medicine-service";
+import { Manufacturer, getManufacturers } from "@/services/manufacturer-service";
+import { Purchase, getPurchases } from "@/services/purchase-service";
 import { useToast } from "@/hooks/use-toast";
+import { DateRangePicker } from "@/components/dashboard/DateRangePicker";
+import { DateRange } from "react-day-picker";
+import { format, parseISO, isWithinInterval } from "date-fns";
+
 
 const allStores = [
     { id: "all", name: "All Stores" },
@@ -41,9 +48,19 @@ export default function StockReportsPage() {
     const router = useRouter();
     const pathname = usePathname();
     const { toast } = useToast();
-    const [selectedStore, setSelectedStore] = useState("all");
+    
+    // Data states
     const [transfers, setTransfers] = useState<Transfer[]>([]);
-    const [stockLevels, setStockLevels] = useState<InventoryItem[]>([]);
+    const [stockLevels, setStockLevels] = useState<any[]>([]);
+    const [purchases, setPurchases] = useState<Purchase[]>([]);
+    const [medicines, setMedicines] = useState<Medicine[]>([]);
+    const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
+
+    // Filter states
+    const [selectedStore, setSelectedStore] = useState("all");
+    const [selectedManufacturer, setSelectedManufacturer] = useState("all");
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+
     const [dataLoading, setDataLoading] = useState(true);
 
      const availableStores = useMemo(() => {
@@ -54,25 +71,32 @@ export default function StockReportsPage() {
         return [];
     }, [user]);
 
-    const fetchReportsData = async () => {
+    const fetchReportsData = useCallback(async () => {
         setDataLoading(true);
         try {
-            const [transfersData, downtownStock, uptownStock, warehouseStock] = await Promise.all([
+            const [transfersData, downtownStock, uptownStock, warehouseStock, medicinesData, manufacturersData, purchasesData] = await Promise.all([
                 getTransfers(),
                 getAvailableStockForLocation("STR002"),
                 getAvailableStockForLocation("STR003"),
                 getAvailableStockForLocation("warehouse"),
+                getMedicines(),
+                getManufacturers(),
+                getPurchases(),
             ]);
             setTransfers(transfersData);
+            setMedicines(medicinesData);
+            setManufacturers(manufacturersData);
+            setPurchases(purchasesData);
 
             const allStockItems = new Map<string, any>();
-
-            const processStock = (stock: InventoryItem[], locationKey: string) => {
+             const processStock = (stock: InventoryItem[], locationKey: string) => {
                 stock.forEach(item => {
+                    const medicineInfo = medicinesData.find(m => m.id === item.medicineId);
                     if (!allStockItems.has(item.medicineId)) {
                         allStockItems.set(item.medicineId, {
                             medicineId: item.medicineId,
                             medicineName: item.medicineName,
+                            manufacturerId: medicineInfo?.manufacturerId,
                             warehouse: 0,
                             downtown: 0,
                             uptown: 0,
@@ -91,61 +115,62 @@ export default function StockReportsPage() {
                 total: item.warehouse + item.downtown + item.uptown,
             }));
 
-            setStockLevels(combinedStock as any);
+            setStockLevels(combinedStock);
 
         } catch (error) {
+            console.error(error)
             toast({ variant: 'destructive', title: 'Error', description: 'Failed to load report data.' });
         }
         setDataLoading(false);
-    }
+    }, [toast]);
 
     useEffect(() => {
         if(user) {
             fetchReportsData();
         }
-    }, [user, toast]);
+    }, [user, fetchReportsData]);
 
-    useEffect(() => {
-        if (user?.role === 'Pharmacist' && availableStores.length > 0) {
-            setSelectedStore(availableStores[0].id);
-        } else if (user?.role === 'Admin') {
-            setSelectedStore('all');
+    // Apply filters
+    const filteredStockLevels = useMemo(() => {
+        let filtered = [...stockLevels];
+
+        if (selectedStore !== 'all') {
+             const storeKey = allStores.find(s => s.id === selectedStore)?.name.toLowerCase().replace(/ /g, '') === 'downtownpharmacy' ? 'downtown' : allStores.find(s => s.id === selectedStore)?.name.toLowerCase() === 'uptownhealth' ? 'uptown' : 'warehouse';
+             filtered = filtered.filter(item => item[storeKey] > 0);
         }
-    }, [user, availableStores]);
-
+        
+        if (selectedManufacturer !== 'all') {
+            filtered = filtered.filter(item => item.manufacturerId === selectedManufacturer);
+        }
+        
+        return filtered;
+    }, [selectedStore, selectedManufacturer, stockLevels]);
 
     const filteredTransfers = useMemo(() => {
-        if (selectedStore === 'all') return transfers;
-        return transfers.filter(t => t.from === selectedStore || t.to === selectedStore);
-    }, [selectedStore, transfers]);
+        let filtered = [...transfers];
+        if (selectedStore !== 'all') {
+            filtered = filtered.filter(t => t.from === selectedStore || t.to === selectedStore);
+        }
+        if (dateRange?.from && dateRange.to) {
+            filtered = filtered.filter(t => isWithinInterval(parseISO(t.date), { start: dateRange.from!, end: dateRange.to! }));
+        }
+        return filtered;
+    }, [selectedStore, dateRange, transfers]);
 
-    const filteredStockLevels = useMemo(() => {
-        if (selectedStore === 'all' || selectedStore === 'warehouse') return stockLevels;
-        const storeKey = allStores.find(s => s.id === selectedStore)?.name.toLowerCase().replace(' ', '') === 'downtownpharmacy' ? 'downtown' : 'uptown';
-        
-        return stockLevels
-            .filter(item => item[storeKey] > 0)
-            .map(item => ({
-                medicineId: item.medicineId,
-                medicineName: item.medicineName,
-                storeStock: item[storeKey],
-                warehouse: item.warehouse,
-                total: item[storeKey] + item.warehouse,
-            }));
-    }, [selectedStore, stockLevels]);
-    
-    const stockLevelStoreName = useMemo(() => {
-        return allStores.find(s => s.id === selectedStore)?.name || "Store Stock";
-    }, [selectedStore]);
+    const filteredPurchases = useMemo(() => {
+        let filtered = [...purchases];
+         if (selectedManufacturer !== 'all') {
+            filtered = filtered.filter(p => p.manufacturerId === selectedManufacturer);
+        }
+        if (dateRange?.from && dateRange.to) {
+            filtered = filtered.filter(p => isWithinInterval(parseISO(p.date), { start: dateRange.from!, end: dateRange.to! }));
+        }
+        return filtered;
+    }, [selectedManufacturer, dateRange, purchases]);
 
 
-    const sidebarRoutes = useMemo(() => {
-        return allAppRoutes.filter(route => route.path !== '/');
-    }, []);
-    
-    const stockManagementRoutes = useMemo(() => {
-        return allAppRoutes.filter(route => route.path.startsWith('/inventory/') && route.inSidebar && hasPermission(route.path));
-    }, [hasPermission]);
+    const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
+    const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && route.inSidebar && hasPermission(route.path)), [hasPermission]);
 
      useEffect(() => {
         if (!loading && !user) {
@@ -263,20 +288,6 @@ export default function StockReportsPage() {
            <div className="flex w-full items-center justify-between">
               <h1 className="text-xl font-semibold">Inventory Reports</h1>
                <div className="flex items-center gap-2">
-                    <Select 
-                        value={selectedStore} 
-                        onValueChange={setSelectedStore}
-                        disabled={user?.role === 'Pharmacist' && availableStores.length === 1}
-                    >
-                        <SelectTrigger className="w-full sm:w-[200px]">
-                            <SelectValue placeholder="Select Store" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {availableStores.map(store => (
-                                <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
                     <ThemeToggle />
                </div>
            </div>
@@ -286,34 +297,37 @@ export default function StockReportsPage() {
                 <TabsList>
                     <TabsTrigger value="levels">Overall Stock Levels</TabsTrigger>
                     <TabsTrigger value="transfers">Inter-Store Transfers</TabsTrigger>
-                    <TabsTrigger value="purchase">Purchase & Returns</TabsTrigger>
+                    <TabsTrigger value="purchase">Purchase History</TabsTrigger>
                 </TabsList>
                 <TabsContent value="levels">
                      <Card>
-                        <CardHeader className="flex flex-row items-center justify-between">
-                            <div>
-                                <CardTitle>Overall Stock Levels</CardTitle>
-                                <CardDescription>Aggregated stock counts across locations.</CardDescription>
-                            </div>
-                            <Button size="sm" variant="outline"><Download className="mr-2" /> Download Report</Button>
+                        <CardHeader>
+                            <CardTitle>Overall Stock Levels</CardTitle>
+                             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                                <CardDescription>Aggregated stock counts across locations. Filter by store or manufacturer.</CardDescription>
+                                <div className="flex items-center gap-2">
+                                     <Select value={selectedStore} onValueChange={setSelectedStore} disabled={user?.role === 'Pharmacist' && availableStores.length === 1}>
+                                        <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Select Store" /></SelectTrigger>
+                                        <SelectContent>{availableStores.map(store => (<SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>))}</SelectContent>
+                                    </Select>
+                                     <Select value={selectedManufacturer} onValueChange={setSelectedManufacturer}>
+                                        <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Select Manufacturer" /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Manufacturers</SelectItem>
+                                            {manufacturers.map(m => (<SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                             </div>
                         </CardHeader>
                         <CardContent>
                             <Table>
                                 <TableHeader>
                                      <TableRow>
                                         <TableHead>Medicine</TableHead>
-                                        {selectedStore === 'all' || selectedStore === 'warehouse' ? (
-                                            <>
-                                                <TableHead className="text-right">Warehouse</TableHead>
-                                                <TableHead className="text-right">Downtown Pharmacy</TableHead>
-                                                <TableHead className="text-right">Uptown Health</TableHead>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <TableHead className="text-right">Warehouse</TableHead>
-                                                <TableHead className="text-right">{stockLevelStoreName}</TableHead>
-                                            </>
-                                        )}
+                                        <TableHead className="text-right">Warehouse</TableHead>
+                                        <TableHead className="text-right">Downtown</TableHead>
+                                        <TableHead className="text-right">Uptown</TableHead>
                                         <TableHead className="text-right font-bold">Total Stock</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -322,22 +336,13 @@ export default function StockReportsPage() {
                                      : filteredStockLevels.length > 0 ? filteredStockLevels.map((item: any) => (
                                         <TableRow key={item.medicineId}>
                                             <TableCell className="font-medium">{item.medicineName}</TableCell>
-                                            {selectedStore === 'all' || selectedStore === 'warehouse' ? (
-                                                <>
-                                                    <TableCell className="text-right">{item.warehouse}</TableCell>
-                                                    <TableCell className="text-right">{item.downtown}</TableCell>
-                                                    <TableCell className="text-right">{item.uptown}</TableCell>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <TableCell className="text-right">{item.warehouse}</TableCell>
-                                                    <TableCell className="text-right">{item.storeStock}</TableCell>
-                                                </>
-                                            )}
+                                            <TableCell className="text-right">{item.warehouse}</TableCell>
+                                            <TableCell className="text-right">{item.downtown}</TableCell>
+                                            <TableCell className="text-right">{item.uptown}</TableCell>
                                             <TableCell className="text-right font-bold">{item.total}</TableCell>
                                         </TableRow>
                                     )) : (
-                                      <TableRow><TableCell colSpan={5} className="h-24 text-center">No data to display.</TableCell></TableRow>
+                                      <TableRow><TableCell colSpan={5} className="h-24 text-center">No data to display for the selected filters.</TableCell></TableRow>
                                     )}
                                 </TableBody>
                             </Table>
@@ -346,12 +351,18 @@ export default function StockReportsPage() {
                 </TabsContent>
                 <TabsContent value="transfers">
                     <Card>
-                        <CardHeader className="flex flex-row items-center justify-between">
-                            <div>
-                                <CardTitle>Transfer &amp; Return Report</CardTitle>
+                        <CardHeader>
+                            <CardTitle>Transfer &amp; Return Report</CardTitle>
+                             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                                 <CardDescription>History of all stock movements between warehouse and stores.</CardDescription>
+                                <div className="flex items-center gap-2">
+                                     <Select value={selectedStore} onValueChange={setSelectedStore} disabled={user?.role === 'Pharmacist' && availableStores.length === 1}>
+                                        <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Select Store" /></SelectTrigger>
+                                        <SelectContent>{availableStores.map(store => (<SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>))}</SelectContent>
+                                    </Select>
+                                     <DateRangePicker onUpdate={(values) => setDateRange(values.range)} />
+                                </div>
                             </div>
-                            <Button size="sm" variant="outline"><Download className="mr-2" /> Download Report</Button>
                         </CardHeader>
                         <CardContent>
                             <Table>
@@ -372,14 +383,14 @@ export default function StockReportsPage() {
                                             <TableCell className="font-medium">{report.id}</TableCell>
                                             <TableCell>{allStores.find(s => s.id === report.from)?.name}</TableCell>
                                             <TableCell>{allStores.find(s => s.id === report.to)?.name}</TableCell>
-                                            <TableCell>{new Date(report.date).toLocaleDateString()}</TableCell>
+                                            <TableCell>{format(parseISO(report.date), 'dd MMM, yyyy')}</TableCell>
                                             <TableCell className="text-center">{report.items.length}</TableCell>
                                             <TableCell className="text-right">
                                                 <Badge>{report.status}</Badge>
                                             </TableCell>
                                         </TableRow>
                                     )) : (
-                                      <TableRow><TableCell colSpan={6} className="h-24 text-center">No transfer data to display.</TableCell></TableRow>
+                                      <TableRow><TableCell colSpan={6} className="h-24 text-center">No transfer data to display for the selected filters.</TableCell></TableRow>
                                     )}
                                 </TableBody>
                             </Table>
@@ -388,26 +399,46 @@ export default function StockReportsPage() {
                 </TabsContent>
                 <TabsContent value="purchase">
                     <Card>
-                        <CardHeader className="flex flex-row items-center justify-between">
-                            <div>
-                                <CardTitle>Purchase &amp; Manufacturer Return History</CardTitle>
-                                <CardDescription>History of all stock purchases and returns to manufacturers.</CardDescription>
-                            </div>
-                            <Button size="sm" variant="outline"><Download className="mr-2" /> Download Report</Button>
+                         <CardHeader>
+                            <CardTitle>Purchase History</CardTitle>
+                            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                               <CardDescription>History of all stock purchases from manufacturers.</CardDescription>
+                               <div className="flex items-center gap-2">
+                                     <Select value={selectedManufacturer} onValueChange={setSelectedManufacturer}>
+                                        <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Select Manufacturer" /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Manufacturers</SelectItem>
+                                            {manufacturers.map(m => (<SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>))}
+                                        </SelectContent>
+                                    </Select>
+                                     <DateRangePicker onUpdate={(values) => setDateRange(values.range)} />
+                               </div>
+                           </div>
                         </CardHeader>
                         <CardContent>
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>ID</TableHead>
+                                        <TableHead>Invoice ID</TableHead>
                                         <TableHead>Date</TableHead>
-                                        <TableHead>Type</TableHead>
+                                        <TableHead>Manufacturer</TableHead>
                                         <TableHead className="text-center">No. of Items</TableHead>
-                                        <TableHead className="text-right">Amount</TableHead>
+                                        <TableHead className="text-right">Amount (₹)</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                      <TableRow><TableCell colSpan={5} className="h-24 text-center">No data to display.</TableCell></TableRow>
+                                    {dataLoading ? (Array.from({length:5}).map((_, i) => <TableRow key={i}><TableCell colSpan={5}><div className="h-4 bg-muted rounded-full w-full animate-pulse"/></TableCell></TableRow>))
+                                    : filteredPurchases.length > 0 ? filteredPurchases.map((purchase) => (
+                                        <TableRow key={purchase.invoiceId}>
+                                            <TableCell>{purchase.invoiceId}</TableCell>
+                                            <TableCell>{format(parseISO(purchase.date), 'dd MMM, yyyy')}</TableCell>
+                                            <TableCell>{purchase.manufacturerName}</TableCell>
+                                            <TableCell className="text-center">{purchase.items.length}</TableCell>
+                                            <TableCell className="text-right">{purchase.totalAmount.toFixed(2)}</TableCell>
+                                        </TableRow>
+                                    )) : (
+                                      <TableRow><TableCell colSpan={5} className="h-24 text-center">No purchase data to display for the selected filters.</TableCell></TableRow>
+                                    )}
                                 </TableBody>
                             </Table>
                         </CardContent>

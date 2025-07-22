@@ -28,6 +28,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Medicine, getMedicines, addMedicine, updateMedicine, deleteMedicine } from "@/services/medicine-service";
+import { Manufacturer, getManufacturers } from "@/services/manufacturer-service";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UnitType, getUnitTypes } from "@/services/unit-service";
 import { PackagingType, getPackagingTypes } from "@/services/packaging-service";
@@ -36,6 +37,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 const defaultFormState: Omit<Medicine, 'id'> = {
     name: "",
     hsnCode: "",
+    manufacturerId: "",
+    manufacturerName: "",
     purchasePrice: 0,
     sellingPrice: 0,
     gstSlab: "",
@@ -54,6 +57,7 @@ export default function MedicineMasterPage() {
     const [medicines, setMedicines] = useState<Medicine[]>([]);
     const [unitTypes, setUnitTypes] = useState<UnitType[]>([]);
     const [packagingTypes, setPackagingTypes] = useState<PackagingType[]>([]);
+    const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
 
     const [dataLoading, setDataLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -70,14 +74,16 @@ export default function MedicineMasterPage() {
     const fetchMasterData = async () => {
         setDataLoading(true);
         try {
-            const [medicinesFromDb, units, packagings] = await Promise.all([
+            const [medicinesFromDb, units, packagings, manufacturersFromDb] = await Promise.all([
                 getMedicines(),
                 getUnitTypes(),
                 getPackagingTypes(),
+                getManufacturers(),
             ]);
             setMedicines(medicinesFromDb);
             setUnitTypes(units);
             setPackagingTypes(packagings);
+            setManufacturers(manufacturersFromDb);
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch master data.'});
         }
@@ -109,6 +115,8 @@ export default function MedicineMasterPage() {
         setFormState({
             name: medicine.name,
             hsnCode: medicine.hsnCode,
+            manufacturerId: medicine.manufacturerId,
+            manufacturerName: medicine.manufacturerName,
             purchasePrice: medicine.purchasePrice,
             sellingPrice: medicine.sellingPrice,
             gstSlab: medicine.gstSlab,
@@ -126,8 +134,13 @@ export default function MedicineMasterPage() {
         setFormState(prev => ({ ...prev, [name]: isNumberField ? parseFloat(value) || 0 : value }));
     };
 
-    const handleSelectChange = (name: 'gstSlab' | 'baseUnit' | 'packType', value: string) => {
-        setFormState(prev => ({...prev, [name]: value}));
+    const handleSelectChange = (name: 'gstSlab' | 'baseUnit' | 'packType' | 'manufacturerId', value: string) => {
+         if (name === 'manufacturerId') {
+            const selectedMan = manufacturers.find(m => m.id === value);
+            setFormState(prev => ({ ...prev, manufacturerId: value, manufacturerName: selectedMan?.name || '' }));
+        } else {
+            setFormState(prev => ({ ...prev, [name]: value }));
+        }
     }
     
     const confirmDelete = (id: string) => {
@@ -152,9 +165,9 @@ export default function MedicineMasterPage() {
     const handleAddOrUpdateMedicine = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         
-        const { name, hsnCode, purchasePrice, sellingPrice, gstSlab, minStockLevel, baseUnit } = formState;
+        const { name, hsnCode, purchasePrice, sellingPrice, gstSlab, minStockLevel, baseUnit, manufacturerId } = formState;
 
-        if (name && hsnCode && purchasePrice > 0 && sellingPrice > 0 && gstSlab && minStockLevel > 0 && baseUnit) {
+        if (name && hsnCode && purchasePrice > 0 && sellingPrice > 0 && gstSlab && minStockLevel > 0 && baseUnit && manufacturerId) {
             try {
                 if(modalMode === 'edit' && selectedMedicine) {
                     await updateMedicine(selectedMedicine.id, formState);
@@ -169,7 +182,7 @@ export default function MedicineMasterPage() {
                 toast({ variant: "destructive", title: "Error", description: "Failed to save medicine." });
             }
         } else {
-            toast({ variant: "destructive", title: "Error", description: "Please fill all required fields correctly. Prices and stock must be greater than zero." });
+            toast({ variant: "destructive", title: "Error", description: "Please fill all required fields correctly. Prices, stock, and manufacturer are required." });
         }
     };
     
@@ -293,7 +306,7 @@ export default function MedicineMasterPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Name</TableHead>
-                                <TableHead className="hidden md:table-cell">HSN</TableHead>
+                                <TableHead className="hidden md:table-cell">Manufacturer</TableHead>
                                 <TableHead className="hidden md:table-cell text-right">Selling Price (₹)</TableHead>
                                 <TableHead className="hidden md:table-cell text-right">Unit</TableHead>
                                 <TableHead className="hidden md:table-cell text-right">Min Stock</TableHead>
@@ -307,7 +320,7 @@ export default function MedicineMasterPage() {
                                 Array.from({length: 5}).map((_, i) => (
                                     <TableRow key={i}>
                                         <TableCell><Skeleton className="h-4 w-48" /></TableCell>
-                                        <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
+                                        <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-32" /></TableCell>
                                         <TableCell className="hidden md:table-cell text-right"><Skeleton className="h-4 w-16" /></TableCell>
                                         <TableCell className="hidden md:table-cell text-right"><Skeleton className="h-4 w-12" /></TableCell>
                                         <TableCell className="hidden md:table-cell text-right"><Skeleton className="h-4 w-12" /></TableCell>
@@ -317,7 +330,7 @@ export default function MedicineMasterPage() {
                             ) : medicines.map((med) => (
                                 <TableRow key={med.id}>
                                     <TableCell className="font-medium">{med.name}</TableCell>
-                                    <TableCell className="hidden md:table-cell">{med.hsnCode}</TableCell>
+                                    <TableCell className="hidden md:table-cell">{med.manufacturerName}</TableCell>
                                     <TableCell className="hidden md:table-cell text-right">{med.sellingPrice.toFixed(2)}</TableCell>
                                     <TableCell className="hidden md:table-cell text-right">{med.baseUnit}</TableCell>
                                     <TableCell className="hidden md:table-cell text-right">{med.minStockLevel}</TableCell>
@@ -381,6 +394,19 @@ export default function MedicineMasterPage() {
                                     </SelectContent>
                                 </Select>
                             </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="manufacturerId">Manufacturer</Label>
+                             <Select name="manufacturerId" value={formState.manufacturerId} onValueChange={(v) => handleSelectChange('manufacturerId', v)} required>
+                                <SelectTrigger id="manufacturerId">
+                                    <SelectValue placeholder="Select Manufacturer" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {manufacturers.map(man => (
+                                        <SelectItem key={man.id} value={man.id}>{man.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
