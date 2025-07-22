@@ -67,7 +67,7 @@ export default function WarehouseInventoryPage() {
     });
 
     const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
-    const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && r.inSidebar && hasPermission(route.path)), [hasPermission]);
+    const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && hasPermission(route.path)), [hasPermission]);
 
     const fetchWarehouseData = useCallback(async () => {
         setPageLoading(true);
@@ -189,14 +189,6 @@ export default function WarehouseInventoryPage() {
         }
     }, [user, loading, router]);
 
-    if (loading || pageLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="text-2xl">Loading...</div>
-            </div>
-        );
-    }
-    
     const getIcon = (name: string) => {
         switch (name) {
             case 'Dashboard': return <HomeIcon />;
@@ -217,6 +209,41 @@ export default function WarehouseInventoryPage() {
             default: return <LayoutGrid />;
         }
     };
+
+    if (loading || pageLoading) {
+        return (
+            <div className="flex min-h-screen w-full flex-col bg-muted/40">
+                <Sidebar>
+                    <SidebarHeader>
+                        <SidebarMenuButton className="pointer-events-none">
+                            <LayoutGrid className="size-6" />
+                            <span className="text-lg font-semibold">MediStock</span>
+                        </SidebarMenuButton>
+                    </SidebarHeader>
+                    <SidebarContent>
+                        <Skeleton className="h-8 w-full" />
+                        <Skeleton className="h-8 w-full" />
+                        <Skeleton className="h-8 w-full" />
+                    </SidebarContent>
+                </Sidebar>
+                <div className="flex flex-col sm:gap-4 sm:py-4">
+                    <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+                        <SidebarTrigger />
+                        <div className="flex w-full items-center justify-between">
+                            <h1 className="text-xl font-semibold">Warehouse Stock Ledger</h1>
+                            <ThemeToggle />
+                        </div>
+                    </header>
+                    <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
+                        <div className="space-y-4">
+                             <Skeleton className="h-32 w-full" />
+                             <Skeleton className="h-64 w-full" />
+                        </div>
+                    </main>
+                </div>
+            </div>
+        );
+    }
     
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">

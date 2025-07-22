@@ -44,7 +44,7 @@ export default function ReturnToManufacturerPage() {
     const [currentReturnItem, setCurrentReturnItem] = useState({ medicineId: "", quantity: 1 });
 
     const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
-    const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && r.inSidebar && hasPermission(route.path)), [hasPermission]);
+    const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && hasPermission(route.path)), [hasPermission]);
 
     const fetchPrerequisites = useCallback(async () => {
         try {
@@ -144,14 +144,6 @@ export default function ReturnToManufacturerPage() {
         }
     }
 
-    if (loading || !user) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="text-2xl">Loading...</div>
-            </div>
-        );
-    }
-
     const getIcon = (name: string) => {
         switch (name) {
             case 'Dashboard': return <HomeIcon />;
@@ -172,6 +164,15 @@ export default function ReturnToManufacturerPage() {
             default: return <LayoutGrid />;
         }
     };
+
+    if (loading || !user) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="text-2xl">Loading...</div>
+            </div>
+        );
+    }
+
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
