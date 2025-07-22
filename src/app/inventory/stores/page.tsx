@@ -29,6 +29,7 @@ import { Input } from "@/components/ui/input";
 import { InventoryItem, getAvailableStockForLocation } from "@/services/inventory-service";
 import { Medicine, getMedicines } from "@/services/medicine-service";
 import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface EnrichedInventoryItem extends InventoryItem {
     minStockLevel: number;
@@ -109,7 +110,7 @@ export default function StoreInventoryPage() {
 
 
     const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
-    const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory') && hasPermission(route.path)), [hasPermission]);
+    const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory') && route.inSidebar && hasPermission(route.path)), [hasPermission]);
 
     useEffect(() => {
         if (!loading && !user) router.push('/login');
@@ -142,7 +143,7 @@ export default function StoreInventoryPage() {
              <SidebarMenu>
                 {hasPermission('/') && (
                     <SidebarMenuItem>
-                        <SidebarMenuButton href="/" tooltip="Dashboard">
+                        <SidebarMenuButton href="/" tooltip="Dashboard" isActive={pathname === '/'}>
                             <HomeIcon />
                             <span>Dashboard</span>
                         </SidebarMenuButton>

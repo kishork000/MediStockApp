@@ -235,7 +235,7 @@ export default function StockReportsPage() {
              <SidebarMenu>
                 {hasPermission('/') && (
                     <SidebarMenuItem>
-                        <SidebarMenuButton href="/" tooltip="Dashboard">
+                        <SidebarMenuButton href="/" tooltip="Dashboard" isActive={pathname === '/'}>
                             <HomeIcon />
                             <span>Dashboard</span>
                         </SidebarMenuButton>
@@ -473,4 +473,3 @@ export default function StockReportsPage() {
     </div>
   );
 }
-

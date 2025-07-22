@@ -214,6 +214,14 @@ export default function ManufacturerMasterPage() {
           </SidebarHeader>
           <SidebarContent>
             <SidebarMenu>
+                {hasPermission('/') && (
+                    <SidebarMenuItem>
+                        <SidebarMenuButton href="/" tooltip="Dashboard" isActive={pathname === '/'}>
+                            <HomeIcon />
+                            <span>Dashboard</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                )}
                 {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path) && r.path !== '/admin').map((route) => (
                     <SidebarMenuItem key={route.path}>
                         <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}>

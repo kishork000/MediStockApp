@@ -244,7 +244,7 @@ export default function StockTransferPage() {
              <SidebarMenu>
                 {hasPermission('/') && (
                     <SidebarMenuItem>
-                        <SidebarMenuButton href="/" tooltip="Dashboard">
+                        <SidebarMenuButton href="/" tooltip="Dashboard" isActive={pathname === '/'}>
                             <HomeIcon />
                             <span>Dashboard</span>
                         </SidebarMenuButton>
