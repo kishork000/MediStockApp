@@ -35,7 +35,7 @@ export async function getStockLevel(locationId: string, medicineId: string): Pro
 export async function getAvailableStockForLocation(locationId: string): Promise<InventoryItem[]> {
     const q = query(inventoryCollectionRef, where("locationId", "==", locationId), where("quantity", ">", 0));
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => doc.data() as InventoryItem);
+    return querySnapshot.docs.map(doc => ({...doc.data(), id: doc.id} as InventoryItem));
 }
 
 
@@ -47,11 +47,16 @@ export async function getAvailableStockForLocation(locationId: string): Promise<
 export async function updateInventoryAfterSale(locationId: string, items: SaleItem[]) {
     const batch = writeBatch(db);
 
-    items.forEach(item => {
+    for (const item of items) {
         const docRef = doc(db, 'inventory', `${locationId}_${item.medicineValue}`);
-        // Decrement the quantity by the amount sold.
-        batch.update(docRef, { quantity: increment(-item.quantity) });
-    });
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists() && docSnap.data().quantity >= item.quantity) {
+             batch.update(docRef, { quantity: increment(-item.quantity) });
+        } else {
+            throw new Error(`Insufficient stock for ${item.medicine}. Cannot record sale.`);
+        }
+    }
 
     await batch.commit();
 }
@@ -74,6 +79,38 @@ export async function addStockToInventory(locationId: string, items: { medicineI
         } else {
             batch.set(docRef, {
                 locationId,
+                medicineId: item.medicineId,
+                medicineName: item.medicineName,
+                quantity: item.quantity,
+            });
+        }
+    }
+
+    await batch.commit();
+}
+
+/**
+ * Moves stock from one location to another.
+ * @param from The source location ID.
+ * @param to The destination location ID.
+ * @param items The items to move.
+ */
+export async function moveStock(from: string, to: string, items: { medicineId: string, medicineName: string, quantity: number }[]) {
+    const batch = writeBatch(db);
+
+    for (const item of items) {
+        // Decrement from source
+        const fromDocRef = doc(db, 'inventory', `${from}_${item.medicineId}`);
+        batch.update(fromDocRef, { quantity: increment(-item.quantity) });
+
+        // Increment or set at destination
+        const toDocRef = doc(db, 'inventory', `${to}_${item.medicineId}`);
+        const toDocSnap = await getDoc(toDocRef);
+        if (toDocSnap.exists()) {
+            batch.update(toDocRef, { quantity: increment(item.quantity) });
+        } else {
+            batch.set(toDocRef, {
+                locationId: to,
                 medicineId: item.medicineId,
                 medicineName: item.medicineName,
                 quantity: item.quantity,

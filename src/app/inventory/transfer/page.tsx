@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -25,40 +25,71 @@ import { useRouter, usePathname } from "next/navigation";
 import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThemeToggle } from "@/components/theme-toggle";
-
-
-interface TransferItem {
-    id: number;
-    medicine: string;
-    medicineLabel: string;
-    quantity: number;
-}
-
-const medicineOptions: any[] = [];
+import { useToast } from "@/hooks/use-toast";
+import { getAvailableStockForLocation, InventoryItem } from "@/services/inventory-service";
+import { recordTransfer, recordReturn, TransferItem } from "@/services/transfer-service";
 
 const storeOptions = [
-    { value: "store1", label: "Downtown Pharmacy" },
-    { value: "store2", label: "Uptown Health" },
+    { value: "STR002", label: "Downtown Pharmacy" },
+    { value: "STR003", label: "Uptown Health" },
 ];
 
 export default function StockTransferPage() {
     const { user, logout, loading, hasPermission } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
+    const { toast } = useToast();
     const [activeTab, setActiveTab] = useState("transfer");
     
     // State for Transfer
+    const [transferInvoiceNumber, setTransferInvoiceNumber] = useState("");
+    const [destinationStore, setDestinationStore] = useState("");
+    const [warehouseStock, setWarehouseStock] = useState<InventoryItem[]>([]);
     const [transferItems, setTransferItems] = useState<TransferItem[]>([]);
     const [currentTransferItem, setCurrentTransferItem] = useState({ medicine: "", quantity: 1 });
     
     // State for Return
+    const [cnrNumber, setCnrNumber] = useState("");
+    const [sourceStore, setSourceStore] = useState("");
+    const [storeStock, setStoreStock] = useState<InventoryItem[]>([]);
     const [returnItems, setReturnItems] = useState<TransferItem[]>([]);
     const [currentReturnItem, setCurrentReturnItem] = useState({ medicine: "", quantity: 1 });
 
+    const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
 
-    const sidebarRoutes = useMemo(() => {
-        return allAppRoutes.filter(route => route.path !== '/');
-    }, []);
+    const fetchWarehouseStock = useCallback(async () => {
+        try {
+            const stock = await getAvailableStockForLocation('warehouse');
+            setWarehouseStock(stock);
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to load warehouse stock.' });
+        }
+    }, [toast]);
+
+    const fetchStoreStock = useCallback(async (storeId: string) => {
+        if (!storeId) {
+            setStoreStock([]);
+            return;
+        }
+        try {
+            const stock = await getAvailableStockForLocation(storeId);
+            setStoreStock(stock);
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: `Failed to load stock for ${storeId}.` });
+        }
+    }, [toast]);
+
+    useEffect(() => {
+        if(user) {
+            fetchWarehouseStock();
+        }
+    }, [user, fetchWarehouseStock]);
+
+    useEffect(() => {
+        if (sourceStore) {
+            fetchStoreStock(sourceStore);
+        }
+    }, [sourceStore, fetchStoreStock]);
 
     useEffect(() => {
         if (!loading && !user) {
@@ -68,13 +99,19 @@ export default function StockTransferPage() {
 
 
     const handleAddTransferItem = () => {
-        const selectedMedicine = medicineOptions.find(m => m.value === currentTransferItem.medicine);
-        if (!selectedMedicine || currentTransferItem.quantity <= 0) return;
+        const stockItem = warehouseStock.find(m => m.medicineId === currentTransferItem.medicine);
+        if (!stockItem || currentTransferItem.quantity <= 0) {
+            toast({ variant: 'destructive', title: 'Invalid Item', description: 'Please select a valid medicine and quantity.' });
+            return;
+        }
+        if (currentTransferItem.quantity > stockItem.quantity) {
+             toast({ variant: 'destructive', title: 'Stock Exceeded', description: `Cannot transfer more than available: ${stockItem.quantity}` });
+            return;
+        }
 
         const newItem: TransferItem = {
-            id: Date.now(),
-            medicine: selectedMedicine.value,
-            medicineLabel: selectedMedicine.label,
+            medicineId: stockItem.medicineId,
+            medicineName: stockItem.medicineName,
             quantity: currentTransferItem.quantity,
         };
 
@@ -82,28 +119,85 @@ export default function StockTransferPage() {
         setCurrentTransferItem({ medicine: "", quantity: 1 });
     };
 
-    const handleRemoveTransferItem = (id: number) => {
-        setTransferItems(transferItems.filter(item => item.id !== id));
+    const handleRemoveTransferItem = (medicineId: string) => {
+        setTransferItems(transferItems.filter(item => item.medicineId !== medicineId));
     };
     
     const handleAddReturnItem = () => {
-        // In a real app, medicine options would be based on the selected store's stock
-         const selectedMedicine = medicineOptions.find(m => m.value === currentReturnItem.medicine);
-        if (!selectedMedicine || currentReturnItem.quantity <= 0) return;
-
+        const stockItem = storeStock.find(m => m.medicineId === currentReturnItem.medicine);
+        if (!stockItem || currentReturnItem.quantity <= 0) {
+            toast({ variant: 'destructive', title: 'Invalid Item', description: 'Please select a valid medicine and quantity.' });
+            return;
+        }
+        if (currentReturnItem.quantity > stockItem.quantity) {
+             toast({ variant: 'destructive', title: 'Stock Exceeded', description: `Cannot return more than available: ${stockItem.quantity}` });
+            return;
+        }
         const newItem: TransferItem = {
-            id: Date.now(),
-            medicine: selectedMedicine.value,
-            medicineLabel: selectedMedicine.label.replace("WH Stock", "Store Stock"), // Mock label
+            medicineId: stockItem.medicineId,
+            medicineName: stockItem.medicineName,
             quantity: currentReturnItem.quantity,
         };
-
         setReturnItems(prevItems => [...prevItems, newItem]);
         setCurrentReturnItem({ medicine: "", quantity: 1 });
     };
 
-    const handleRemoveReturnItem = (id: number) => {
-        setReturnItems(returnItems.filter(item => item.id !== id));
+    const handleRemoveReturnItem = (medicineId: string) => {
+        setReturnItems(returnItems.filter(item => item.medicineId !== medicineId));
+    };
+
+    const handleProcessTransfer = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        if (!transferInvoiceNumber || !destinationStore || transferItems.length === 0) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Please fill all fields and add items to transfer.' });
+            return;
+        }
+
+        try {
+            await recordTransfer({
+                id: transferInvoiceNumber,
+                from: 'warehouse',
+                to: destinationStore,
+                items: transferItems,
+                date: new Date().toISOString(),
+                status: 'Completed',
+                type: 'transfer',
+            });
+            toast({ title: 'Success', description: 'Stock transfer recorded and inventory updated.' });
+            setTransferItems([]);
+            setTransferInvoiceNumber("");
+            setDestinationStore("");
+            await fetchWarehouseStock();
+        } catch (error) {
+             toast({ variant: 'destructive', title: 'Error', description: 'Failed to process transfer.' });
+        }
+    };
+    
+    const handleProcessReturn = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        if (!cnrNumber || !sourceStore || returnItems.length === 0) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Please fill all fields and add items to return.' });
+            return;
+        }
+        
+        try {
+            await recordReturn({
+                id: cnrNumber,
+                from: sourceStore,
+                to: 'warehouse',
+                items: returnItems,
+                date: new Date().toISOString(),
+                status: 'Completed',
+                type: 'return',
+            });
+            toast({ title: 'Success', description: 'Stock return recorded and inventory updated.' });
+            setReturnItems([]);
+            setCnrNumber("");
+            setSourceStore("");
+            setStoreStock([]);
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to process return.' });
+        }
     };
 
     if (loading || !user) {
@@ -194,7 +288,7 @@ export default function StockTransferPage() {
 
                  {hasPermission('/admin') && (
                     <SidebarMenuItem>
-                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname === '/admin'}>
+                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname.startsWith('/admin')}>
                             {getIcon('Admin')}
                             <span>Admin</span>
                         </SidebarMenuButton>
@@ -235,15 +329,15 @@ export default function StockTransferPage() {
                             <CardDescription>Move inventory from the main warehouse to a specific store.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <form className="space-y-6">
+                            <form className="space-y-6" onSubmit={handleProcessTransfer}>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="transfer-invoice-number">Transfer Invoice Number</Label>
-                                        <Input id="transfer-invoice-number" placeholder="e.g., TINV-2024-001" />
+                                        <Input id="transfer-invoice-number" value={transferInvoiceNumber} onChange={(e) => setTransferInvoiceNumber(e.target.value)} placeholder="e.g., TINV-2024-001" required/>
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="destination-store">Destination Store</Label>
-                                        <Select>
+                                        <Select value={destinationStore} onValueChange={setDestinationStore} required>
                                             <SelectTrigger id="destination-store">
                                                 <SelectValue placeholder="Select a store" />
                                             </SelectTrigger>
@@ -263,7 +357,7 @@ export default function StockTransferPage() {
                                             <Label htmlFor="transfer-medicine">Medicine (from WH)</Label>
                                             <Select value={currentTransferItem.medicine} onValueChange={(value) => setCurrentTransferItem({...currentTransferItem, medicine: value})}>
                                                 <SelectTrigger id="transfer-medicine"><SelectValue placeholder="Select medicine" /></SelectTrigger>
-                                                <SelectContent>{medicineOptions.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}</SelectContent>
+                                                <SelectContent>{warehouseStock.map(m => <SelectItem key={m.medicineId} value={m.medicineId}>{m.medicineName} (Avail: {m.quantity})</SelectItem>)}</SelectContent>
                                             </Select>
                                         </div>
                                          <div className="space-y-2">
@@ -287,11 +381,11 @@ export default function StockTransferPage() {
                                         </TableHeader>
                                         <TableBody>
                                             {transferItems.map(item => (
-                                                <TableRow key={item.id}>
-                                                    <TableCell>{item.medicineLabel}</TableCell>
+                                                <TableRow key={item.medicineId}>
+                                                    <TableCell>{item.medicineName}</TableCell>
                                                     <TableCell className="text-center">{item.quantity}</TableCell>
                                                     <TableCell className="text-right">
-                                                        <Button variant="ghost" size="icon" onClick={() => handleRemoveTransferItem(item.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                                        <Button variant="ghost" size="icon" onClick={() => handleRemoveTransferItem(item.medicineId)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                                                     </TableCell>
                                                 </TableRow>
                                             ))}
@@ -315,18 +409,18 @@ export default function StockTransferPage() {
                             <CardDescription>Return inventory from a store back to the main warehouse.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                             <form className="space-y-6">
+                             <form className="space-y-6" onSubmit={handleProcessReturn}>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                      <div className="space-y-2">
                                         <Label htmlFor="return-store">Select Store</Label>
-                                        <Select>
+                                        <Select value={sourceStore} onValueChange={setSourceStore} required>
                                             <SelectTrigger id="return-store"><SelectValue placeholder="Select a store" /></SelectTrigger>
                                             <SelectContent>{storeOptions.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
                                         </Select>
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="cnr-number">Credit Note (CNR) Number</Label>
-                                        <Input id="cnr-number" placeholder="e.g., CNR-2024-001" />
+                                        <Input id="cnr-number" value={cnrNumber} onChange={(e) => setCnrNumber(e.target.value)} placeholder="e.g., CNR-2024-001" required/>
                                     </div>
                                 </div>
 
@@ -335,11 +429,10 @@ export default function StockTransferPage() {
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                                         <div className="space-y-2">
                                             <Label htmlFor="return-medicine">Medicine (from Store)</Label>
-                                            <Select value={currentReturnItem.medicine} onValueChange={(value) => setCurrentReturnItem({...currentReturnItem, medicine: value})}>
+                                            <Select value={currentReturnItem.medicine} onValueChange={(value) => setCurrentReturnItem({...currentReturnItem, medicine: value})} disabled={!sourceStore}>
                                                 <SelectTrigger id="return-medicine"><SelectValue placeholder="Select medicine" /></SelectTrigger>
                                                 <SelectContent>
-                                                     {/* This would be dynamically populated based on selected store's stock */}
-                                                    <SelectItem value="paracetamol">Paracetamol (Stock: 45)</SelectItem>
+                                                    {storeStock.map(m => <SelectItem key={m.medicineId} value={m.medicineId}>{m.medicineName} (Avail: {m.quantity})</SelectItem>)}
                                                 </SelectContent>
                                             </Select>
                                         </div>
@@ -364,11 +457,11 @@ export default function StockTransferPage() {
                                         </TableHeader>
                                         <TableBody>
                                             {returnItems.map(item => (
-                                                <TableRow key={item.id}>
-                                                    <TableCell>{item.medicineLabel}</TableCell>
+                                                <TableRow key={item.medicineId}>
+                                                    <TableCell>{item.medicineName}</TableCell>
                                                     <TableCell className="text-center">{item.quantity}</TableCell>
                                                     <TableCell className="text-right">
-                                                        <Button variant="ghost" size="icon" onClick={() => handleRemoveReturnItem(item.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                                        <Button variant="ghost" size="icon" onClick={() => handleRemoveReturnItem(item.medicineId)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                                                     </TableCell>
                                                 </TableRow>
                                             ))}

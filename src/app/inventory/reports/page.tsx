@@ -24,44 +24,86 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Transfer, getTransfers } from "@/services/transfer-service";
+import { InventoryItem, getAvailableStockForLocation } from "@/services/inventory-service";
+import { useToast } from "@/hooks/use-toast";
 
 const allStores = [
     { id: "all", name: "All Stores" },
-    { id: "STR001", name: "Main Warehouse" },
+    { id: "warehouse", name: "Main Warehouse" },
     { id: "STR002", name: "Downtown Pharmacy" },
     { id: "STR003", name: "Uptown Health" },
 ];
-
-const allTransferData: { [key: string]: any[] } = {
-    "STR002": [],
-    "STR003": [],
-    "all": []
-};
-
-const allPurchaseData = {
-    "all": []
-};
-
-const allStockLevelData: { [key: string]: any[] } = {
-    "STR002": [],
-    "STR003": [],
-     "all": []
-};
 
 
 export default function StockReportsPage() {
     const { user, logout, loading, hasPermission } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
+    const { toast } = useToast();
     const [selectedStore, setSelectedStore] = useState("all");
+    const [transfers, setTransfers] = useState<Transfer[]>([]);
+    const [stockLevels, setStockLevels] = useState<InventoryItem[]>([]);
+    const [dataLoading, setDataLoading] = useState(true);
 
      const availableStores = useMemo(() => {
-        if (user?.role === 'Admin') return allStores.filter(s => s.id !== 'STR001'); // Admins can see all stores
+        if (user?.role === 'Admin') return allStores;
         if (user?.role === 'Pharmacist' && user.assignedStore) {
-            return allStores.filter(s => s.id === user.assignedStore);
+            return allStores.filter(s => s.id === user.assignedStore || s.id === 'all');
         }
         return [];
     }, [user]);
+
+    const fetchReportsData = async () => {
+        setDataLoading(true);
+        try {
+            const [transfersData, downtownStock, uptownStock, warehouseStock] = await Promise.all([
+                getTransfers(),
+                getAvailableStockForLocation("STR002"),
+                getAvailableStockForLocation("STR003"),
+                getAvailableStockForLocation("warehouse"),
+            ]);
+            setTransfers(transfersData);
+
+            const allStockItems = new Map<string, any>();
+
+            const processStock = (stock: InventoryItem[], locationKey: string) => {
+                stock.forEach(item => {
+                    if (!allStockItems.has(item.medicineId)) {
+                        allStockItems.set(item.medicineId, {
+                            medicineId: item.medicineId,
+                            medicineName: item.medicineName,
+                            warehouse: 0,
+                            downtown: 0,
+                            uptown: 0,
+                        });
+                    }
+                    allStockItems.get(item.medicineId)[locationKey] = item.quantity;
+                });
+            };
+
+            processStock(downtownStock, 'downtown');
+            processStock(uptownStock, 'uptown');
+            processStock(warehouseStock, 'warehouse');
+            
+            const combinedStock = Array.from(allStockItems.values()).map(item => ({
+                ...item,
+                total: item.warehouse + item.downtown + item.uptown,
+            }));
+
+            setStockLevels(combinedStock as any);
+
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to load report data.' });
+        }
+        setDataLoading(false);
+    }
+
+    useEffect(() => {
+        if(user) {
+            fetchReportsData();
+        }
+    }, [user, toast]);
 
     useEffect(() => {
         if (user?.role === 'Pharmacist' && availableStores.length > 0) {
@@ -72,13 +114,25 @@ export default function StockReportsPage() {
     }, [user, availableStores]);
 
 
-    const transferReportData = useMemo(() => {
-        return allTransferData[selectedStore as keyof typeof allTransferData] || allTransferData['all'];
-    }, [selectedStore]);
+    const filteredTransfers = useMemo(() => {
+        if (selectedStore === 'all') return transfers;
+        return transfers.filter(t => t.from === selectedStore || t.to === selectedStore);
+    }, [selectedStore, transfers]);
 
-    const stockLevelData = useMemo(() => {
-        return allStockLevelData[selectedStore as keyof typeof allStockLevelData] || [];
-    }, [selectedStore]);
+    const filteredStockLevels = useMemo(() => {
+        if (selectedStore === 'all' || selectedStore === 'warehouse') return stockLevels;
+        const storeKey = allStores.find(s => s.id === selectedStore)?.name.toLowerCase().replace(' ', '') === 'downtownpharmacy' ? 'downtown' : 'uptown';
+        
+        return stockLevels
+            .filter(item => item[storeKey] > 0)
+            .map(item => ({
+                medicineId: item.medicineId,
+                medicineName: item.medicineName,
+                storeStock: item[storeKey],
+                warehouse: item.warehouse,
+                total: item[storeKey] + item.warehouse,
+            }));
+    }, [selectedStore, stockLevels]);
     
     const stockLevelStoreName = useMemo(() => {
         return allStores.find(s => s.id === selectedStore)?.name || "Store Stock";
@@ -184,7 +238,7 @@ export default function StockReportsPage() {
                 )}
                  {hasPermission('/admin') && (
                     <SidebarMenuItem>
-                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname === '/admin'}>
+                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname.startsWith('/admin')}>
                             {getIcon('Admin')}
                             <span>Admin</span>
                         </SidebarMenuButton>
@@ -239,7 +293,7 @@ export default function StockReportsPage() {
                         <CardHeader className="flex flex-row items-center justify-between">
                             <div>
                                 <CardTitle>Overall Stock Levels</CardTitle>
-                                <CardDescription>Aggregated stock counts across all locations.</CardDescription>
+                                <CardDescription>Aggregated stock counts across locations.</CardDescription>
                             </div>
                             <Button size="sm" variant="outline"><Download className="mr-2" /> Download Report</Button>
                         </CardHeader>
@@ -248,7 +302,7 @@ export default function StockReportsPage() {
                                 <TableHeader>
                                      <TableRow>
                                         <TableHead>Medicine</TableHead>
-                                        {selectedStore === 'all' ? (
+                                        {selectedStore === 'all' || selectedStore === 'warehouse' ? (
                                             <>
                                                 <TableHead className="text-right">Warehouse</TableHead>
                                                 <TableHead className="text-right">Downtown Pharmacy</TableHead>
@@ -264,10 +318,11 @@ export default function StockReportsPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                     {stockLevelData.length > 0 ? stockLevelData.map((item: any) => (
-                                        <TableRow key={item.medicine}>
-                                            <TableCell className="font-medium">{item.medicine}</TableCell>
-                                            {selectedStore === 'all' ? (
+                                     {dataLoading ? (Array.from({length:5}).map((_, i) => <TableRow key={i}><TableCell colSpan={5}><div className="h-4 bg-muted rounded-full w-full animate-pulse"/></TableCell></TableRow>))
+                                     : filteredStockLevels.length > 0 ? filteredStockLevels.map((item: any) => (
+                                        <TableRow key={item.medicineId}>
+                                            <TableCell className="font-medium">{item.medicineName}</TableCell>
+                                            {selectedStore === 'all' || selectedStore === 'warehouse' ? (
                                                 <>
                                                     <TableCell className="text-right">{item.warehouse}</TableCell>
                                                     <TableCell className="text-right">{item.downtown}</TableCell>
@@ -302,7 +357,7 @@ export default function StockReportsPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Invoice/CNR ID</TableHead>
+                                        <TableHead>ID</TableHead>
                                         <TableHead>From</TableHead>
                                         <TableHead>To</TableHead>
                                         <TableHead>Date</TableHead>
@@ -311,17 +366,20 @@ export default function StockReportsPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {transferReportData.length > 0 ? transferReportData.map((report) => (
+                                    {dataLoading ? (Array.from({length:5}).map((_, i) => <TableRow key={i}><TableCell colSpan={6}><div className="h-4 bg-muted rounded-full w-full animate-pulse"/></TableCell></TableRow>))
+                                    : filteredTransfers.length > 0 ? filteredTransfers.map((report) => (
                                         <TableRow key={report.id}>
                                             <TableCell className="font-medium">{report.id}</TableCell>
-                                            <TableCell>{report.from}</TableCell>
-                                            <TableCell>{report.to}</TableCell>
-                                            <TableCell>{report.date}</TableCell>
-                                            <TableCell className="text-center">{report.items}</TableCell>
-                                            <TableCell className="text-right">{report.status}</TableCell>
+                                            <TableCell>{allStores.find(s => s.id === report.from)?.name}</TableCell>
+                                            <TableCell>{allStores.find(s => s.id === report.to)?.name}</TableCell>
+                                            <TableCell>{new Date(report.date).toLocaleDateString()}</TableCell>
+                                            <TableCell className="text-center">{report.items.length}</TableCell>
+                                            <TableCell className="text-right">
+                                                <Badge>{report.status}</Badge>
+                                            </TableCell>
                                         </TableRow>
                                     )) : (
-                                      <TableRow><TableCell colSpan={6} className="h-24 text-center">No data to display.</TableCell></TableRow>
+                                      <TableRow><TableCell colSpan={6} className="h-24 text-center">No transfer data to display.</TableCell></TableRow>
                                     )}
                                 </TableBody>
                             </Table>
@@ -349,19 +407,7 @@ export default function StockReportsPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {allPurchaseData.all.length > 0 ? allPurchaseData.all.map((report) => (
-                                        <TableRow key={report.id}>
-                                            <TableCell className="font-medium">{report.id}</TableCell>
-                                            <TableCell>{report.date}</TableCell>
-                                            <TableCell>
-                                                <Badge variant={report.type.startsWith('Purchase') ? 'default' : 'secondary'}>{report.type}</Badge>
-                                            </TableCell>
-                                            <TableCell className="text-center">{report.items}</TableCell>
-                                            <TableCell className="text-right">{report.amount}</TableCell>
-                                        </TableRow>
-                                    )) : (
                                       <TableRow><TableCell colSpan={5} className="h-24 text-center">No data to display.</TableCell></TableRow>
-                                    )}
                                 </TableBody>
                             </Table>
                         </CardContent>
