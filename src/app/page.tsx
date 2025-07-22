@@ -30,6 +30,7 @@ import { ChevronDown } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import Link from "next/link";
 import { Building, Undo } from "lucide-react";
+import StockAlerts from "@/components/dashboard/StockAlerts";
 
 
 const emptyDashboardData: DashboardData = {
@@ -153,7 +154,7 @@ export default function Home() {
                 )}
                  {hasPermission('/admin') && (
                     <SidebarMenuItem>
-                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname === '/admin'}>
+                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname.startsWith('/admin')}>
                             {getIcon('Admin')}
                             <span>Admin</span>
                         </SidebarMenuButton>
@@ -219,8 +220,9 @@ export default function Home() {
                       <div className="lg:col-span-1">
                           <OverviewChart data={dashboardData.overview} />
                       </div>
-                      <div className="lg:col-span-1">
+                      <div className="space-y-4 lg:col-span-1">
                           <AiSummary dashboardData={dashboardData} />
+                          <StockAlerts />
                       </div>
                   </div>
                 </div>
