@@ -29,7 +29,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Medicine, getMedicines, addMedicine, updateMedicine, deleteMedicine } from "@/services/medicine-service";
 import { Skeleton } from "@/components/ui/skeleton";
-
+import { UnitType, getUnitTypes } from "@/services/unit-service";
+import { PackagingType, getPackagingTypes } from "@/services/packaging-service";
 
 const defaultFormState: Omit<Medicine, 'id'> = {
     name: "",
@@ -50,6 +51,9 @@ export default function MedicineMasterPage() {
     const pathname = usePathname();
     const { toast } = useToast();
     const [medicines, setMedicines] = useState<Medicine[]>([]);
+    const [unitTypes, setUnitTypes] = useState<UnitType[]>([]);
+    const [packagingTypes, setPackagingTypes] = useState<PackagingType[]>([]);
+
     const [dataLoading, setDataLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
@@ -60,20 +64,26 @@ export default function MedicineMasterPage() {
     const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
     const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && route.inSidebar && hasPermission(route.path)), [hasPermission]);
 
-    const fetchMedicines = async () => {
+    const fetchMasterData = async () => {
         setDataLoading(true);
         try {
-            const medicinesFromDb = await getMedicines();
+            const [medicinesFromDb, units, packagings] = await Promise.all([
+                getMedicines(),
+                getUnitTypes(),
+                getPackagingTypes(),
+            ]);
             setMedicines(medicinesFromDb);
+            setUnitTypes(units);
+            setPackagingTypes(packagings);
         } catch (error) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch medicines.'});
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch master data.'});
         }
         setDataLoading(false);
     };
     
     useEffect(() => {
         if(user) {
-            fetchMedicines();
+            fetchMasterData();
         }
     }, [user]);
 
@@ -120,7 +130,7 @@ export default function MedicineMasterPage() {
     const handleDelete = async (id: string) => {
         try {
             await deleteMedicine(id);
-            await fetchMedicines();
+            await fetchMasterData();
             toast({ title: "Success", description: "Medicine removed from master list." });
         } catch (error) {
             toast({ variant: "destructive", title: "Error", description: "Failed to remove medicine." });
@@ -141,7 +151,7 @@ export default function MedicineMasterPage() {
                     await addMedicine(formState);
                     toast({ title: "Success", description: "Medicine added to master list." });
                 }
-                await fetchMedicines();
+                await fetchMasterData();
                 setIsModalOpen(false);
             } catch (error) {
                 toast({ variant: "destructive", title: "Error", description: "Failed to save medicine." });
@@ -227,7 +237,7 @@ export default function MedicineMasterPage() {
                 )}
                  {hasPermission('/admin') && (
                     <SidebarMenuItem>
-                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname === '/admin'}>
+                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname.startsWith('/admin')}>
                             {getIcon('Admin')}
                             <span>Admin</span>
                         </SidebarMenuButton>
@@ -372,15 +382,16 @@ export default function MedicineMasterPage() {
                         </div>
                         
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
+                           <div className="space-y-2">
                                 <Label htmlFor="packType">Packaging Type</Label>
                                 <Select name="packType" value={formState.packType} onValueChange={(v) => handleSelectChange('packType', v)}>
                                     <SelectTrigger id="packType">
                                         <SelectValue placeholder="e.g., Box" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="STRIP">Strip</SelectItem>
-                                        <SelectItem value="BOX">Box</SelectItem>
+                                        {packagingTypes.map(pt => (
+                                            <SelectItem key={pt.id} value={pt.name}>{pt.name}</SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -402,10 +413,9 @@ export default function MedicineMasterPage() {
                                         <SelectValue placeholder="Select Unit" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="PCS">Pieces (PCS)</SelectItem>
-                                        <SelectItem value="BTL">Bottle (BTL)</SelectItem>
-                                        <SelectItem value="TUBE">Tube</SelectItem>
-                                        <SelectItem value="ML">Milliliter (ml)</SelectItem>
+                                       {unitTypes.map(ut => (
+                                            <SelectItem key={ut.id} value={ut.name}>{ut.name}</SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -423,3 +433,5 @@ export default function MedicineMasterPage() {
     </div>
   );
 }
+
+    

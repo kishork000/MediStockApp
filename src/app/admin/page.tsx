@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Activity, Settings, Store, MoreHorizontal, Trash2, GitBranch, LogOut, ShieldCheck, ChevronDown, Warehouse, TrendingUp, Building, UserPlus } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Activity, Settings, Store, MoreHorizontal, Trash2, GitBranch, LogOut, ShieldCheck, ChevronDown, Warehouse, TrendingUp, Building, UserPlus, Layers, Box } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -31,6 +31,7 @@ import { allAppRoutes, AppRoute, UserRole } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useToast } from "@/hooks/use-toast";
+import Link from "next/link";
 
 
 interface User {
@@ -237,7 +238,7 @@ export default function AdminPage() {
 
                  {hasPermission('/admin') && (
                     <SidebarMenuItem>
-                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname === '/admin'}>
+                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname.startsWith('/admin')}>
                             {getIcon('Admin')}
                             <span>Admin</span>
                         </SidebarMenuButton>
@@ -279,6 +280,12 @@ export default function AdminPage() {
                         <TabsTrigger value="stores">
                             <Store className="md:hidden" />
                             <span className="hidden md:inline">Store Management</span>
+                        </TabsTrigger>
+                         <TabsTrigger value="units" asChild>
+                            <Link href="/admin/units"><Layers className="md:hidden" /><span className="hidden md:inline">Unit Types</span></Link>
+                        </TabsTrigger>
+                        <TabsTrigger value="packaging" asChild>
+                            <Link href="/admin/packaging"><Box className="md:hidden" /><span className="hidden md:inline">Packaging Types</span></Link>
                         </TabsTrigger>
                         <TabsTrigger value="add-user">
                              <UserPlus className="md:hidden" />
@@ -550,3 +557,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
