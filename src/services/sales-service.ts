@@ -1,7 +1,6 @@
 
 import { db } from '@/lib/firebase-config';
-import { collection, addDoc, serverTimestamp, writeBatch, doc } from 'firebase/firestore';
-import type { Patient } from './patient-service';
+import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import { updateInventoryAfterSale } from './inventory-service';
 
 export interface SaleItem {
@@ -16,8 +15,10 @@ export interface SaleItem {
 }
 
 export interface Sale {
+    invoiceId: string;
     patientId: string;
     patientName: string;
+    patientMobile: string; // Added for universal report
     storeId: string;
     storeName: string;
     items: Omit<SaleItem, 'id' | 'stock'>[];
@@ -26,18 +27,31 @@ export interface Sale {
     grandTotal: number;
     paymentMethod: 'Cash' | 'Online';
     soldBy: string; // User's name
-    createdAt: any;
+    createdAt: string; // ISO string
 }
 
 
 const salesCollectionRef = collection(db, 'sales');
 
 /**
+ * Gets all sales from the database.
+ */
+export async function getSales(): Promise<Sale[]> {
+    const querySnapshot = await getDocs(salesCollectionRef);
+    return querySnapshot.docs.map(doc => ({
+        ...doc.data(),
+        invoiceId: doc.id, // Use the document ID as the invoiceId
+        createdAt: doc.data().createdAt.toDate().toISOString(), // Convert timestamp to ISO string
+    } as Sale));
+}
+
+
+/**
  * Records a new sale in the database and updates inventory levels.
  * This is a transactional operation to ensure data consistency.
  * @param saleData The complete sale object.
  */
-export async function recordSale(saleData: Omit<Sale, 'createdAt'>): Promise<void> {
+export async function recordSale(saleData: Omit<Sale, 'createdAt' | 'invoiceId' | 'patientMobile'>, patientMobile: string): Promise<void> {
     
     // In a real production app with high traffic, you'd use a transaction
     // to read stock levels and write the sale in a single atomic operation.
@@ -50,6 +64,7 @@ export async function recordSale(saleData: Omit<Sale, 'createdAt'>): Promise<voi
         // 2. Record the sale document
         await addDoc(salesCollectionRef, {
             ...saleData,
+            patientMobile,
             createdAt: serverTimestamp(),
         });
 

@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Trash2, PlusCircle, Activity, Printer, Settings, GitBranch, Search, Undo, LogOut, ChevronDown, Warehouse, TrendingUp } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Trash2, PlusCircle, Activity, Printer, Settings, GitBranch, Search, Undo, LogOut, ChevronDown, Warehouse, TrendingUp, Pill, Building } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -207,7 +207,7 @@ export default function SalesPage() {
   const processSale = async (paymentMethod: 'Cash' | 'Online') => {
     if (!user || !patientForm.id) return;
     
-    const saleData: Omit<Sale, 'createdAt'> = {
+    const saleData: Omit<Sale, 'createdAt' | 'patientMobile' | 'invoiceId'> = {
         patientId: patientForm.id,
         patientName: patientForm.name,
         storeId: currentStore,
@@ -221,7 +221,7 @@ export default function SalesPage() {
     };
     
     try {
-        await recordSale(saleData);
+        await recordSale(saleData, patientForm.mobile);
         toast({ title: "Sale Recorded", description: "Stock levels have been updated." });
         setTimeout(() => { 
             window.print(); 
@@ -286,7 +286,7 @@ export default function SalesPage() {
     
     const getIcon = (name: string) => {
         switch (name) {
-            case 'Dashboard': return <HomeIcon />; case 'Patients': return <Users2 />; case 'Sales': return <ShoppingCart />; case 'Sales Reports': return <BarChart />; case 'Warehouse Stock': return <Warehouse />; case 'Store Stock': return <Package />; case 'Add Medicine': return <PlusSquare />; case 'Stock Transfer': return <GitBranch />; case 'Inventory Reports': return <BarChart />; case 'Valuation Report': return <TrendingUp />; case 'Diseases': return <Activity />; case 'Admin': return <Settings />; default: return <LayoutGrid />;
+            case 'Dashboard': return <HomeIcon />; case 'Patients': return <Users2 />; case 'Sales': return <ShoppingCart />; case 'Universal Report': return <BarChart />; case 'Warehouse Stock': return <Warehouse />; case 'Store Stock': return <Package />; case 'Add Medicine': return <PlusSquare />; case 'Stock Transfer': return <GitBranch />; case 'Inventory Reports': return <BarChart />; case 'Valuation Report': return <TrendingUp />; case 'Diseases': return <Activity />; case 'Admin': return <Settings />; default: return <LayoutGrid />;
         }
     };
     

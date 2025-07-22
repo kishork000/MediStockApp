@@ -87,6 +87,7 @@ export default function Home() {
         case 'Dashboard': return <HomeIcon />;
         case 'Patients': return <Users2 />;
         case 'Sales': return <ShoppingCart />;
+        case 'Universal Report': return <BarChart />;
         case 'Sales Reports': return <BarChart />;
         case 'Warehouse Stock': return <Warehouse />;
         case 'Store Stock': return <Package />;
