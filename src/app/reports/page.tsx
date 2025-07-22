@@ -285,14 +285,14 @@ export default function UniversalReportPage() {
                                 <div>
                                     <Label htmlFor="storeId">Store</Label>
                                     <Select value={filters.storeId} onValueChange={v => handleFilterChange('storeId', v)}>
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectTrigger id="storeId"><SelectValue /></SelectTrigger>
                                         <SelectContent>{allStores.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
                                     </Select>
                                 </div>
                                 <div>
                                     <Label htmlFor="pharmacistName">Pharmacist</Label>
                                     <Select value={filters.pharmacistName} onValueChange={v => handleFilterChange('pharmacistName', v)}>
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectTrigger id="pharmacistName"><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="all">All Pharmacists</SelectItem>
                                             {pharmacists.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
@@ -302,7 +302,7 @@ export default function UniversalReportPage() {
                                 <div className="lg:col-span-2">
                                     <Label htmlFor="medicineId">Medicine</Label>
                                     <Select value={filters.medicineId} onValueChange={v => handleFilterChange('medicineId', v)}>
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectTrigger id="medicineId"><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="all">All Medicines</SelectItem>
                                             {medicines.map(m => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
