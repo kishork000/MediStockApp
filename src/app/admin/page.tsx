@@ -29,7 +29,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { allAppRoutes, AppRoute, UserRole } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useToast } from "@/hooks/use-toast";
 
 
@@ -49,6 +49,12 @@ interface Store {
     gstin: string;
 }
 
+const initialUsers: User[] = [
+    { id: "1", name: "Admin User", email: "admin@medistock.com", role: "Admin" },
+    { id: "2", name: "Pharmacist One", email: "pharmacist1@medistock.com", role: "Pharmacist", assignedStore: "STR002" },
+    { id: "3", name: "Supervisor One", email: "supervisor1@medistock.com", role: "Supervisor" },
+];
+
 const initialStores: Store[] = [
     { id: "STR001", name: "Main Warehouse", address: "456 Industrial Ave, Metro City", gstin: "29BBBBB1111B1Z6"},
     { id: "STR002", name: "Downtown Pharmacy", address: "123 Main St, Wellness City", gstin: "22AAAAA0000A1Z5"},
@@ -57,7 +63,7 @@ const initialStores: Store[] = [
 
 
 export default function AdminPage() {
-    const { user, logout, loading, permissions, setPermissions, hasPermission, createUser, deleteUser, fetchUsers } = useAuth();
+    const { user, logout, loading, permissions, setPermissions, hasPermission } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
     const { toast } = useToast();
@@ -68,26 +74,11 @@ export default function AdminPage() {
     const [stores, setStores] = useState<Store[]>(initialStores);
     const [isAddStoreModalOpen, setIsAddStoreModalOpen] = useState(false);
     
-    const [users, setUsers] = useState<User[]>([]);
-    const [dataLoading, setDataLoading] = useState(true);
+    const [users, setUsers] = useState<User[]>(initialUsers);
 
     const sidebarRoutes = useMemo(() => {
         return allAppRoutes.filter(route => route.path !== '/');
     }, []);
-
-    const refreshUsers = async () => {
-        setDataLoading(true);
-        const userList = await fetchUsers();
-        setUsers(userList);
-        setDataLoading(false);
-    }
-    
-    useEffect(() => {
-        if (!loading && user) {
-           refreshUsers();
-        }
-    }, [user, loading]);
-
 
      useEffect(() => {
         if (!loading && (!user || user.role !== 'Admin')) {
@@ -123,10 +114,11 @@ export default function AdminPage() {
         setStores(stores.filter(s => s.id !== id));
     };
 
-    const handleAddUser = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleAddUser = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
-        const newUser = {
+        const newUser: User = {
+            id: (users.length + 1).toString(),
             name: formData.get("name") as string,
             email: formData.get("email") as string,
             role: formData.get("role") as UserRole,
@@ -135,27 +127,17 @@ export default function AdminPage() {
         };
         
         if (newUser.name && newUser.email && newUser.role && newUser.password) {
-            try {
-                await createUser(newUser);
-                toast({ title: "Success", description: "User created successfully!" });
-                await refreshUsers();
-                e.currentTarget.reset();
-            } catch (error: any) {
-                toast({ variant: "destructive", title: "Error", description: error.message || "Failed to create user." });
-            }
+            setUsers(prev => [...prev, newUser]);
+            toast({ title: "Success", description: "User created successfully! Note: this is a mock implementation." });
+            e.currentTarget.reset();
         } else {
             toast({ variant: "destructive", title: "Error", description: "Please fill all user details including password." });
         }
     };
 
-    const handleDeleteUser = async (userToDelete: User) => {
-        try {
-            await deleteUser(userToDelete.id, userToDelete.email);
-            toast({ title: "Success", description: `User ${userToDelete.name} has been deleted.`});
-            await refreshUsers();
-        } catch (error: any) {
-             toast({ variant: "destructive", title: "Error", description: error.message || "Failed to delete user." });
-        }
+    const handleDeleteUser = (userToDelete: User) => {
+       setUsers(prev => prev.filter(u => u.id !== userToDelete.id));
+       toast({ title: "Success", description: `User ${userToDelete.name} has been deleted.`});
     };
 
     const handlePermissionChange = (role: UserRole, route: string, checked: boolean | 'indeterminate') => {
@@ -328,15 +310,7 @@ export default function AdminPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {dataLoading ? (
-                                        Array.from({length: 3}).map((_, i) => (
-                                            <TableRow key={i}>
-                                                <TableCell colSpan={5} className="p-0">
-                                                     <div className="h-12 w-full bg-muted animate-pulse" />
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    ) : users.map((u) => (
+                                    {users.map((u) => (
                                         <TableRow key={u.id}>
                                             <TableCell className="font-medium">{u.name}</TableCell>
                                             <TableCell className="hidden sm:table-cell">{u.email}</TableCell>
@@ -576,5 +550,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
-    
