@@ -30,34 +30,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
-
-
-interface MedicineMaster {
-    id: string;
-    name: string;
-    hsnCode: string;
-    purchasePrice: number;
-    sellingPrice: number;
-    gstSlab: string;
-    minStockLevel: number;
-    unitType: string;
-}
-
-const medicineMasterData: MedicineMaster[] = [
-    { id: "MED001", name: "Aspirin 100mg", hsnCode: "300490", purchasePrice: 1.00, sellingPrice: 1.20, gstSlab: "5", minStockLevel: 100, unitType: 'PCS' },
-    { id: "MED002", name: "Ibuprofen 200mg", hsnCode: "300490", purchasePrice: 2.50, sellingPrice: 3.00, gstSlab: "12", minStockLevel: 50, unitType: 'PCS' },
-    { id: "MED003", name: "Paracetamol 500mg", hsnCode: "300490", purchasePrice: 0.50, sellingPrice: 0.60, gstSlab: "5", minStockLevel: 200, unitType: 'PCS' },
-    { id: "MED004", name: "Amoxicillin 250mg", hsnCode: "300450", purchasePrice: 8.00, sellingPrice: 9.50, gstSlab: "12", minStockLevel: 50, unitType: 'STRIP' },
-    { id: "MED005", name: "Atorvastatin 20mg", hsnCode: "300490", purchasePrice: 15.00, sellingPrice: 18.00, gstSlab: "12", minStockLevel: 75, unitType: 'PCS' },
-];
-
-const manufacturerOptions = [
-    { id: "MAN001", name: "Bayer" },
-    { id: "MAN002", name: "Pfizer" },
-    { id: "MAN003", name: "Sun Pharma" },
-    { id: "MAN004", name: "Cipla" },
-];
-
+import { getMedicines, Medicine } from "@/services/medicine-service";
+import { getManufacturers, Manufacturer } from "@/services/manufacturer-service";
+import { addStockToInventory } from "@/services/inventory-service";
 
 interface PurchaseItem {
     id: number;
@@ -80,8 +55,31 @@ export default function AddStockPage() {
     const [manufacturer, setManufacturer] = useState("");
     const [destination, setDestination] = useState("warehouse");
 
+    const [medicineMaster, setMedicineMaster] = useState<Medicine[]>([]);
+    const [manufacturerMaster, setManufacturerMaster] = useState<Manufacturer[]>([]);
+
     const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
     const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && route.inSidebar && hasPermission(route.path)), [hasPermission]);
+
+     useEffect(() => {
+        const fetchMasters = async () => {
+            try {
+                const [medicines, manufacturers] = await Promise.all([
+                    getMedicines(),
+                    getManufacturers()
+                ]);
+                setMedicineMaster(medicines);
+                setManufacturerMaster(manufacturers);
+            } catch (error) {
+                toast({ variant: 'destructive', title: 'Error', description: 'Failed to load master data.' });
+            }
+        };
+
+        if (user) {
+            fetchMasters();
+        }
+    }, [user, toast]);
+
 
     useEffect(() => {
         if (!loading && !user) {
@@ -108,7 +106,7 @@ export default function AddStockPage() {
     };
 
     const handleMedicineSelect = (id: number, medicineId: string) => {
-        const selectedMedicine = medicineMasterData.find(m => m.id === medicineId);
+        const selectedMedicine = medicineMaster.find(m => m.id === medicineId);
         if (!selectedMedicine) return;
 
         setPurchaseItems(purchaseItems.map(item =>
@@ -129,7 +127,7 @@ export default function AddStockPage() {
         return purchaseItems.reduce((acc, item) => acc + (item.quantity * item.pricePerUnit), 0);
     }, [purchaseItems]);
 
-    const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!invoiceNumber) {
             toast({ variant: 'destructive', title: 'Error', description: 'Please enter a purchase invoice number.' });
@@ -154,12 +152,24 @@ export default function AddStockPage() {
             }
         }
         
-        console.log({ invoiceNumber, invoiceDate: format(invoiceDate, 'yyyy-MM-dd'), manufacturer, destination, items: purchaseItems, totalInvoiceValue });
-        toast({ title: 'Success', description: 'Stock added to inventory successfully. Reports will be updated to reflect the backdated entry if applicable.' });
-        setPurchaseItems([]);
-        setInvoiceNumber("");
-        setManufacturer("");
-        setInvoiceDate(new Date());
+        try {
+            const stockToAdd = purchaseItems.map(item => ({
+                medicineId: item.medicineId,
+                medicineName: item.medicineName,
+                quantity: item.quantity,
+            }));
+            
+            await addStockToInventory(destination, stockToAdd);
+
+            toast({ title: 'Success', description: 'Stock added to inventory successfully. Reports will be updated to reflect the backdated entry if applicable.' });
+            setPurchaseItems([]);
+            setInvoiceNumber("");
+            setManufacturer("");
+            setInvoiceDate(new Date());
+
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to add stock to inventory.' });
+        }
     };
 
     const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -336,7 +346,7 @@ export default function AddStockPage() {
                                                 <SelectValue placeholder="Select Manufacturer" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {manufacturerOptions.map(man => (
+                                                {manufacturerMaster.map(man => (
                                                     <SelectItem key={man.id} value={man.name}>{man.name}</SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -374,7 +384,7 @@ export default function AddStockPage() {
                                                             <Select value={item.medicineId} onValueChange={value => handleMedicineSelect(item.id, value)} required>
                                                                 <SelectTrigger><SelectValue placeholder="Select Medicine" /></SelectTrigger>
                                                                 <SelectContent>
-                                                                    {medicineMasterData.map(med => (
+                                                                    {medicineMaster.map(med => (
                                                                         <SelectItem key={med.id} value={med.id}>{med.name}</SelectItem>
                                                                     ))}
                                                                 </SelectContent>
@@ -441,7 +451,7 @@ export default function AddStockPage() {
                                             <SelectValue placeholder="Select Manufacturer" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {manufacturerOptions.map(man => (
+                                            {manufacturerMaster.map(man => (
                                                 <SelectItem key={man.id} value={man.name}>{man.name}</SelectItem>
                                             ))}
                                         </SelectContent>

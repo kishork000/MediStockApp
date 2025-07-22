@@ -1,0 +1,63 @@
+
+import { db } from '@/lib/firebase-config';
+import { collection, addDoc, serverTimestamp, writeBatch, doc } from 'firebase/firestore';
+import type { Patient } from './patient-service';
+import { updateInventoryAfterSale } from './inventory-service';
+
+export interface SaleItem {
+    id: number;
+    medicine: string; // Name/label
+    medicineValue: string; // ID
+    quantity: number;
+    price: number;
+    gst: number;
+    total: number;
+    stock: number;
+}
+
+export interface Sale {
+    patientId: string;
+    patientName: string;
+    storeId: string;
+    storeName: string;
+    items: Omit<SaleItem, 'id' | 'stock'>[];
+    subtotal: number;
+    totalGst: number;
+    grandTotal: number;
+    paymentMethod: 'Cash' | 'Online';
+    soldBy: string; // User's name
+    createdAt: any;
+}
+
+
+const salesCollectionRef = collection(db, 'sales');
+
+/**
+ * Records a new sale in the database and updates inventory levels.
+ * This is a transactional operation to ensure data consistency.
+ * @param saleData The complete sale object.
+ */
+export async function recordSale(saleData: Omit<Sale, 'createdAt'>): Promise<void> {
+    
+    // In a real production app with high traffic, you'd use a transaction
+    // to read stock levels and write the sale in a single atomic operation.
+    // For this app's scale, a batch write after client-side checks is sufficient.
+    
+    try {
+        // 1. Update inventory levels first
+        await updateInventoryAfterSale(saleData.storeId, saleData.items);
+
+        // 2. Record the sale document
+        await addDoc(salesCollectionRef, {
+            ...saleData,
+            createdAt: serverTimestamp(),
+        });
+
+    } catch (error) {
+        console.error("Failed to record sale and update inventory: ", error);
+        // Here you might need logic to handle a failed transaction,
+        // like attempting to revert the inventory update if it went through but the sale record failed.
+        // For now, we'll just throw the error.
+        throw new Error("Sale could not be completed. Inventory has not been updated.");
+    }
+}

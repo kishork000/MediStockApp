@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -32,19 +32,11 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { findPatientByMobile, addPatient } from "@/services/patient-service";
-import type { Patient } from "@/services/patient-service";
+import { findPatientByMobile, addPatient, Patient } from "@/services/patient-service";
+import { getMedicines, Medicine } from "@/services/medicine-service";
+import { getAvailableStockForLocation, InventoryItem } from "@/services/inventory-service";
+import { recordSale, Sale, SaleItem } from "@/services/sales-service";
 
-interface SaleItem {
-    id: number;
-    medicine: string;
-    medicineValue: string;
-    quantity: number;
-    price: number;
-    gst: number;
-    total: number;
-    stock: number;
-}
 
 interface ReturnItem extends SaleItem {
     returnQuantity: number;
@@ -57,24 +49,6 @@ interface BlindReturnItem {
     quantity: number;
 }
 
-
-interface Medicine {
-    value: string;
-    label: string;
-    price: number;
-    gst: number;
-    stock: number;
-}
-
-const initialMedicineStock: Medicine[] = [
-    { value: "aspirin", label: "Aspirin", price: 10.00, gst: 5, stock: 150 },
-    { value: "ibuprofen", label: "Ibuprofen", price: 15.50, gst: 5, stock: 20 },
-    { value: "paracetamol", label: "Paracetamol", price: 5.75, gst: 5, stock: 100 },
-    { value: "amoxicillin", label: "Amoxicillin", price: 55.20, gst: 12, stock: 80 },
-    { value: "metformin", label: "Metformin", price: 25.00, gst: 12, stock: 0 },
-    { value: "atorvastatin", label: "Atorvastatin", price: 45.00, gst: 12, stock: 120 },
-];
-
 const diseaseOptions = [
     { id: "d1", label: "Fever" },
     { id: "d2", label: "Headache" },
@@ -84,23 +58,7 @@ const diseaseOptions = [
     { id: "d6", label: "Allergy" },
 ];
 
-const pastSales = [
-    { 
-        invoiceId: "SALE001", customer: "Alice Johnson", mobile: "9876543210", date: "2024-07-20",
-        items: [ { id: 1, medicine: "Paracetamol", medicineValue: "paracetamol", quantity: 2, price: 5.75, gst: 5, total: 11.50, stock: 100 }, { id: 2, medicine: "Amoxicillin", medicineValue: "amoxicillin", quantity: 1, price: 55.20, gst: 12, total: 55.20, stock: 80 }, ],
-        store: "Downtown Pharmacy"
-    },
-    { 
-        invoiceId: "SALE002", customer: "Bob Williams", mobile: "9876543211", date: "2024-07-22",
-        items: [ { id: 3, medicine: "Ibuprofen", medicineValue: "ibuprofen", quantity: 1, price: 15.50, gst: 5, total: 15.50, stock: 20 } ],
-        store: "Downtown Pharmacy"
-    },
-    { 
-        invoiceId: "SALE003", customer: "Alice Johnson", mobile: "9876543210", date: "2024-07-25",
-        items: [ { id: 4, medicine: "Aspirin", medicineValue: "aspirin", quantity: 10, price: 10.00, gst: 5, total: 100.00, stock: 150 } ],
-        store: "Downtown Pharmacy"
-    }
-];
+// Mock data removed
 
 const companyInfo = {
     name: "MediStock Pharmacy",
@@ -109,8 +67,8 @@ const companyInfo = {
 };
 
 const storeOptions = [
-    { value: "downtown-pharmacy", label: "Downtown Pharmacy", id: "STR002" },
-    { value: "uptown-health", label: "Uptown Health", id: "STR003" },
+    { value: "STR002", label: "Downtown Pharmacy" },
+    { value: "STR003", label: "Uptown Health" },
 ];
 
 
@@ -125,11 +83,14 @@ export default function SalesPage() {
   const [selectedDiseases, setSelectedDiseases] = useState<string[]>([]);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [printSize, setPrintSize] = useState("80mm");
-  const [medicineOptions, setMedicineOptions] = useState<Medicine[]>(initialMedicineStock);
+  
+  const [availableStock, setAvailableStock] = useState<InventoryItem[]>([]);
+  const [medicineMaster, setMedicineMaster] = useState<Medicine[]>([]);
+
   const [currentStore, setCurrentStore] = useState(storeOptions[0].value);
   
   // Patient form state
-  const [patientForm, setPatientForm] = useState({ name: "", mobile: "", age: "", gender: "" as Patient['gender'], bp: "", sugar: "", address: "", });
+  const [patientForm, setPatientForm] = useState({ id: "", name: "", mobile: "", age: "", gender: "" as Patient['gender'], bp: "", sugar: "", address: "", });
   
   // Return state
   const [searchQuery, setSearchQuery] = useState("");
@@ -149,7 +110,7 @@ export default function SalesPage() {
   
   const availableStores = useMemo(() => {
     if (user?.role === 'Admin') { return storeOptions; }
-    if (user?.role === 'Pharmacist' && user.assignedStore) { return storeOptions.filter(s => s.id === user.assignedStore); }
+    if (user?.role === 'Pharmacist' && user.assignedStore) { return storeOptions.filter(s => s.value === user.assignedStore); }
     return [];
   }, [user]);
 
@@ -158,16 +119,48 @@ export default function SalesPage() {
   }, [user, availableStores]);
 
 
+  const fetchPrerequisites = useCallback(async () => {
+    try {
+        const [medicines, stock] = await Promise.all([
+            getMedicines(),
+            getAvailableStockForLocation(currentStore)
+        ]);
+        setMedicineMaster(medicines);
+        setAvailableStock(stock);
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to load medicines or stock.' });
+    }
+  }, [currentStore, toast]);
+
+  useEffect(() => {
+    if (user && currentStore) {
+        fetchPrerequisites();
+    }
+  }, [user, currentStore, fetchPrerequisites]);
+
+
   useEffect(() => {
     if (!loading && !user) { router.push('/login'); }
   }, [user, loading, router]);
 
 
   const handleAddItem = () => {
-      const selectedMedicine = medicineOptions.find(m => m.value === currentItem.medicine);
-      if (!selectedMedicine || currentItem.quantity <= 0) return;
+      const stockItem = availableStock.find(m => m.medicineId === currentItem.medicine);
+      if (!stockItem || currentItem.quantity <= 0) return;
 
-      const newItem: SaleItem = { id: Date.now(), medicine: selectedMedicine.label, medicineValue: selectedMedicine.value, quantity: currentItem.quantity, price: selectedMedicine.price, gst: selectedMedicine.gst, total: selectedMedicine.price * currentItem.quantity, stock: selectedMedicine.stock, };
+      const medicineDetails = medicineMaster.find(m => m.id === stockItem.medicineId);
+      if (!medicineDetails) return;
+
+      const newItem: SaleItem = { 
+          id: Date.now(), 
+          medicine: medicineDetails.name, 
+          medicineValue: medicineDetails.id, 
+          quantity: currentItem.quantity, 
+          price: medicineDetails.sellingPrice, 
+          gst: parseFloat(medicineDetails.gstSlab), 
+          total: medicineDetails.sellingPrice * currentItem.quantity, 
+          stock: stockItem.quantity, 
+      };
       setSaleItems([...saleItems, newItem]);
       setCurrentItem({ medicine: "", quantity: 1 });
   };
@@ -189,40 +182,60 @@ export default function SalesPage() {
       e.preventDefault(); 
       if (!isSaleValid) return;
 
-      let patientId;
-      const existingPatient = await findPatientByMobile(patientForm.mobile);
+      let patientId = patientForm.id;
 
-      if (!existingPatient) {
+      if (!patientId) {
           const newPatientData = {
-              ...patientForm,
+              name: patientForm.name,
+              mobile: patientForm.mobile,
               age: parseInt(patientForm.age, 10) || 0,
+              gender: patientForm.gender,
+              bp: patientForm.bp,
+              sugar: patientForm.sugar,
+              address: patientForm.address,
               lastVisit: new Date().toISOString().split('T')[0],
           };
           const newPatientRef = await addPatient(newPatientData);
           patientId = newPatientRef.id;
           toast({ title: "New Patient Created", description: "A new patient record has been added to the database." });
-      } else {
-          patientId = existingPatient.id;
       }
       
-      // Here you would proceed to save the sale with the patientId
-      console.log("Proceeding to payment for patient ID:", patientId);
-
+      setPatientForm(prev => ({...prev, id: patientId}));
       setPaymentModalOpen(true); 
   }
   
-  const processSale = () => {
-    const newMedicineOptions = [...medicineOptions];
-    saleItems.forEach(soldItem => {
-        const medicineIndex = newMedicineOptions.findIndex(med => med.value === soldItem.medicineValue);
-        if (medicineIndex > -1) { newMedicineOptions[medicineIndex].stock -= soldItem.quantity; }
-    });
-    setMedicineOptions(newMedicineOptions);
-    toast({ title: "Sale Recorded", description: "Stock levels have been updated." });
+  const processSale = async (paymentMethod: 'Cash' | 'Online') => {
+    if (!user || !patientForm.id) return;
+    
+    const saleData: Omit<Sale, 'createdAt'> = {
+        patientId: patientForm.id,
+        patientName: patientForm.name,
+        storeId: currentStore,
+        storeName: storeOptions.find(s => s.value === currentStore)?.label || '',
+        items: saleItems.map(({ id, stock, ...item }) => item),
+        subtotal,
+        totalGst,
+        grandTotal,
+        paymentMethod,
+        soldBy: user.name,
+    };
+    
+    try {
+        await recordSale(saleData);
+        toast({ title: "Sale Recorded", description: "Stock levels have been updated." });
+        setTimeout(() => { 
+            window.print(); 
+            setPaymentModalOpen(false); 
+            resetSaleForm();
+            fetchPrerequisites(); // Refresh stock levels
+        }, 100);
+    } catch (error: any) {
+         toast({ variant: 'destructive', title: "Sale Failed", description: error.message });
+    }
   }
 
-  const handlePrint = () => { processSale(); setTimeout(() => { window.print(); setPaymentModalOpen(false); resetSaleForm(); }, 100); }
-  const resetSaleForm = () => { setSaleItems([]); setSelectedDiseases([]); setPatientForm({ name: "", mobile: "", age: "", gender: "" as Patient['gender'], bp: "", sugar: "", address: "" }); }
+  const handlePrint = (paymentMethod: 'Cash' | 'Online') => { processSale(paymentMethod); }
+  const resetSaleForm = () => { setSaleItems([]); setSelectedDiseases([]); setPatientForm({ id: "", name: "", mobile: "", age: "", gender: "" as Patient['gender'], bp: "", sugar: "", address: "" }); }
   
   const handlePatientFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => { const { id, value } = e.target; setPatientForm(prev => ({ ...prev, [id]: value })); };
   const handlePatientSelectChange = (value: Patient['gender']) => { setPatientForm(prev => ({ ...prev, gender: value })); };
@@ -231,7 +244,7 @@ export default function SalesPage() {
     if (!patientForm.mobile) { toast({ variant: "destructive", title: "Error", description: "Please enter a mobile number to search." }); return; }
     const foundPatient = await findPatientByMobile(patientForm.mobile);
     if (foundPatient) { 
-        setPatientForm({ name: foundPatient.name, mobile: foundPatient.mobile, age: foundPatient.age.toString(), gender: foundPatient.gender, bp: foundPatient.bp || "", sugar: foundPatient.sugar || "", address: foundPatient.address || "", }); 
+        setPatientForm({ id: foundPatient.id, name: foundPatient.name, mobile: foundPatient.mobile, age: foundPatient.age.toString(), gender: foundPatient.gender, bp: foundPatient.bp || "", sugar: foundPatient.sugar || "", address: foundPatient.address || "", }); 
         toast({ title: "Patient Found", description: `${foundPatient.name}'s details have been filled in.` });
     } else { 
         toast({ variant: "destructive", title: "Patient Not Found", description: "No existing patient with this mobile number. Please fill in the details." }); 
@@ -239,74 +252,29 @@ export default function SalesPage() {
   };
 
   const handleSearchReturns = () => {
-      let results = [];
-      if (searchType === 'invoice') {
-          const foundSale = pastSales.find(s => s.invoiceId.toLowerCase() === searchQuery.toLowerCase());
-          if (foundSale) {
-              handleSelectInvoice(foundSale);
-              return;
-          }
-          results = [];
-      } else { // mobile search
-          results = pastSales.filter(s => s.mobile === searchQuery);
-      }
-
-      setSearchResults(results);
-      setSaleToReturn(null);
-      if (results.length === 0) {
-          toast({ variant: "destructive", title: "Not Found", description: "No records found for the given search query." });
-      }
+    toast({ variant: "destructive", title: "Not Implemented", description: "Return by invoice functionality is not yet live." });
   };
   
   const handleSelectInvoice = (sale: any) => {
-    setSaleToReturn(sale);
-    setSearchResults([]);
-    setItemsToReturn(sale.items.map((item: any) => ({ ...item, returnQuantity: 0 })));
+    // Logic to be implemented
   };
 
   const handleReturnQuantityChange = (itemId: number, quantity: number) => {
-      setItemsToReturn(itemsToReturn.map(item => item.id === itemId ? { ...item, returnQuantity: Math.min(quantity, item.quantity) } : item ));
+      // Logic to be implemented
   };
 
   const handleProcessRefund = () => {
-      const itemsBeingReturned = itemsToReturn.filter(item => item.returnQuantity > 0);
-      if(itemsBeingReturned.length === 0) { toast({ variant: "destructive", title: "Error", description: "Please specify a quantity to return for at least one item." }); return; }
-      
-      const newMedicineOptions = [...medicineOptions];
-      itemsBeingReturned.forEach(returnedItem => {
-          const medicineIndex = newMedicineOptions.findIndex(med => med.value === returnedItem.medicineValue);
-          if (medicineIndex > -1) { newMedicineOptions[medicineIndex].stock += returnedItem.returnQuantity; }
-      });
-      setMedicineOptions(newMedicineOptions);
-
-      const refundAmount = itemsBeingReturned.reduce((acc, item) => { const pricePerUnit = item.price; const gstMultiplier = 1 + (item.gst / 100); return acc + (pricePerUnit * item.returnQuantity * gstMultiplier); }, 0).toFixed(2);
-      toast({ title: "Refund Processed", description: `Refund of ₹${refundAmount} for invoice ${saleToReturn.invoiceId}. Stock has been updated.` });
-      
-      setSearchQuery(""); setSaleToReturn(null); setItemsToReturn([]);
+    toast({ variant: "destructive", title: "Not Implemented", description: "Refund functionality is not yet live." });
   };
 
   const handleAddBlindReturnItem = () => {
-      const selectedMedicine = medicineOptions.find(m => m.value === currentBlindReturnItem.medicine);
-      if (!selectedMedicine || currentBlindReturnItem.quantity <= 0) return;
-      const newItem: BlindReturnItem = { id: Date.now(), medicine: selectedMedicine.label, medicineValue: selectedMedicine.value, quantity: currentBlindReturnItem.quantity };
-      setBlindReturnItems([...blindReturnItems, newItem]);
-      setCurrentBlindReturnItem({ medicine: "", quantity: 1 });
+     // Logic to be implemented
   };
   
   const handleRemoveBlindReturnItem = (id: number) => { setBlindReturnItems(blindReturnItems.filter(item => item.id !== id)); };
 
   const handleProcessBlindReturn = () => {
-      if (blindReturnItems.length === 0) { toast({ variant: "destructive", title: "Error", description: "Please add at least one item to return." }); return; }
-
-      const newMedicineOptions = [...medicineOptions];
-      blindReturnItems.forEach(returnedItem => {
-          const medicineIndex = newMedicineOptions.findIndex(med => med.value === returnedItem.medicineValue);
-          if (medicineIndex > -1) { newMedicineOptions[medicineIndex].stock += returnedItem.quantity; }
-      });
-      setMedicineOptions(newMedicineOptions);
-
-      toast({ title: "Blind Return Processed", description: "Stock has been updated. Please issue store credit or exchange manually." });
-      setBlindReturnItems([]);
+      toast({ variant: "destructive", title: "Not Implemented", description: "Blind return functionality is not yet live." });
   };
 
 
@@ -496,7 +464,7 @@ export default function SalesPage() {
                                                 <Select value={currentItem.medicine} onValueChange={(value) => setCurrentItem({...currentItem, medicine: value})}>
                                                     <SelectTrigger id="medicine"><SelectValue placeholder="Select a medicine" /></SelectTrigger>
                                                     <SelectContent>
-                                                        {medicineOptions.map(med => ( <SelectItem key={med.value} value={med.value} disabled={med.stock <= 0}>{med.label} (Stock: {med.stock})</SelectItem> ))}
+                                                        {availableStock.map(med => ( <SelectItem key={med.medicineId} value={med.medicineId} disabled={med.quantity <= 0}>{med.medicineName} (Stock: {med.quantity})</SelectItem> ))}
                                                     </SelectContent>
                                                 </Select>
                                             </div>
@@ -642,7 +610,7 @@ export default function SalesPage() {
                                          <Select value={currentBlindReturnItem.medicine} onValueChange={(value) => setCurrentBlindReturnItem({...currentBlindReturnItem, medicine: value})}>
                                              <SelectTrigger id="blind-return-medicine"><SelectValue placeholder="Select a medicine" /></SelectTrigger>
                                              <SelectContent>
-                                                 {medicineOptions.map(med => ( <SelectItem key={med.value} value={med.value}>{med.label}</SelectItem> ))}
+                                                 {medicineMaster.map(med => ( <SelectItem key={med.id} value={med.id}>{med.name}</SelectItem> ))}
                                              </SelectContent>
                                          </Select>
                                      </div>
@@ -714,7 +682,7 @@ export default function SalesPage() {
                                </SelectContent>
                            </Select>
                         </div>
-                        <Button onClick={handlePrint} className="w-full"><Printer className="mr-2" /> Print Invoice</Button>
+                        <Button onClick={() => handlePrint('Cash')} className="w-full"><Printer className="mr-2" /> Print Invoice</Button>
                     </div>
                 </TabsContent>
                 <TabsContent value="online">
@@ -736,7 +704,7 @@ export default function SalesPage() {
                                </SelectContent>
                            </Select>
                        </div>
-                       <Button onClick={handlePrint} className="w-full"><Printer className="mr-2" /> Confirm &amp; Print</Button>
+                       <Button onClick={() => handlePrint('Online')} className="w-full"><Printer className="mr-2" /> Confirm &amp; Print</Button>
                    </div>
                 </TabsContent>
             </Tabs>

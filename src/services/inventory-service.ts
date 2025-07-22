@@ -1,0 +1,85 @@
+
+import { db } from '@/lib/firebase-config';
+import { collection, doc, getDocs, query, where, writeBatch, increment, getDoc, setDoc } from 'firebase/firestore';
+import type { SaleItem } from './sales-service';
+
+export interface InventoryItem {
+    id: string; // Composite key like `${locationId}_${medicineId}`
+    locationId: string;
+    medicineId: string;
+    quantity: number;
+    medicineName: string; // Denormalized for easier display
+}
+
+const inventoryCollectionRef = collection(db, 'inventory');
+
+/**
+ * Gets the current stock for a specific medicine at a specific location.
+ * @param locationId The ID of the store or 'warehouse'.
+ * @param medicineId The ID of the medicine.
+ * @returns The current quantity, or 0 if it doesn't exist.
+ */
+export async function getStockLevel(locationId: string, medicineId: string): Promise<number> {
+    const docRef = doc(db, 'inventory', `${locationId}_${medicineId}`);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+        return docSnap.data().quantity;
+    }
+    return 0;
+}
+
+/**
+ * Gets all available medicines and their stock for a given location.
+ * This is used to populate the sales dropdown.
+ */
+export async function getAvailableStockForLocation(locationId: string): Promise<InventoryItem[]> {
+    const q = query(inventoryCollectionRef, where("locationId", "==", locationId), where("quantity", ">", 0));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => doc.data() as InventoryItem);
+}
+
+
+/**
+ * Updates inventory levels after a sale. This is an atomic operation.
+ * @param locationId The ID of the store where the sale occurred.
+ * @param items The items that were sold.
+ */
+export async function updateInventoryAfterSale(locationId: string, items: SaleItem[]) {
+    const batch = writeBatch(db);
+
+    items.forEach(item => {
+        const docRef = doc(db, 'inventory', `${locationId}_${item.medicineValue}`);
+        // Decrement the quantity by the amount sold.
+        batch.update(docRef, { quantity: increment(-item.quantity) });
+    });
+
+    await batch.commit();
+}
+
+
+/**
+ * Adds new stock to inventory. If the item doesn't exist, it's created.
+ * @param locationId The ID of the store or 'warehouse'.
+ * @param items The items being added.
+ */
+export async function addStockToInventory(locationId: string, items: { medicineId: string, medicineName: string, quantity: number }[]) {
+    const batch = writeBatch(db);
+
+    for (const item of items) {
+        const docRef = doc(db, 'inventory', `${locationId}_${item.medicineId}`);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            batch.update(docRef, { quantity: increment(item.quantity) });
+        } else {
+            batch.set(docRef, {
+                locationId,
+                medicineId: item.medicineId,
+                medicineName: item.medicineName,
+                quantity: item.quantity,
+            });
+        }
+    }
+
+    await batch.commit();
+}
