@@ -10,12 +10,13 @@ import { User, UserRole, RolePermissions, allAppRoutes } from '@/lib/types';
 const initialUsers = [
     { name: "Admin User", email: "admin@medistock.com", role: "Admin" as UserRole, assignedStore: "STR001", password: "password" },
     { name: "Pharmacist One", email: "pharmacist1@medistock.com", role: "Pharmacist" as UserRole, assignedStore: "STR002", password: "password" },
+    { name: "Supervisor One", email: "supervisor1@medistock.com", role: "Supervisor" as UserRole, password: "password" },
 ];
 
 const initialPermissions: RolePermissions = {
     Admin: allAppRoutes.map(r => r.path), // Admin has all permissions
     Pharmacist: ['/', '/patients', '/sales', '/inventory/stores', '/inventory/transfer'],
-    Supervisor: ['/', '/sales']
+    Supervisor: ['/', '/sales', '/sales/reports', '/inventory/reports', '/inventory/valuation']
 };
 
 
