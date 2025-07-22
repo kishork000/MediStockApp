@@ -294,36 +294,10 @@ export default function StoreInventoryPage() {
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
             <Card>
                 <CardHeader>
-                     <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
+                    <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
                         <div className="flex-shrink-0">
                             <CardTitle>Detailed Stock Ledger</CardTitle>
                             <CardDescription>Generate a detailed report of stock movement for the selected store.</CardDescription>
-                        </div>
-                        <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:flex-row sm:flex-wrap">
-                             <Select 
-                                value={selectedStore} 
-                                onValueChange={setSelectedStore}
-                                disabled={user?.role === 'Pharmacist' && availableStores.length === 1}
-                             >
-                                <SelectTrigger className="w-full sm:w-[200px]">
-                                    <SelectValue placeholder="Select a store" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {availableStores.map(store => (
-                                        <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <div className="relative">
-                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    type="search"
-                                    placeholder="Search medicine..."
-                                    className="w-full sm:w-[200px] pl-8"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                />
-                            </div>
                         </div>
                     </div>
                 </CardHeader>
@@ -332,21 +306,52 @@ export default function StoreInventoryPage() {
                         <CardHeader>
                            <CardTitle>Filter Report</CardTitle>
                         </CardHeader>
-                        <CardContent className="flex flex-wrap gap-4 items-end">
-                            <div className="space-y-2">
+                        <CardContent className="flex flex-col sm:flex-row sm:flex-wrap gap-4 items-end">
+                            <div className="w-full sm:w-auto space-y-2">
+                                <p className="text-sm font-medium">Store</p>
+                                <Select 
+                                    value={selectedStore} 
+                                    onValueChange={setSelectedStore}
+                                    disabled={user?.role === 'Pharmacist' && availableStores.length === 1}
+                                 >
+                                    <SelectTrigger className="w-full sm:w-[200px]">
+                                        <SelectValue placeholder="Select a store" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {availableStores.map(store => (
+                                            <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="w-full sm:w-auto space-y-2">
                                 <p className="text-sm font-medium">Date Range</p>
                                 <DateRangePicker onUpdate={(v) => (filtersRef.current.dateRange = v.range)} />
                             </div>
-                            <Button onClick={calculateStockLedger} disabled={isLedgerLoading}>
-                                {isLedgerLoading ? 'Generating...' : 'Apply Filters'}
-                            </Button>
-                            <Button variant="outline" onClick={() => { setStockLedger([]); filtersRef.current = {}; }}>Reset</Button>
-                            <Button variant="outline" size="sm" onClick={handleDownloadReport} className="ml-auto">
-                                <Download className="mr-2 h-4 w-4" />
-                                Download Report
-                            </Button>
+                            <div className="w-full sm:w-auto flex gap-2">
+                                <Button onClick={calculateStockLedger} disabled={isLedgerLoading} className="w-full sm:w-auto">
+                                    {isLedgerLoading ? 'Generating...' : 'Apply Filters'}
+                                </Button>
+                                <Button variant="outline" onClick={() => { setStockLedger([]); filtersRef.current = {}; }} className="w-full sm:w-auto">Reset</Button>
+                            </div>
                         </CardContent>
                     </Card>
+                    <div className="flex justify-between items-center">
+                         <div className="relative">
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                type="search"
+                                placeholder="Search medicine..."
+                                className="w-full sm:w-[300px] pl-8"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                        <Button variant="outline" size="sm" onClick={handleDownloadReport} className="ml-auto">
+                            <Download className="mr-2 h-4 w-4" />
+                            Download Report
+                        </Button>
+                    </div>
                     <div className="relative w-full overflow-auto rounded-lg border">
                         <Table>
                             <TableHeader>
