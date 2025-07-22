@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Trash2, PlusCircle, Activity, Printer, Settings, GitBranch, Search, Undo, LogOut, ChevronDown, Warehouse, TrendingUp, Pill, Building } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Trash2, PlusCircle, Activity, Printer, Settings, GitBranch, Search, Undo, LogOut, ChevronDown, Warehouse, TrendingUp, Pill, Building, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -57,8 +57,6 @@ const diseaseOptions = [
     { id: "d5", label: "Common Cold" },
     { id: "d6", label: "Allergy" },
 ];
-
-// Mock data removed
 
 const companyInfo = {
     name: "MediStock Pharmacy",
@@ -207,9 +205,10 @@ export default function SalesPage() {
   const processSale = async (paymentMethod: 'Cash' | 'Online') => {
     if (!user || !patientForm.id) return;
     
-    const saleData: Omit<Sale, 'createdAt' | 'patientMobile' | 'invoiceId'> = {
+    const saleData: Omit<Sale, 'createdAt' | 'invoiceId'> = {
         patientId: patientForm.id,
         patientName: patientForm.name,
+        patientMobile: patientForm.mobile,
         storeId: currentStore,
         storeName: storeOptions.find(s => s.value === currentStore)?.label || '',
         items: saleItems.map(({ id, stock, ...item }) => item),
@@ -221,7 +220,7 @@ export default function SalesPage() {
     };
     
     try {
-        await recordSale(saleData, patientForm.mobile);
+        await recordSale(saleData);
         toast({ title: "Sale Recorded", description: "Stock levels have been updated." });
         setTimeout(() => { 
             window.print(); 
@@ -301,6 +300,7 @@ export default function SalesPage() {
             case 'Inventory Reports': return <BarChart />;
             case 'Valuation Report': return <TrendingUp />;
             case 'Diseases': return <Activity />;
+            case 'Documentation': return <BookOpen />;
             case 'Admin': return <Settings />;
             default: return <LayoutGrid />;
         }
@@ -379,7 +379,7 @@ export default function SalesPage() {
            <div className="flex w-full items-center justify-between">
               <h1 className="text-xl font-semibold">Sales &amp; Returns</h1>
               <div className="flex items-center gap-4">
-                  <Select value={currentStore} onValueChange={setCurrentStore} disabled={availableStores.length <= 1}>
+                  <Select name="currentStore" value={currentStore} onValueChange={setCurrentStore} disabled={availableStores.length <= 1}>
                      <SelectTrigger className="w-[180px]">
                          <SelectValue placeholder="Select Store" />
                      </SelectTrigger>
@@ -409,23 +409,23 @@ export default function SalesPage() {
                                     <CardContent className="space-y-4">
                                         <div className="space-y-2">
                                             <Label htmlFor="name">Patient Name</Label>
-                                            <Input id="name" value={patientForm.name} onChange={handlePatientFormChange} placeholder="John Doe" required />
+                                            <Input id="name" name="name" value={patientForm.name} onChange={handlePatientFormChange} placeholder="John Doe" required />
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="mobile">Mobile Number</Label>
                                             <div className="flex gap-2">
-                                                <Input id="mobile" value={patientForm.mobile} onChange={handlePatientFormChange} type="tel" placeholder="9876543210" required />
+                                                <Input id="mobile" name="mobile" value={patientForm.mobile} onChange={handlePatientFormChange} type="tel" placeholder="9876543210" required />
                                                 <Button type="button" variant="outline" size="icon" onClick={handleSearchPatient}><Search /></Button>
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="space-y-2">
                                                 <Label htmlFor="age">Age</Label>
-                                                <Input id="age" value={patientForm.age} onChange={handlePatientFormChange} type="number" placeholder="42" />
+                                                <Input id="age" name="age" value={patientForm.age} onChange={handlePatientFormChange} type="number" placeholder="42" />
                                             </div>
                                             <div className="space-y-2">
                                                 <Label htmlFor="gender">Gender</Label>
-                                                <Select value={patientForm.gender} onValueChange={handlePatientSelectChange}>
+                                                <Select name="gender" value={patientForm.gender} onValueChange={handlePatientSelectChange}>
                                                     <SelectTrigger id="gender"><SelectValue placeholder="Select" /></SelectTrigger>
                                                     <SelectContent><SelectItem value="Male">Male</SelectItem><SelectItem value="Female">Female</SelectItem><SelectItem value="Other">Other</SelectItem></SelectContent>
                                                 </Select>
@@ -434,16 +434,16 @@ export default function SalesPage() {
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="space-y-2">
                                                 <Label htmlFor="bp">Blood Pressure (BP)</Label>
-                                                <Input id="bp" value={patientForm.bp} onChange={handlePatientFormChange} placeholder="e.g., 120/80" />
+                                                <Input id="bp" name="bp" value={patientForm.bp} onChange={handlePatientFormChange} placeholder="e.g., 120/80" />
                                             </div>
                                             <div className="space-y-2">
                                                 <Label htmlFor="sugar">Blood Sugar</Label>
-                                                <Input id="sugar" value={patientForm.sugar} onChange={handlePatientFormChange} placeholder="e.g., 98 mg/dL" />
+                                                <Input id="sugar" name="sugar" value={patientForm.sugar} onChange={handlePatientFormChange} placeholder="e.g., 98 mg/dL" />
                                             </div>
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="address">Address</Label>
-                                            <Textarea id="address" value={patientForm.address} onChange={handlePatientFormChange} placeholder="123 Main St, Anytown..." />
+                                            <Textarea id="address" name="address" value={patientForm.address} onChange={handlePatientFormChange} placeholder="123 Main St, Anytown..." />
                                         </div>
                                         <div className="space-y-2">
                                             <Label>Disease(s)</Label>
@@ -457,7 +457,7 @@ export default function SalesPage() {
                                                     <div className="space-y-2">
                                                         {diseaseOptions.map(disease => (
                                                             <div key={disease.id} className="flex items-center space-x-2">
-                                                                <Checkbox id={disease.id} checked={selectedDiseases.includes(disease.id)} onCheckedChange={() => handleDiseaseSelection(disease.id)} />
+                                                                <Checkbox id={disease.id} name="disease" value={disease.id} checked={selectedDiseases.includes(disease.id)} onCheckedChange={() => handleDiseaseSelection(disease.id)} />
                                                                 <Label htmlFor={disease.id}>{disease.label}</Label>
                                                             </div>
                                                         ))}
@@ -477,7 +477,7 @@ export default function SalesPage() {
                                         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
                                             <div className="md:col-span-3 space-y-2">
                                                 <Label htmlFor="medicine">Medicine</Label>
-                                                <Select value={currentItem.medicine} onValueChange={(value) => setCurrentItem({...currentItem, medicine: value})}>
+                                                <Select name="medicine" value={currentItem.medicine} onValueChange={(value) => setCurrentItem({...currentItem, medicine: value})}>
                                                     <SelectTrigger id="medicine"><SelectValue placeholder="Select a medicine" /></SelectTrigger>
                                                     <SelectContent>
                                                         {availableStock.map(med => ( <SelectItem key={med.medicineId} value={med.medicineId} disabled={med.quantity <= 0}>{med.medicineName} (Stock: {med.quantity})</SelectItem> ))}
@@ -486,7 +486,7 @@ export default function SalesPage() {
                                             </div>
                                             <div className="space-y-2">
                                                 <Label htmlFor="quantity">Quantity</Label>
-                                                <Input id="quantity" type="number" placeholder="1" value={currentItem.quantity} onChange={(e) => setCurrentItem({...currentItem, quantity: parseInt(e.target.value, 10) || 1})} min="1"/>
+                                                <Input id="quantity" name="quantity" type="number" placeholder="1" value={currentItem.quantity} onChange={(e) => setCurrentItem({...currentItem, quantity: parseInt(e.target.value, 10) || 1})} min="1"/>
                                             </div>
                                             <Button type="button" onClick={handleAddItem} className="w-full"><PlusCircle className="mr-2" /> Add Item</Button>
                                         </div>
@@ -540,7 +540,7 @@ export default function SalesPage() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                            <div className="flex flex-col sm:flex-row gap-4">
-                               <Select value={searchType} onValueChange={setSearchType}>
+                               <Select name="searchType" value={searchType} onValueChange={setSearchType}>
                                  <SelectTrigger className="w-full sm:w-[150px]">
                                      <SelectValue placeholder="Search By" />
                                  </SelectTrigger>
@@ -550,6 +550,7 @@ export default function SalesPage() {
                                  </SelectContent>
                                </Select>
                                <Input
+                                   name="searchQuery"
                                    value={searchQuery}
                                    onChange={(e) => setSearchQuery(e.target.value)}
                                    placeholder={searchType === 'invoice' ? 'Enter invoice ID...' : 'Enter mobile number...'}
@@ -591,6 +592,7 @@ export default function SalesPage() {
                                               <TableCell>{item.quantity}</TableCell>
                                               <TableCell>
                                                  <Input
+                                                     name={`return-qty-${item.id}`}
                                                      type="number"
                                                      className="w-20"
                                                      max={item.quantity}
@@ -623,7 +625,7 @@ export default function SalesPage() {
                                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
                                      <div className="md:col-span-3 space-y-2">
                                          <Label htmlFor="blind-return-medicine">Medicine</Label>
-                                         <Select value={currentBlindReturnItem.medicine} onValueChange={(value) => setCurrentBlindReturnItem({...currentBlindReturnItem, medicine: value})}>
+                                         <Select name="blind-return-medicine" value={currentBlindReturnItem.medicine} onValueChange={(value) => setCurrentBlindReturnItem({...currentBlindReturnItem, medicine: value})}>
                                              <SelectTrigger id="blind-return-medicine"><SelectValue placeholder="Select a medicine" /></SelectTrigger>
                                              <SelectContent>
                                                  {medicineMaster.map(med => ( <SelectItem key={med.id} value={med.id}>{med.name}</SelectItem> ))}
@@ -632,7 +634,7 @@ export default function SalesPage() {
                                      </div>
                                       <div className="space-y-2">
                                          <Label htmlFor="blind-return-quantity">Quantity</Label>
-                                         <Input id="blind-return-quantity" type="number" placeholder="1" value={currentBlindReturnItem.quantity} onChange={(e) => setCurrentBlindReturnItem({...currentBlindReturnItem, quantity: parseInt(e.target.value, 10) || 1})} min="1"/>
+                                         <Input id="blind-return-quantity" name="blind-return-quantity" type="number" placeholder="1" value={currentBlindReturnItem.quantity} onChange={(e) => setCurrentBlindReturnItem({...currentBlindReturnItem, quantity: parseInt(e.target.value, 10) || 1})} min="1"/>
                                      </div>
                                      <Button type="button" onClick={handleAddBlindReturnItem} className="w-full"><PlusCircle className="mr-2" /> Add Item</Button>
                                  </div>
@@ -687,7 +689,7 @@ export default function SalesPage() {
                         <p>Confirm cash payment and print the invoice.</p>
                         <div className="space-y-2">
                            <Label htmlFor="print-size-cash">Paper Size</Label>
-                           <Select value={printSize} onValueChange={setPrintSize}>
+                           <Select name="print-size-cash" value={printSize} onValueChange={setPrintSize}>
                                <SelectTrigger id="print-size-cash">
                                    <SelectValue placeholder="Select size" />
                                </SelectTrigger>
@@ -709,7 +711,7 @@ export default function SalesPage() {
                        </div>
                        <div className="space-y-2">
                            <Label htmlFor="print-size-online">Paper Size</Label>
-                           <Select value={printSize} onValueChange={setPrintSize}>
+                           <Select name="print-size-online" value={printSize} onValueChange={setPrintSize}>
                                <SelectTrigger id="print-size-online">
                                    <SelectValue placeholder="Select size" />
                                </SelectTrigger>
