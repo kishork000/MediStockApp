@@ -30,63 +30,17 @@ import { ChevronDown } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import Link from "next/link";
 
-const generateData = (factor = 1) => [
-  { name: "Jan", total: Math.floor(Math.random() * 5000 * factor) + 1000 },
-  { name: "Feb", total: Math.floor(Math.random() * 5000 * factor) + 1000 },
-  { name: "Mar", total: Math.floor(Math.random() * 5000 * factor) + 1000 },
-  { name: "Apr", total: Math.floor(Math.random() * 5000 * factor) + 1000 },
-  { name: "May", total: Math.floor(Math.random() * 5000 * factor) + 1000 },
-  { name: "Jun", total: Math.floor(Math.random() * 5000 * factor) + 1000 },
-  { name: "Jul", total: Math.floor(Math.random() * 5000 * factor) + 1000 },
-  { name: "Aug", total: Math.floor(Math.random() * 5000 * factor) + 1000 },
-  { name: "Sep", total: Math.floor(Math.random() * 5000 * factor) + 1000 },
-  { name: "Oct", total: Math.floor(Math.random() * 5000 * factor) + 1000 },
-  { name: "Nov", total: Math.floor(Math.random() * 5000 * factor) + 1000 },
-  { name: "Dec", total: Math.floor(Math.random() * 5000 * factor) + 1000 },
-];
 
-const companyWideData: DashboardData = {
-    totalRevenue: "₹3,45,231.89",
-    revenueChange: "+20.1% from last month",
-    sales: "+12,234",
-    salesChange: "+19% from last month",
-    stockAvailability: "8,340",
-    stockChange: "+5% from yesterday",
-    subscriptions: "+2350",
-    subscriptionsChange: "+180.1% from last month",
-    overview: generateData(),
-};
-
-const downtownPharmacyData: DashboardData = {
-    totalRevenue: "₹1,12,890.45",
-    revenueChange: "+15.2% from last month",
-    sales: "+4,812",
-    salesChange: "+22% from last month",
-    stockAvailability: "1,450",
-    stockChange: "-2% from yesterday",
-    subscriptions: "+980",
-    subscriptionsChange: "+150% from last month",
-    overview: generateData(0.4),
-};
-
-const uptownHealthData: DashboardData = {
-    totalRevenue: "₹98,540.10",
-    revenueChange: "+25.8% from last month",
-    sales: "+3,990",
-    salesChange: "+15% from last month",
-    stockAvailability: "1,820",
-    stockChange: "+8% from yesterday",
-    subscriptions: "+750",
-    subscriptionsChange: "+210% from last month",
-    overview: generateData(0.3),
-};
-
-const getDashboardData = (user: { role: string, assignedStore?: string } | null): DashboardData => {
-    if (!user) return companyWideData;
-    if (user.role === 'Admin') return companyWideData;
-    if (user.assignedStore === 'STR002') return downtownPharmacyData;
-    if (user.assignedStore === 'STR003') return uptownHealthData;
-    return companyWideData; // Default to company wide
+const emptyDashboardData: DashboardData = {
+    totalRevenue: "₹0.00",
+    revenueChange: " ",
+    sales: "0",
+    salesChange: " ",
+    stockAvailability: "0",
+    stockChange: " ",
+    subscriptions: "0",
+    subscriptionsChange: " ",
+    overview: [],
 };
 
 
@@ -114,7 +68,8 @@ export default function Home() {
     }
   }, [user, loading, router]);
   
-  const dashboardData = useMemo(() => getDashboardData(user), [user]);
+  const dashboardData = emptyDashboardData;
+
   const dashboardTitle = useMemo(() => {
       if(user?.role === 'Admin') return 'Company Dashboard';
       if(user?.assignedStore === 'STR002') return 'Downtown Pharmacy Dashboard';
@@ -334,3 +289,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
