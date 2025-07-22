@@ -7,6 +7,7 @@ import { User, UserRole, RolePermissions, allAppRoutes } from '@/lib/types';
 import { auth, db } from '@/lib/firebase-config';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, User as FirebaseAuthUser } from 'firebase/auth';
 import { collection, query, where, getDocs, doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
+import { seedDatabase } from '@/services/seed-service';
 
 
 const initialPermissions: RolePermissions = {
@@ -47,35 +48,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const pathname = usePathname();
 
     const fetchUserDetails = async (firebaseUser: FirebaseAuthUser): Promise<User | null> => {
-        const usersRef = collection(db, "users");
-        const q = query(usersRef, where("email", "==", firebaseUser.email));
-        const querySnapshot = await getDocs(q);
+        const userDocRef = doc(db, "users", firebaseUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
         
-        if (querySnapshot.empty) {
-            console.warn("No user document found for email:", firebaseUser.email);
-            return null;
+        if (!userDocSnap.exists()) {
+             // Fallback for users created before UID was standard
+            const usersRef = collection(db, "users");
+            const q = query(usersRef, where("email", "==", firebaseUser.email));
+            const querySnapshot = await getDocs(q);
+             if (querySnapshot.empty) {
+                console.warn("No user document found for email:", firebaseUser.email);
+                return null;
+            }
+            const userDoc = querySnapshot.docs[0];
+            return { id: userDoc.id, ...userDoc.data() } as User;
         }
 
-        const userDoc = querySnapshot.docs[0];
-        const userData = userDoc.data() as Omit<User, 'id'>;
-        
-        return {
-            id: userDoc.id,
-            ...userData,
-        };
+        return { id: userDocSnap.id, ...userDocSnap.data() } as User;
     };
     
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
+                setLoading(true);
                 const userDetails = await fetchUserDetails(firebaseUser);
                 if (userDetails) {
                     setUser(userDetails);
                     localStorage.setItem('medi-stock-user', JSON.stringify(userDetails));
+
+                    if (userDetails.role === 'Admin') {
+                        const seeded = localStorage.getItem('db_seeded');
+                        if (!seeded) {
+                            console.log("Admin logged in, checking if DB needs seeding...");
+                            await seedDatabase();
+                            localStorage.setItem('db_seeded', 'true');
+                            console.log("Database seeding complete.");
+                        }
+                    }
+
                 } else {
                     setUser(null);
                     localStorage.removeItem('medi-stock-user');
-                    await signOut(auth); // Log out from Firebase if no user document
+                    await signOut(auth);
                 }
             } else {
                 setUser(null);
@@ -112,12 +126,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     useEffect(() => {
         if (loading) return;
 
-        if (!user && pathname !== '/login') {
+        const publicRoutes = ['/login'];
+        const pathIsPublic = publicRoutes.includes(pathname);
+
+        if (!user && !pathIsPublic) {
             router.push('/login');
             return;
         }
 
-        if (user && pathname !== '/login' && !hasPermission(pathname)) {
+        if (user && !hasPermission(pathname)) {
              if(hasPermission('/')) {
                 router.push('/');
              } else {
@@ -148,17 +165,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem('medi-stock-permissions', JSON.stringify(newPermissions));
     }
     
-    // Admin user management functions
     const createUser = async (newUser: NewUser) => {
         if (user?.role !== 'Admin') throw new Error("Only admins can create users.");
         if (!newUser.password) throw new Error("Password is required to create a user.");
         
-        // This is a temporary way to create a user in Firebase Auth from the client.
-        // In a real production app, this should be handled by a secure backend function.
         const userCredential = await createUserWithEmailAndPassword(auth, newUser.email, newUser.password);
         const { password, ...userData } = newUser;
         
-        // Now save the user's role and other details in Firestore
         const userDocRef = doc(db, 'users', userCredential.user.uid);
         await setDoc(userDocRef, {
             ...userData,
@@ -168,11 +181,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const deleteUser = async (userId: string, email: string) => {
          if (user?.role !== 'Admin') throw new Error("Only admins can delete users.");
-         // This is a placeholder. Deleting a user requires backend privileges (e.g., a Firebase Function).
-         // It cannot be done securely from the client-side SDK.
          console.warn("User deletion from Firebase Auth must be done from a backend environment.");
-
-         // We can, however, delete their data from Firestore.
          const userDocRef = doc(db, 'users', userId);
          await deleteDoc(userDocRef);
     };
@@ -201,5 +210,3 @@ export const useAuth = (): AuthContextType => {
     }
     return context;
 };
-
-    
