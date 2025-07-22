@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, Pill, Undo, Building, MoreHorizontal, Download } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, Pill, Undo, Building, MoreHorizontal, Download, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +21,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InventoryItem, getAvailableStockForLocation } from "@/services/inventory-service";
 import { Medicine, getMedicines } from "@/services/medicine-service";
@@ -35,13 +35,8 @@ import { Transfer, getTransfers } from "@/services/transfer-service";
 import { getManufacturerReturns, ManufacturerReturn } from "@/services/return-service";
 import { isWithinInterval, startOfDay, endOfDay, parseISO, format } from "date-fns";
 import type { WarehouseLedgerItem } from "@/lib/report-types";
+import { Input } from "@/components/ui/input";
 
-
-const getStatus = (quantity: number, minStockLevel: number) => {
-    if (quantity <= 0) return "Out of Stock";
-    if (quantity <= minStockLevel) return "Low Stock";
-    return "In Stock";
-};
 
 export default function WarehouseInventoryPage() {
     const { user, logout, loading, hasPermission } = useAuth();
@@ -61,9 +56,10 @@ export default function WarehouseInventoryPage() {
     const [manufacturerReturns, setManufacturerReturns] = useState<ManufacturerReturn[]>([]);
     
     const [stockLedger, setStockLedger] = useState<WarehouseLedgerItem[]>([]);
-    const filtersRef = useRef<{dateRange?: DateRange; manufacturerId: string; medicineId: string}>({
+    const filtersRef = useRef<{dateRange?: DateRange; manufacturerId: string; medicineId: string; invoiceNo: string}>({
         manufacturerId: 'all',
         medicineId: 'all',
+        invoiceNo: "",
     });
 
     const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
@@ -108,7 +104,11 @@ export default function WarehouseInventoryPage() {
         const startDate = startOfDay(filtersRef.current.dateRange.from);
         const endDate = endOfDay(filtersRef.current.dateRange.to);
 
-        const purchasesInDateRange = purchases.filter(p => isWithinInterval(parseISO(p.date), { start: startDate, end: endDate }));
+        let filteredPurchases = purchases.filter(p => isWithinInterval(parseISO(p.date), { start: startDate, end: endDate }));
+        if(filtersRef.current.invoiceNo) {
+            filteredPurchases = filteredPurchases.filter(p => p.invoiceId.toLowerCase().includes(filtersRef.current.invoiceNo.toLowerCase()));
+        }
+
         const transfersInDateRange = transfers.filter(t => isWithinInterval(parseISO(t.date), { start: startDate, end: endDate }));
         const returnsInDateRange = manufacturerReturns.filter(r => isWithinInterval(parseISO(r.date), { start: startDate, end: endDate }));
         
@@ -131,12 +131,13 @@ export default function WarehouseInventoryPage() {
             const currentItem = inventory.find(i => i.medicineId === medId);
             const balance = currentItem?.quantity || 0;
 
-            const receivedDuringPeriod = purchasesInDateRange.flatMap(p => p.items).filter(i => i.medicineId === medId).reduce((sum, i) => sum + i.quantity, 0);
+            const receivedDuringPeriod = filteredPurchases.flatMap(p => p.items).filter(i => i.medicineId === medId).reduce((sum, i) => sum + i.quantity, 0);
             const transferredDuringPeriod = transfersInDateRange.filter(t => t.from === 'warehouse').flatMap(t => t.items).filter(i => i.medicineId === medId).reduce((sum, i) => sum + i.quantity, 0);
             const returnedFromStoreDuringPeriod = transfersInDateRange.filter(t => t.to === 'warehouse').flatMap(t => t.items).filter(i => i.medicineId === medId).reduce((sum, i) => sum + i.quantity, 0);
             const returnedToMfrDuringPeriod = returnsInDateRange.flatMap(r => r.items).filter(i => i.medicineId === medId).reduce((sum, i) => sum + i.quantity, 0);
 
             const opening = balance - receivedDuringPeriod - returnedFromStoreDuringPeriod + transferredDuringPeriod + returnedToMfrDuringPeriod;
+            const totalStock = opening + receivedDuringPeriod + returnedFromStoreDuringPeriod;
             
             ledger.push({
                 medicineId: medId,
@@ -144,6 +145,7 @@ export default function WarehouseInventoryPage() {
                 manufacturerName: medicineDetails.manufacturerName,
                 opening,
                 received: receivedDuringPeriod,
+                totalStock,
                 returnedFromStore: returnedFromStoreDuringPeriod,
                 returnedToManufacturer: returnedToMfrDuringPeriod,
                 transferred: transferredDuringPeriod,
@@ -160,11 +162,11 @@ export default function WarehouseInventoryPage() {
             return;
         }
         let csvContent = "data:text/csv;charset=utf-8,";
-        const headers = ["Medicine", "Manufacturer", "Opening", "Received", "Returned (Stores)", "Returned (MFR)", "Transferred", "Balance"];
+        const headers = ["Medicine", "Manufacturer", "Opening", "Received", "Returned (Stores)", "Total Stock", "Returned (MFR)", "Transferred", "Balance"];
         csvContent += headers.join(",") + "\r\n";
 
         stockLedger.forEach(item => {
-            const row = [`"${item.medicineName}"`, `"${item.manufacturerName}"`, item.opening, item.received, item.returnedFromStore, item.returnedToManufacturer, item.transferred, item.balance];
+            const row = [`"${item.medicineName}"`, `"${item.manufacturerName}"`, item.opening, item.received, item.returnedFromStore, item.totalStock, item.returnedToManufacturer, item.transferred, item.balance];
             csvContent += row.join(",") + "\r\n";
         });
 
@@ -178,8 +180,10 @@ export default function WarehouseInventoryPage() {
     };
 
     const handleResetFilters = () => {
-        filtersRef.current = { dateRange: undefined, manufacturerId: 'all', medicineId: 'all' };
+        filtersRef.current = { dateRange: undefined, manufacturerId: 'all', medicineId: 'all', invoiceNo: '' };
+        // To re-render the components with cleared values
         setStockLedger([]);
+        // We can optionally call calculateStockLedger() if we want to show a default report on reset
     };
 
 
@@ -236,7 +240,7 @@ export default function WarehouseInventoryPage() {
                     </header>
                     <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
                         <div className="space-y-4">
-                             <Skeleton className="h-32 w-full" />
+                             <Skeleton className="h-40 w-full" />
                              <Skeleton className="h-64 w-full" />
                         </div>
                     </main>
@@ -334,8 +338,9 @@ export default function WarehouseInventoryPage() {
                     <CardDescription>Use filters to generate the stock ledger report for a specific period.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         <DateRangePicker onUpdate={(v) => (filtersRef.current.dateRange = v.range)} />
+                        <Input placeholder="Search by Invoice No..." defaultValue={filtersRef.current.invoiceNo} onChange={e => (filtersRef.current.invoiceNo = e.target.value)} />
                         <Select onValueChange={(v) => (filtersRef.current.manufacturerId = v)} defaultValue="all">
                             <SelectTrigger><SelectValue placeholder="Select Manufacturer" /></SelectTrigger>
                             <SelectContent>
@@ -371,18 +376,18 @@ export default function WarehouseInventoryPage() {
                     </Button>
                 </CardHeader>
                 <CardContent>
-                    <div className="relative w-full overflow-auto rounded-lg border">
+                    <div className="hidden md:block relative w-full overflow-auto rounded-lg border">
                         <Table>
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Medicine</TableHead>
-                                    <TableHead className="hidden lg:table-cell">Manufacturer</TableHead>
-                                    <TableHead className="text-right">Opening</TableHead>
-                                    <TableHead className="text-right">Received</TableHead>
-                                    <TableHead className="text-right">Returned (Stores)</TableHead>
-                                    <TableHead className="text-right">Returned (MFR)</TableHead>
-                                    <TableHead className="text-right">Transferred</TableHead>
-                                    <TableHead className="text-right font-bold">Balance</TableHead>
+                                    <TableHead>Opening</TableHead>
+                                    <TableHead>Received</TableHead>
+                                    <TableHead>Total Stock</TableHead>
+                                    <TableHead>Returned (Stores)</TableHead>
+                                    <TableHead>Transferred</TableHead>
+                                    <TableHead>Returned (MFR)</TableHead>
+                                    <TableHead className="font-bold">Balance</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -394,13 +399,13 @@ export default function WarehouseInventoryPage() {
                                     stockLedger.map((item) => (
                                         <TableRow key={item.medicineId}>
                                             <TableCell className="font-medium">{item.medicineName}</TableCell>
-                                            <TableCell className="hidden lg:table-cell">{item.manufacturerName}</TableCell>
-                                            <TableCell className="text-right">{item.opening}</TableCell>
-                                            <TableCell className="text-right text-green-600">+{item.received}</TableCell>
-                                            <TableCell className="text-right text-blue-600">+{item.returnedFromStore}</TableCell>
-                                            <TableCell className="text-right text-red-600">-{item.returnedToManufacturer}</TableCell>
-                                            <TableCell className="text-right text-orange-600">-{item.transferred}</TableCell>
-                                            <TableCell className="text-right font-bold">{item.balance}</TableCell>
+                                            <TableCell>{item.opening}</TableCell>
+                                            <TableCell className="text-green-600">+{item.received}</TableCell>
+                                            <TableCell>{item.totalStock}</TableCell>
+                                            <TableCell className="text-blue-600">+{item.returnedFromStore}</TableCell>
+                                            <TableCell className="text-orange-600">-{item.transferred}</TableCell>
+                                            <TableCell className="text-red-600">-{item.returnedToManufacturer}</TableCell>
+                                            <TableCell className="font-bold">{item.balance}</TableCell>
                                         </TableRow>
                                     ))
                                 ) : (
@@ -412,6 +417,9 @@ export default function WarehouseInventoryPage() {
                                 )}
                             </TableBody>
                         </Table>
+                    </div>
+                     <div className="md:hidden text-center p-8">
+                        <p className="text-muted-foreground">The detailed ledger report is only available on desktop. Please use a larger screen to view this table.</p>
                     </div>
                 </CardContent>
             </Card>
