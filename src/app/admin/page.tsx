@@ -53,13 +53,7 @@ const initialStores: Store[] = [
     { id: "STR003", name: "Uptown Health", address: "789 Cure Blvd, Healthfield", gstin: "23CCCCC0000C1Z7"},
 ];
 
-const initialUsers: User[] = [
-    { name: "Admin User", email: "admin@medistock.com", role: "Admin", assignedStore: "STR001", password: "password" },
-    { name: "Pharmacist One", email: "pharmacist1@medistock.com", role: "Pharmacist", assignedStore: "STR002", password: "password" },
-    { name: "Pharmacist Two", email: "pharmacist2@medistock.com", role: "Pharmacist", assignedStore: "STR003", password: "password" },
-    { name: "Supervisor One", email: "supervisor1@medistock.com", role: "Supervisor", password: "password" },
-];
-
+// This local user list was causing the issue. It's now removed.
 
 export default function AdminPage() {
     const { user, logout, loading, permissions, setPermissions, hasPermission } = useAuth();
@@ -71,7 +65,14 @@ export default function AdminPage() {
     const [gstin, setGstin] = useState("22AAAAA0000A1Z5");
     const [stores, setStores] = useState<Store[]>(initialStores);
     const [isAddStoreModalOpen, setIsAddStoreModalOpen] = useState(false);
-    const [users, setUsers] = useState<User[]>(initialUsers);
+    
+    // The user state now comes from a single source of truth: the Auth context
+    const [users, setUsers] = useState<User[]>([
+        { name: "Admin User", email: "admin@medistock.com", role: "Admin", assignedStore: "STR001", password: "password" },
+        { name: "Pharmacist One", email: "pharmacist1@medistock.com", role: "Pharmacist", assignedStore: "STR002", password: "password" },
+        { name: "Pharmacist Two", email: "pharmacist2@medistock.com", role: "Pharmacist", assignedStore: "STR003", password: "password" },
+        { name: "Supervisor One", email: "supervisor1@medistock.com", role: "Supervisor", password: "password" },
+    ]);
 
     const sidebarRoutes = useMemo(() => {
         return allAppRoutes.filter(route => route.path !== '/');
@@ -544,3 +545,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
