@@ -27,77 +27,123 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Medicine, getMedicines, addMedicine, updateMedicine, deleteMedicine } from "@/services/medicine-service";
+import { Skeleton } from "@/components/ui/skeleton";
 
 
-interface MedicineMaster {
-    id: string;
-    name: string;
-    hsnCode: string;
-    purchasePrice: number;
-    sellingPrice: number;
-    gstSlab: string;
-    minStockLevel: number;
-    unitType: string;
-}
+const defaultFormState: Omit<Medicine, 'id'> = {
+    name: "",
+    hsnCode: "",
+    purchasePrice: 0,
+    sellingPrice: 0,
+    gstSlab: "",
+    minStockLevel: 0,
+    unitType: "",
+};
 
-const initialMedicines: MedicineMaster[] = [
-    { id: "MED001", name: "Aspirin 100mg", hsnCode: "300490", purchasePrice: 1.00, sellingPrice: 1.20, gstSlab: "5", minStockLevel: 100, unitType: 'PCS' },
-    { id: "MED002", name: "Ibuprofen 200mg", hsnCode: "300490", purchasePrice: 2.50, sellingPrice: 3.00, gstSlab: "12", minStockLevel: 50, unitType: 'PCS' },
-    { id: "MED003", name: "Paracetamol 500mg", hsnCode: "300490", purchasePrice: 0.50, sellingPrice: 0.60, gstSlab: "5", minStockLevel: 200, unitType: 'PCS' },
-    { id: "MED004", name: "Amoxicillin 250mg", hsnCode: "300450", purchasePrice: 8.00, sellingPrice: 9.50, gstSlab: "12", minStockLevel: 50, unitType: 'STRIP' },
-    { id: "MED005", name: "Atorvastatin 20mg", hsnCode: "300490", purchasePrice: 15.00, sellingPrice: 18.00, gstSlab: "12", minStockLevel: 75, unitType: 'PCS' },
-];
 
 export default function MedicineMasterPage() {
     const { user, logout, loading, hasPermission } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
     const { toast } = useToast();
-    const [medicines, setMedicines] = useState<MedicineMaster[]>(initialMedicines);
-    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [medicines, setMedicines] = useState<Medicine[]>([]);
+    const [dataLoading, setDataLoading] = useState(true);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
+    const [selectedMedicine, setSelectedMedicine] = useState<Medicine | null>(null);
+    const [formState, setFormState] = useState(defaultFormState);
+
 
     const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
     const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && route.inSidebar && hasPermission(route.path)), [hasPermission]);
+
+    const fetchMedicines = async () => {
+        setDataLoading(true);
+        try {
+            const medicinesFromDb = await getMedicines();
+            setMedicines(medicinesFromDb);
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch medicines.'});
+        }
+        setDataLoading(false);
+    };
+    
+    useEffect(() => {
+        if(user) {
+            fetchMedicines();
+        }
+    }, [user]);
 
     useEffect(() => {
         if (!loading && !user) {
             router.push('/login');
         }
     }, [user, loading, router]);
+    
+    const openAddModal = () => {
+        setModalMode('add');
+        setFormState(defaultFormState);
+        setSelectedMedicine(null);
+        setIsModalOpen(true);
+    }
 
-    const handleDelete = (id: string) => {
-        setMedicines(medicines.filter(d => d.id !== id));
-        toast({ title: "Success", description: "Medicine removed from master list." });
+    const openEditModal = (medicine: Medicine) => {
+        setModalMode('edit');
+        setSelectedMedicine(medicine);
+        setFormState({
+            name: medicine.name,
+            hsnCode: medicine.hsnCode,
+            purchasePrice: medicine.purchasePrice,
+            sellingPrice: medicine.sellingPrice,
+            gstSlab: medicine.gstSlab,
+            minStockLevel: medicine.minStockLevel,
+            unitType: medicine.unitType,
+        });
+        setIsModalOpen(true);
+    }
+    
+    const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        const isNumberField = ['purchasePrice', 'sellingPrice', 'minStockLevel'].includes(name);
+        setFormState(prev => ({ ...prev, [name]: isNumberField ? parseFloat(value) || 0 : value }));
     };
 
-    const handleAddMedicine = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        const formData = new FormData(e.currentTarget);
-        const name = formData.get("medicine-name") as string;
-        const hsnCode = formData.get("hsn-code") as string;
-        const purchasePrice = parseFloat(formData.get("purchase-price") as string);
-        const sellingPrice = parseFloat(formData.get("selling-price") as string);
-        const gstSlab = formData.get("gst-slab") as string;
-        const minStockLevel = parseInt(formData.get("min-stock") as string, 10);
-        const unitType = formData.get("unit-type") as string;
+    const handleSelectChange = (name: 'gstSlab' | 'unitType', value: string) => {
+        setFormState(prev => ({...prev, [name]: value}));
+    }
 
-        if (name && hsnCode && purchasePrice && sellingPrice && gstSlab && minStockLevel && unitType) {
-            const newMedicine: MedicineMaster = {
-                id: `MED${(medicines.length + 1).toString().padStart(3, '0')}`,
-                name,
-                hsnCode,
-                purchasePrice,
-                sellingPrice,
-                gstSlab,
-                minStockLevel,
-                unitType,
-            };
-            setMedicines([...medicines, newMedicine]);
-            toast({ title: "Success", description: "Medicine added to master list." });
-            setIsAddModalOpen(false);
-            e.currentTarget.reset();
+    const handleDelete = async (id: string) => {
+        try {
+            await deleteMedicine(id);
+            await fetchMedicines();
+            toast({ title: "Success", description: "Medicine removed from master list." });
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: "Failed to remove medicine." });
+        }
+    };
+
+    const handleAddOrUpdateMedicine = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        
+        const { name, hsnCode, purchasePrice, sellingPrice, gstSlab, minStockLevel, unitType } = formState;
+
+        if (name && hsnCode && purchasePrice > 0 && sellingPrice > 0 && gstSlab && minStockLevel > 0 && unitType) {
+            try {
+                if(modalMode === 'edit' && selectedMedicine) {
+                    await updateMedicine(selectedMedicine.id, formState);
+                    toast({ title: "Success", description: "Medicine details updated." });
+                } else {
+                    await addMedicine(formState);
+                    toast({ title: "Success", description: "Medicine added to master list." });
+                }
+                await fetchMedicines();
+                setIsModalOpen(false);
+            } catch (error) {
+                toast({ variant: "destructive", title: "Error", description: "Failed to save medicine." });
+            }
         } else {
-            toast({ variant: "destructive", title: "Error", description: "Please fill all fields." });
+            toast({ variant: "destructive", title: "Error", description: "Please fill all fields correctly. Prices and stock must be greater than zero." });
         }
     };
     
@@ -194,7 +240,7 @@ export default function MedicineMasterPage() {
            <div className="flex w-full items-center justify-between">
                 <h1 className="text-xl font-semibold">Medicine Master</h1>
                 <div className="flex items-center gap-2">
-                    <Button onClick={() => setIsAddModalOpen(true)}>
+                    <Button onClick={openAddModal}>
                         <PlusSquare className="mr-2 h-4 w-4"/>
                         Add Medicine
                     </Button>
@@ -212,7 +258,6 @@ export default function MedicineMasterPage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="hidden sm:table-cell">ID</TableHead>
                                 <TableHead>Name</TableHead>
                                 <TableHead className="hidden md:table-cell">HSN</TableHead>
                                 <TableHead className="hidden md:table-cell text-right">Selling Price (₹)</TableHead>
@@ -224,10 +269,20 @@ export default function MedicineMasterPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {medicines.map((med) => (
+                            {dataLoading ? (
+                                Array.from({length: 5}).map((_, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell><Skeleton className="h-4 w-48" /></TableCell>
+                                        <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
+                                        <TableCell className="hidden md:table-cell text-right"><Skeleton className="h-4 w-16" /></TableCell>
+                                        <TableCell className="hidden md:table-cell text-right"><Skeleton className="h-4 w-12" /></TableCell>
+                                        <TableCell className="hidden md:table-cell text-right"><Skeleton className="h-4 w-12" /></TableCell>
+                                        <TableCell><Skeleton className="h-8 w-8" /></TableCell>
+                                    </TableRow>
+                                ))
+                            ) : medicines.map((med) => (
                                 <TableRow key={med.id}>
-                                    <TableCell className="hidden sm:table-cell font-medium">{med.id}</TableCell>
-                                    <TableCell>{med.name}</TableCell>
+                                    <TableCell className="font-medium">{med.name}</TableCell>
                                     <TableCell className="hidden md:table-cell">{med.hsnCode}</TableCell>
                                     <TableCell className="hidden md:table-cell text-right">{med.sellingPrice.toFixed(2)}</TableCell>
                                     <TableCell className="hidden md:table-cell text-right">{med.unitType}</TableCell>
@@ -242,7 +297,7 @@ export default function MedicineMasterPage() {
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                <DropdownMenuItem>Edit</DropdownMenuItem>
+                                                <DropdownMenuItem onSelect={() => openEditModal(med)}>Edit</DropdownMenuItem>
                                                 <DropdownMenuItem onSelect={() => handleDelete(med.id)} className="text-destructive">
                                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
                                                 </DropdownMenuItem>
@@ -258,29 +313,29 @@ export default function MedicineMasterPage() {
         </main>
       </div>
 
-       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
             <DialogContent className="sm:max-w-lg">
-                 <form onSubmit={handleAddMedicine}>
+                 <form onSubmit={handleAddOrUpdateMedicine}>
                     <DialogHeader>
-                        <DialogTitle>Add New Medicine</DialogTitle>
+                        <DialogTitle>{modalMode === 'edit' ? 'Edit Medicine' : 'Add New Medicine'}</DialogTitle>
                         <DialogDescription>
-                            Define a new medicine in the master list with its properties.
+                            {modalMode === 'edit' ? 'Update the details for this medicine.' : 'Define a new medicine in the master list with its properties.'}
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="space-y-2">
-                            <Label htmlFor="medicine-name">Medicine Name</Label>
-                            <Input id="medicine-name" name="medicine-name" placeholder="e.g., Paracetamol 500mg" required />
+                            <Label htmlFor="name">Medicine Name</Label>
+                            <Input id="name" name="name" value={formState.name} onChange={handleFormChange} placeholder="e.g., Paracetamol 500mg" required />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                              <div className="space-y-2">
-                                <Label htmlFor="hsn-code">HSN Code</Label>
-                                <Input id="hsn-code" name="hsn-code" placeholder="e.g., 300490" required />
+                                <Label htmlFor="hsnCode">HSN Code</Label>
+                                <Input id="hsnCode" name="hsnCode" value={formState.hsnCode} onChange={handleFormChange} placeholder="e.g., 300490" required />
                             </div>
                              <div className="space-y-2">
-                                <Label htmlFor="gst-slab">GST Slab</Label>
-                                <Select name="gst-slab" required>
-                                    <SelectTrigger id="gst-slab">
+                                <Label htmlFor="gstSlab">GST Slab</Label>
+                                <Select name="gstSlab" value={formState.gstSlab} onValueChange={(v) => handleSelectChange('gstSlab', v)} required>
+                                    <SelectTrigger id="gstSlab">
                                         <SelectValue placeholder="Select GST %" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -295,23 +350,23 @@ export default function MedicineMasterPage() {
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="purchase-price">Default Purchase Price (₹)</Label>
-                                <Input id="purchase-price" name="purchase-price" type="number" step="0.01" placeholder="9.50" required />
+                                <Label htmlFor="purchasePrice">Default Purchase Price (₹)</Label>
+                                <Input id="purchasePrice" name="purchasePrice" value={formState.purchasePrice} onChange={handleFormChange} type="number" step="0.01" placeholder="9.50" required />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="selling-price">Selling Price (₹)</Label>
-                                <Input id="selling-price" name="selling-price" type="number" step="0.01" placeholder="10.50" required />
+                                <Label htmlFor="sellingPrice">Selling Price (₹)</Label>
+                                <Input id="sellingPrice" name="sellingPrice" value={formState.sellingPrice} onChange={handleFormChange} type="number" step="0.01" placeholder="10.50" required />
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="min-stock">Minimum Stock Level</Label>
-                                <Input id="min-stock" name="min-stock" type="number" placeholder="50" required />
+                                <Label htmlFor="minStockLevel">Minimum Stock Level</Label>
+                                <Input id="minStockLevel" name="minStockLevel" value={formState.minStockLevel} onChange={handleFormChange} type="number" placeholder="50" required />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="unit-type">Unit Type</Label>
-                                <Select name="unit-type" required>
-                                    <SelectTrigger id="unit-type">
+                                <Label htmlFor="unitType">Unit Type</Label>
+                                <Select name="unitType" value={formState.unitType} onValueChange={(v) => handleSelectChange('unitType', v)} required>
+                                    <SelectTrigger id="unitType">
                                         <SelectValue placeholder="Select Unit" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -329,7 +384,7 @@ export default function MedicineMasterPage() {
                         <DialogClose asChild>
                             <Button type="button" variant="secondary">Cancel</Button>
                         </DialogClose>
-                        <Button type="submit">Add to Master</Button>
+                        <Button type="submit">{modalMode === 'edit' ? 'Save Changes' : 'Add to Master'}</Button>
                     </DialogFooter>
                 </form>
             </DialogContent>
