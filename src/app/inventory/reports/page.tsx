@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, Download, TrendingUp, Undo, Pill, Building } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, Download, TrendingUp, Undo, Pill, Building, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -24,6 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Transfer, getTransfers } from "@/services/transfer-service";
 import { InventoryItem, getAvailableStockForLocation } from "@/services/inventory-service";
 import { Medicine, getMedicines } from "@/services/medicine-service";
@@ -60,6 +61,7 @@ export default function StockReportsPage() {
     const [selectedStore, setSelectedStore] = useState("all");
     const [selectedManufacturer, setSelectedManufacturer] = useState("all");
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+    const [searchId, setSearchId] = useState("");
 
     const [dataLoading, setDataLoading] = useState(true);
 
@@ -154,8 +156,11 @@ export default function StockReportsPage() {
         if (dateRange?.from && dateRange.to) {
             filtered = filtered.filter(t => isWithinInterval(parseISO(t.date), { start: dateRange.from!, end: dateRange.to! }));
         }
+         if (searchId) {
+            filtered = filtered.filter(t => t.id.toLowerCase().includes(searchId.toLowerCase()));
+        }
         return filtered;
-    }, [selectedStore, dateRange, transfers]);
+    }, [selectedStore, dateRange, searchId, transfers]);
 
     const filteredPurchases = useMemo(() => {
         let filtered = [...purchases];
@@ -165,8 +170,11 @@ export default function StockReportsPage() {
         if (dateRange?.from && dateRange.to) {
             filtered = filtered.filter(p => isWithinInterval(parseISO(p.date), { start: dateRange.from!, end: dateRange.to! }));
         }
+        if (searchId) {
+            filtered = filtered.filter(p => p.invoiceId.toLowerCase().includes(searchId.toLowerCase()));
+        }
         return filtered;
-    }, [selectedManufacturer, dateRange, purchases]);
+    }, [selectedManufacturer, dateRange, searchId, purchases]);
 
 
     const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
@@ -205,6 +213,13 @@ export default function StockReportsPage() {
             case 'Admin': return <Settings />;
             default: return <LayoutGrid />;
         }
+    };
+    
+    const handleClearFilters = () => {
+        setSelectedStore('all');
+        setSelectedManufacturer('all');
+        setDateRange(undefined);
+        setSearchId('');
     };
 
   return (
@@ -293,7 +308,7 @@ export default function StockReportsPage() {
            </div>
         </header>
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
-            <Tabs defaultValue="levels">
+            <Tabs defaultValue="levels" onValueChange={handleClearFilters}>
                 <TabsList>
                     <TabsTrigger value="levels">Overall Stock Levels</TabsTrigger>
                     <TabsTrigger value="transfers">Inter-Store Transfers</TabsTrigger>
@@ -302,9 +317,8 @@ export default function StockReportsPage() {
                 <TabsContent value="levels">
                      <Card>
                         <CardHeader>
-                            <CardTitle>Overall Stock Levels</CardTitle>
                              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                                <CardDescription>Aggregated stock counts across locations. Filter by store or manufacturer.</CardDescription>
+                                <CardTitle>Overall Stock Levels</CardTitle>
                                 <div className="flex items-center gap-2">
                                      <Select value={selectedStore} onValueChange={setSelectedStore} disabled={user?.role === 'Pharmacist' && availableStores.length === 1}>
                                         <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Select Store" /></SelectTrigger>
@@ -319,6 +333,7 @@ export default function StockReportsPage() {
                                     </Select>
                                 </div>
                              </div>
+                             <CardDescription>Aggregated stock counts across locations. Filter by store or manufacturer.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <Table>
@@ -352,17 +367,21 @@ export default function StockReportsPage() {
                 <TabsContent value="transfers">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Transfer &amp; Return Report</CardTitle>
                              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                                <CardDescription>History of all stock movements between warehouse and stores.</CardDescription>
-                                <div className="flex items-center gap-2">
+                                <CardTitle>Transfer &amp; Return Report</CardTitle>
+                                <div className="flex flex-wrap items-center gap-2">
+                                     <div className="relative">
+                                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                        <Input type="search" placeholder="Search by Invoice/CNR ID..." className="pl-8 w-full sm:w-[200px]" value={searchId} onChange={e => setSearchId(e.target.value)} />
+                                    </div>
                                      <Select value={selectedStore} onValueChange={setSelectedStore} disabled={user?.role === 'Pharmacist' && availableStores.length === 1}>
-                                        <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Select Store" /></SelectTrigger>
+                                        <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Select Store" /></SelectTrigger>
                                         <SelectContent>{availableStores.map(store => (<SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>))}</SelectContent>
                                     </Select>
                                      <DateRangePicker onUpdate={(values) => setDateRange(values.range)} />
                                 </div>
                             </div>
+                            <CardDescription>History of all stock movements between warehouse and stores.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <Table>
@@ -400,10 +419,13 @@ export default function StockReportsPage() {
                 <TabsContent value="purchase">
                     <Card>
                          <CardHeader>
-                            <CardTitle>Purchase History</CardTitle>
                             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                               <CardDescription>History of all stock purchases from manufacturers.</CardDescription>
-                               <div className="flex items-center gap-2">
+                               <CardTitle>Purchase History</CardTitle>
+                               <div className="flex flex-wrap items-center gap-2">
+                                     <div className="relative">
+                                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                        <Input type="search" placeholder="Search by Invoice ID..." className="pl-8 w-full sm:w-[200px]" value={searchId} onChange={e => setSearchId(e.target.value)} />
+                                    </div>
                                      <Select value={selectedManufacturer} onValueChange={setSelectedManufacturer}>
                                         <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Select Manufacturer" /></SelectTrigger>
                                         <SelectContent>
@@ -414,6 +436,7 @@ export default function StockReportsPage() {
                                      <DateRangePicker onUpdate={(values) => setDateRange(values.range)} />
                                </div>
                            </div>
+                           <CardDescription>History of all stock purchases from manufacturers.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <Table>
@@ -450,3 +473,4 @@ export default function StockReportsPage() {
     </div>
   );
 }
+
