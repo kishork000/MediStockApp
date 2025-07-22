@@ -21,7 +21,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -42,6 +42,12 @@ const allStores = [
     { id: "STR002", name: "Downtown Pharmacy" },
     { id: "STR003", name: "Uptown Health" },
 ];
+
+const storeIdToKeyMap: Record<string, 'warehouse' | 'downtown' | 'uptown'> = {
+    "warehouse": "warehouse",
+    "STR002": "downtown",
+    "STR003": "uptown"
+};
 
 
 export default function StockReportsPage() {
@@ -96,7 +102,7 @@ export default function StockReportsPage() {
             setPurchases(purchasesData);
 
             const allStockItems = new Map<string, any>();
-             const processStock = (stock: InventoryItem[], locationKey: string) => {
+             const processStock = (stock: InventoryItem[], locationKey: 'downtown' | 'uptown' | 'warehouse') => {
                 stock.forEach(item => {
                     const medicineInfo = medicinesData.find(m => m.id === item.medicineId);
                     if (!allStockItems.has(item.medicineId)) {
@@ -144,8 +150,10 @@ export default function StockReportsPage() {
         if (tab === 'levels') {
             let filtered = [...stockLevels];
             if (stockFiltersRef.current.store !== 'all') {
-                const storeKey = allStores.find(s => s.id === stockFiltersRef.current.store)?.name.toLowerCase().replace(/ /g, '') === 'downtownpharmacy' ? 'downtown' : allStores.find(s => s.id === stockFiltersRef.current.store)?.name.toLowerCase() === 'uptownhealth' ? 'uptown' : 'warehouse';
-                filtered = filtered.filter(item => item[storeKey] > 0);
+                const storeKey = storeIdToKeyMap[stockFiltersRef.current.store];
+                if (storeKey) {
+                    filtered = filtered.filter(item => item[storeKey] > 0);
+                }
             }
             if (stockFiltersRef.current.manufacturer !== 'all') {
                 filtered = filtered.filter(item => item.manufacturerId === stockFiltersRef.current.manufacturer);
