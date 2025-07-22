@@ -25,5 +25,4 @@ export async function deletePackagingType(id: string) {
     const packagingTypeDoc = doc(db, 'packaging', id);
     return await deleteDoc(packagingTypeDoc);
 }
-
     

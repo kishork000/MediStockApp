@@ -25,5 +25,4 @@ export async function deleteUnitType(id: string) {
     const unitTypeDoc = doc(db, 'units', id);
     return await deleteDoc(unitTypeDoc);
 }
-
     

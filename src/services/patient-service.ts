@@ -54,5 +54,4 @@ export async function findPatientByMobile(mobile: string): Promise<Patient | nul
     const doc = querySnapshot.docs[0];
     return { ...doc.data(), id: doc.id } as Patient;
 }
-
     
