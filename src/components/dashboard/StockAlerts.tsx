@@ -34,17 +34,22 @@ export default function StockAlerts() {
     const fetchAlerts = useCallback(async () => {
         if (!user) return;
         setLoading(true);
+
+        const storesToFetch = user.role === 'Admin'
+            ? allStores
+            : allStores.filter(store => store.id === 'warehouse' || store.id === user.assignedStore);
+
         try {
             const medicines = await getMedicines();
             const medicineMap = new Map(medicines.map(m => [m.id, m]));
 
-            const stockPromises = allStores.map(store => getAvailableStockForLocation(store.id));
+            const stockPromises = storesToFetch.map(store => getAvailableStockForLocation(store.id));
             const stockResults = await Promise.all(stockPromises);
 
             const allAlerts: StockAlert[] = [];
 
             stockResults.forEach((stockItems, index) => {
-                const location = allStores[index];
+                const location = storesToFetch[index];
                 stockItems.forEach(item => {
                     const medicineDetails = medicineMap.get(item.medicineId);
                     if (!medicineDetails) return;
@@ -52,15 +57,12 @@ export default function StockAlerts() {
                     const minStockLevel = location.id === 'warehouse' ? medicineDetails.warehouseMinStockLevel : medicineDetails.storeMinStockLevel;
 
                     if (item.quantity <= minStockLevel) {
-                         // Only show alerts for stores the user has access to
-                        if (user.role === 'Admin' || user.assignedStore === location.id || location.id === 'warehouse') {
-                            allAlerts.push({
-                                medicineName: item.medicineName,
-                                locationName: location.name,
-                                quantity: item.quantity,
-                                minStockLevel: minStockLevel,
-                            });
-                        }
+                        allAlerts.push({
+                            medicineName: item.medicineName,
+                            locationName: location.name,
+                            quantity: item.quantity,
+                            minStockLevel: minStockLevel,
+                        });
                     }
                 });
             });
