@@ -3,12 +3,12 @@ import { db } from '@/lib/firebase-config';
 import { collection, writeBatch, getDocs, doc } from 'firebase/firestore';
 
 const initialMedicines = [
-    { id: "MED001", name: "Paracetamol 500mg", hsnCode: "300490", purchasePrice: 1.5, sellingPrice: 2, gstSlab: "12", minStockLevel: 50, unitType: "STRIP" },
-    { id: "MED002", name: "Aspirin 75mg", hsnCode: "300450", purchasePrice: 0.5, sellingPrice: 0.75, gstSlab: "5", minStockLevel: 100, unitType: "STRIP" },
-    { id: "MED003", name: "Amoxicillin 250mg", hsnCode: "300410", purchasePrice: 4, sellingPrice: 5, gstSlab: "12", minStockLevel: 40, unitType: "STRIP" },
-    { id: "MED004", name: "Ibuprofen 200mg", hsnCode: "300490", purchasePrice: 1, sellingPrice: 1.5, gstSlab: "12", minStockLevel: 75, unitType: "STRIP" },
-    { id: "MED005", name: "Cetirizine 10mg", hsnCode: "300490", purchasePrice: 0.8, sellingPrice: 1.2, gstSlab: "5", minStockLevel: 80, unitType: "STRIP" },
-    { id: "MED006", name: "Benadryl Cough Syrup", hsnCode: "300490", purchasePrice: 80, sellingPrice: 95, gstSlab: "18", minStockLevel: 30, unitType: "BTL" },
+    { id: "MED001", name: "Paracetamol 500mg", hsnCode: "300490", manufacturerId: "MAN002", manufacturerName: "Cipla", purchasePrice: 1.5, sellingPrice: 2, gstSlab: "12", warehouseMinStockLevel: 500, storeMinStockLevel: 100, baseUnit: "PCS", packType: "Strip", unitsPerPack: 10 },
+    { id: "MED002", name: "Aspirin 75mg", hsnCode: "300450", manufacturerId: "MAN001", manufacturerName: "Sun Pharma", purchasePrice: 0.5, sellingPrice: 0.75, gstSlab: "5", warehouseMinStockLevel: 1000, storeMinStockLevel: 200, baseUnit: "PCS", packType: "Strip", unitsPerPack: 14 },
+    { id: "MED003", name: "Amoxicillin 250mg", hsnCode: "300410", manufacturerId: "MAN003", manufacturerName: "Dr. Reddy's", purchasePrice: 4, sellingPrice: 5, gstSlab: "12", warehouseMinStockLevel: 400, storeMinStockLevel: 50, baseUnit: "PCS", packType: "Strip", unitsPerPack: 10 },
+    { id: "MED004", name: "Ibuprofen 200mg", hsnCode: "300490", manufacturerId: "MAN002", manufacturerName: "Cipla", purchasePrice: 1, sellingPrice: 1.5, gstSlab: "12", warehouseMinStockLevel: 750, storeMinStockLevel: 150, baseUnit: "PCS", packType: "Strip", unitsPerPack: 10 },
+    { id: "MED005", name: "Cetirizine 10mg", hsnCode: "300490", manufacturerId: "MAN001", manufacturerName: "Sun Pharma", purchasePrice: 0.8, sellingPrice: 1.2, gstSlab: "5", warehouseMinStockLevel: 800, storeMinStockLevel: 100, baseUnit: "PCS", packType: "Strip", unitsPerPack: 10 },
+    { id: "MED006", name: "Benadryl Cough Syrup", hsnCode: "300490", manufacturerId: "MAN003", manufacturerName: "Dr. Reddy's", purchasePrice: 80, sellingPrice: 95, gstSlab: "18", warehouseMinStockLevel: 300, storeMinStockLevel: 50, baseUnit: "BTL", packType: "Box", unitsPerPack: 1 },
 ];
 
 const initialManufacturers = [
@@ -19,18 +19,34 @@ const initialManufacturers = [
 
 const initialInventory = [
     // Warehouse stock
-    { locationId: "warehouse", medicineId: "MED001", medicineName: "Paracetamol 500mg", quantity: 500 },
-    { locationId: "warehouse", medicineId: "MED002", medicineName: "Aspirin 75mg", quantity: 1000 },
-    { locationId: "warehouse", medicineId: "MED003", medicineName: "Amoxicillin 250mg", quantity: 400 },
-    { locationId: "warehouse", medicineId: "MED004", medicineName: "Ibuprofen 200mg", quantity: 750 },
-    { locationId: "warehouse", medicineId: "MED005", medicineName: "Cetirizine 10mg", quantity: 800 },
-    { locationId: "warehouse", medicineId: "MED006", medicineName: "Benadryl Cough Syrup", quantity: 150 },
+    { locationId: "warehouse", medicineId: "MED001", medicineName: "Paracetamol 500mg", quantity: 5000 },
+    { locationId: "warehouse", medicineId: "MED002", medicineName: "Aspirin 75mg", quantity: 10000 },
+    { locationId: "warehouse", medicineId: "MED003", medicineName: "Amoxicillin 250mg", quantity: 4000 },
+    { locationId: "warehouse", medicineId: "MED004", medicineName: "Ibuprofen 200mg", quantity: 7500 },
+    { locationId: "warehouse", medicineId: "MED005", medicineName: "Cetirizine 10mg", quantity: 8000 },
+    { locationId: "warehouse", medicineId: "MED006", medicineName: "Benadryl Cough Syrup", quantity: 1500 },
     // Downtown Pharmacy
-    { locationId: "STR002", medicineId: "MED001", medicineName: "Paracetamol 500mg", quantity: 100 },
-    { locationId: "STR002", medicineId: "MED005", medicineName: "Cetirizine 10mg", quantity: 50 },
+    { locationId: "STR002", medicineId: "MED001", medicineName: "Paracetamol 500mg", quantity: 1000 },
+    { locationId: "STR002", medicineId: "MED005", medicineName: "Cetirizine 10mg", quantity: 500 },
     // Uptown Health
-    { locationId: "STR003", medicineId: "MED002", medicineName: "Aspirin 75mg", quantity: 80 },
-    { locationId: "STR003", medicineId: "MED004", medicineName: "Ibuprofen 200mg", quantity: 60 },
+    { locationId: "STR003", medicineId: "MED002", medicineName: "Aspirin 75mg", quantity: 800 },
+    { locationId: "STR003", medicineId: "MED004", medicineName: "Ibuprofen 200mg", quantity: 600 },
+];
+
+const initialUnitTypes = [
+    { name: "PCS" },
+    { name: "BTL" },
+    { name: "ML" },
+    { name: "G" },
+    { name: "KIT" },
+];
+
+const initialPackagingTypes = [
+    { name: "Box" },
+    { name: "Strip" },
+    { name: "Bottle" },
+    { name: "Sachet" },
+    { name: "Tube" },
 ];
 
 /**
@@ -49,50 +65,53 @@ async function isCollectionEmpty(collectionName: string): Promise<boolean> {
  */
 export async function seedDatabase() {
     try {
-        const medicinesEmpty = await isCollectionEmpty('medicines');
-        if (medicinesEmpty) {
-            console.log("Medicines collection is empty. Seeding...");
-            const batch = writeBatch(db);
-            const medicinesRef = collection(db, 'medicines');
-            initialMedicines.forEach(med => {
-                const docRef = doc(medicinesRef, med.id);
-                batch.set(docRef, med);
-            });
-            await batch.commit();
-            console.log("Medicines seeded successfully.");
-        } else {
-             console.log("Medicines collection already has data.");
+        const collectionsToSeed = [
+            { name: 'medicines', data: initialMedicines, useId: true },
+            { name: 'manufacturers', data: initialManufacturers, useId: true },
+            { name: 'units', data: initialUnitTypes, useId: false },
+            { name: 'packaging', data: initialPackagingTypes, useId: false },
+        ];
+
+        let needsSeeding = false;
+        for (const { name } of collectionsToSeed) {
+            if (await isCollectionEmpty(name)) {
+                needsSeeding = true;
+                break;
+            }
+        }
+        
+        if (await isCollectionEmpty('inventory')) {
+             needsSeeding = true;
         }
 
-        const manufacturersEmpty = await isCollectionEmpty('manufacturers');
-        if (manufacturersEmpty) {
-            console.log("Manufacturers collection is empty. Seeding...");
-            const batch = writeBatch(db);
-            const manufacturersRef = collection(db, 'manufacturers');
-            initialManufacturers.forEach(man => {
-                 const docRef = doc(manufacturersRef, man.id);
-                 batch.set(docRef, man);
-            });
-            await batch.commit();
-             console.log("Manufacturers seeded successfully.");
-        } else {
-            console.log("Manufacturers collection already has data.");
+        if (!needsSeeding) {
+            console.log("Database already seeded. Skipping.");
+            return;
         }
 
-        const inventoryEmpty = await isCollectionEmpty('inventory');
-        if (inventoryEmpty) {
-            console.log("Inventory collection is empty. Seeding...");
-            const batch = writeBatch(db);
-            const inventoryRef = collection(db, 'inventory');
-            initialInventory.forEach(item => {
-                const docRef = doc(inventoryRef, `${item.locationId}_${item.medicineId}`);
-                batch.set(docRef, item);
+        console.log("Database appears to be empty. Seeding with initial data...");
+        const batch = writeBatch(db);
+
+        // Seed collections from the array
+        for (const { name, data, useId } of collectionsToSeed) {
+            const collectionRef = collection(db, name);
+            data.forEach((item: any) => {
+                const docRef = useId ? doc(collectionRef, item.id) : doc(collectionRef);
+                const dataToSet = { ...item };
+                if (useId) delete dataToSet.id;
+                batch.set(docRef, dataToSet);
             });
-            await batch.commit();
-            console.log("Inventory seeded successfully.");
-        } else {
-            console.log("Inventory collection already has data.");
         }
+        
+        // Seed inventory separately because of composite ID
+        const inventoryRef = collection(db, 'inventory');
+        initialInventory.forEach(item => {
+            const docRef = doc(inventoryRef, `${item.locationId}_${item.medicineId}`);
+            batch.set(docRef, item);
+        });
+
+        await batch.commit();
+        console.log("Database seeded successfully.");
 
     } catch (error) {
         console.error("Error seeding database: ", error);

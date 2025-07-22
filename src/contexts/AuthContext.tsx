@@ -4,6 +4,7 @@
 import React, { createContext, useState, useContext, useEffect, useCallback, ReactNode, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { UserRole, RolePermissions, allAppRoutes } from '@/lib/types';
+import { seedDatabase } from '@/services/seed-service';
 
 export interface User {
     id: string;
@@ -73,6 +74,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const router = useRouter();
     const pathname = usePathname();
 
+    useEffect(() => {
+        const initializeApp = async () => {
+            await seedDatabase();
+             try {
+                const storedUser = localStorage.getItem('medi-stock-user');
+                if (storedUser) {
+                    const parsedUser = JSON.parse(storedUser);
+                    setUser(parsedUser);
+                }
+
+                const storedUsers = localStorage.getItem('medi-stock-users');
+                if (storedUsers) {
+                    const parsedUsers = JSON.parse(storedUsers);
+                    setUsersState(parsedUsers);
+                    mockUsers = parsedUsers; // Keep mockUsers in sync
+                } else {
+                     localStorage.setItem('medi-stock-users', JSON.stringify(mockUsers));
+                }
+
+                const storedPermissions = localStorage.getItem('medi-stock-permissions');
+                if (storedPermissions) {
+                    setPermissionsState(JSON.parse(storedPermissions));
+                } else {
+                    localStorage.setItem('medi-stock-permissions', JSON.stringify(initialPermissions));
+                }
+
+            } catch (error) {
+                console.error("Failed to parse from localStorage", error);
+                localStorage.clear();
+            }
+            setLoading(false);
+        }
+        initializeApp();
+    }, []);
+
     const setPermissions = useCallback((newPermissions: RolePermissions) => {
         setPermissionsState(newPermissions);
         localStorage.setItem('medi-stock-permissions', JSON.stringify(newPermissions));
@@ -102,38 +138,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         localStorage.removeItem('medi-stock-user');
         router.push('/login');
     }, [router]);
-
-    useEffect(() => {
-        try {
-            const storedUser = localStorage.getItem('medi-stock-user');
-            if (storedUser) {
-                const parsedUser = JSON.parse(storedUser);
-                setUser(parsedUser);
-            }
-
-            const storedUsers = localStorage.getItem('medi-stock-users');
-            if (storedUsers) {
-                const parsedUsers = JSON.parse(storedUsers);
-                setUsersState(parsedUsers);
-                mockUsers = parsedUsers; // Keep mockUsers in sync
-            } else {
-                 localStorage.setItem('medi-stock-users', JSON.stringify(mockUsers));
-            }
-
-            const storedPermissions = localStorage.getItem('medi-stock-permissions');
-            if (storedPermissions) {
-                setPermissionsState(JSON.parse(storedPermissions));
-            } else {
-                localStorage.setItem('medi-stock-permissions', JSON.stringify(initialPermissions));
-            }
-
-        } catch (error) {
-            console.error("Failed to parse from localStorage", error);
-            localStorage.clear();
-        }
-        setLoading(false);
-    }, []);
-
 
     useEffect(() => {
         if (loading) return;
