@@ -510,7 +510,7 @@ export default function AdminPage() {
 
     const PermissionRow = ({ route, role, level = 0 }: { route: AppRoute, role: string, level?: number }) => (
         <Collapsible asChild key={route.path}>
-            <React.Fragment>
+            <>
                 <TableRow>
                     <TableCell style={{ paddingLeft: `${level * 2}rem` }}>
                         <div className="flex items-center gap-2">
@@ -539,7 +539,7 @@ export default function AdminPage() {
                 </TableRow>
                 {route.children && route.children.length > 0 && (
                     <CollapsibleContent asChild>
-                        <TableRow>
+                       <TableRow>
                            <TableCell colSpan={Object.keys(permissions).length + 1} className="p-0">
                                 <Table>
                                     <TableBody>
@@ -552,7 +552,7 @@ export default function AdminPage() {
                         </TableRow>
                     </CollapsibleContent>
                 )}
-            </React.Fragment>
+            </>
         </Collapsible>
     );
 
@@ -1184,7 +1184,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
-    
-
-    
