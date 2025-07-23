@@ -71,7 +71,7 @@ const initialStores: Store[] = [
 
 
 export default function AdminPage() {
-    const { user, logout, loading, permissions, setPermissions, hasPermission, users: userList, createUser, updateUser, deleteUser: deleteUserFromContext, addRole, editRole, deleteRole } from useAuth();
+    const { user, logout, loading, permissions, setPermissions, hasPermission, users: userList, createUser, updateUser, deleteUser: deleteUserFromContext, addRole, editRole, deleteRole } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
     const { toast } = useToast();
@@ -319,10 +319,12 @@ export default function AdminPage() {
         if (typeof checked !== 'boolean' || role === 'Admin') return;
         
         const newPermissions = { ...permissions };
+        const currentPermissions = newPermissions[role] || [];
+        
         if (checked) {
-            newPermissions[role] = [...newPermissions[role], route];
+            newPermissions[role] = [...currentPermissions, route];
         } else {
-            newPermissions[role] = newPermissions[role].filter(r => r !== route);
+            newPermissions[role] = currentPermissions.filter(r => r !== route);
         }
         setPermissions(newPermissions);
     };
@@ -988,74 +990,76 @@ export default function AdminPage() {
                         <DialogTitle>Edit User: {selectedUser?.name}</DialogTitle>
                         <DialogDescription>Update the user's details below.</DialogDescription>
                     </DialogHeader>
-                    <div className="flex-grow overflow-y-auto -mx-6 px-6">
-                        <form id="edit-user-form" onSubmit={handleUserUpdateSubmit} className="space-y-4 py-4">
-                             <div className="space-y-2">
-                                <Label htmlFor="edit-name">Full Name</Label>
-                                <Input id="edit-name" name="name" defaultValue={selectedUser?.name} required style={{ textTransform: 'uppercase' }}/>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <ScrollArea className="flex-grow -mx-6">
+                        <div className="px-6">
+                            <form id="edit-user-form" onSubmit={handleUserUpdateSubmit} className="space-y-4 py-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="edit-loginId">Login ID</Label>
-                                    <Input id="edit-loginId" name="loginId" defaultValue={selectedUser?.loginId} disabled style={{ textTransform: 'uppercase' }} />
+                                    <Label htmlFor="edit-name">Full Name</Label>
+                                    <Input id="edit-name" name="name" defaultValue={selectedUser?.name} required style={{ textTransform: 'uppercase' }}/>
                                 </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="edit-email">Email</Label>
-                                    <Input id="edit-email" name="email" type="email" defaultValue={selectedUser?.email} required />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="edit-loginId">Login ID</Label>
+                                        <Input id="edit-loginId" name="loginId" defaultValue={selectedUser?.loginId} disabled style={{ textTransform: 'uppercase' }} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="edit-email">Email</Label>
+                                        <Input id="edit-email" name="email" type="email" defaultValue={selectedUser?.email} required />
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="edit-mobile">Mobile Number</Label>
-                                    <Input id="edit-mobile" name="mobile" type="tel" defaultValue={selectedUser?.mobile} required pattern="\\d{10}" title="Mobile number must be 10 digits" />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="edit-mobile">Mobile Number</Label>
+                                        <Input id="edit-mobile" name="mobile" type="tel" defaultValue={selectedUser?.mobile} required pattern="\\d{10}" title="Mobile number must be 10 digits" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="edit-altMobile">Alt. Mobile No.</Label>
+                                        <Input id="edit-altMobile" name="altMobile" type="tel" defaultValue={selectedUser?.altMobile} pattern="\\d{10}" title="Mobile number must be 10 digits"/>
+                                    </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="edit-altMobile">Alt. Mobile No.</Label>
-                                    <Input id="edit-altMobile" name="altMobile" type="tel" defaultValue={selectedUser?.altMobile} pattern="\\d{10}" title="Mobile number must be 10 digits"/>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="edit-pan">PAN Number</Label>
+                                        <Input id="edit-pan" name="pan" defaultValue={selectedUser?.pan} style={{ textTransform: 'uppercase' }} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="edit-aadhar">Aadhar Number</Label>
+                                        <Input id="edit-aadhar" name="aadhar" defaultValue={selectedUser?.aadhar} />
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="edit-pan">PAN Number</Label>
-                                    <Input id="edit-pan" name="pan" defaultValue={selectedUser?.pan} style={{ textTransform: 'uppercase' }} />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="edit-role">Role</Label>
+                                        <Select name="role" defaultValue={selectedUser?.role} required>
+                                            <SelectTrigger id="edit-role">
+                                                <SelectValue placeholder="Select a role" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {Object.keys(permissions).map(role => (
+                                                    <SelectItem key={role} value={role}>{role}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="edit-assignedStore">Assign to Store</Label>
+                                        <Select name="assignedStore" defaultValue={selectedUser?.assignedStore || 'NONE'}>
+                                            <SelectTrigger id="edit-assignedStore">
+                                                <SelectValue placeholder="Select a store" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="NONE">None</SelectItem>
+                                                {stores.map(store => (
+                                                    <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="edit-aadhar">Aadhar Number</Label>
-                                    <Input id="edit-aadhar" name="aadhar" defaultValue={selectedUser?.aadhar} />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="edit-role">Role</Label>
-                                    <Select name="role" defaultValue={selectedUser?.role} required>
-                                        <SelectTrigger id="edit-role">
-                                            <SelectValue placeholder="Select a role" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {Object.keys(permissions).map(role => (
-                                                <SelectItem key={role} value={role}>{role}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="edit-assignedStore">Assign to Store</Label>
-                                    <Select name="assignedStore" defaultValue={selectedUser?.assignedStore || 'NONE'}>
-                                        <SelectTrigger id="edit-assignedStore">
-                                            <SelectValue placeholder="Select a store" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="NONE">None</SelectItem>
-                                            {stores.map(store => (
-                                                <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                    <DialogFooter className="flex-shrink-0 pt-4 border-t">
+                            </form>
+                        </div>
+                    </ScrollArea>
+                    <DialogFooter className="flex-shrink-0 pt-4 border-t -mx-6 px-6 bg-background">
                         <DialogClose asChild>
                             <Button type="button" variant="secondary" onClick={() => setIsEditUserModalOpen(false)}>Cancel</Button>
                         </DialogClose>
