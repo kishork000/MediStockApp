@@ -1,6 +1,6 @@
 
 import { db } from '@/lib/firebase-config';
-import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, Timestamp } from 'firebase/firestore';
 import { updateInventoryAfterSale } from './inventory-service';
 
 export interface SaleItem {
@@ -38,11 +38,16 @@ const salesCollectionRef = collection(db, 'sales');
  */
 export async function getSales(): Promise<Sale[]> {
     const querySnapshot = await getDocs(salesCollectionRef);
-    return querySnapshot.docs.map(doc => ({
-        ...doc.data(),
-        invoiceId: doc.id, // Use the document ID as the invoiceId
-        createdAt: doc.data().createdAt.toDate().toISOString(), // Convert timestamp to ISO string
-    } as Sale));
+    return querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        // Firebase Timestamps need to be converted to ISO strings
+        const createdAt = (data.createdAt as Timestamp)?.toDate().toISOString() || new Date().toISOString();
+        return {
+            ...data,
+            invoiceId: doc.id, // Use the document ID as the invoiceId
+            createdAt,
+        } as Sale;
+    });
 }
 
 

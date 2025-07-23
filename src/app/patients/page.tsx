@@ -42,6 +42,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Patient, getPatients, updatePatient, deletePatient } from "@/services/patient-service";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getSales, Sale, SaleItem } from "@/services/sales-service";
+import { format, parseISO } from "date-fns";
 
 
 export default function PatientsPage() {
@@ -50,8 +52,10 @@ export default function PatientsPage() {
   const pathname = usePathname();
   const { toast } = useToast();
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [allSales, setAllSales] = useState<Sale[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [patientMedicineHistory, setPatientMedicineHistory] = useState<SaleItem[]>([]);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -64,20 +68,24 @@ export default function PatientsPage() {
     return allAppRoutes.filter(route => route.path !== '/');
   }, []);
 
-  const fetchPatients = async () => {
+  const fetchPageData = async () => {
     setDataLoading(true);
     try {
-        const patientsFromDb = await getPatients();
+        const [patientsFromDb, salesFromDb] = await Promise.all([
+            getPatients(),
+            getSales()
+        ]);
         setPatients(patientsFromDb);
+        setAllSales(salesFromDb);
     } catch (error) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch patients.' });
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch page data.' });
     }
     setDataLoading(false);
   };
 
   useEffect(() => {
     if (user) {
-        fetchPatients();
+        fetchPageData();
     }
   }, [user]);
   
@@ -100,7 +108,7 @@ export default function PatientsPage() {
   const handleDelete = async (id: string) => {
     try {
         await deletePatient(id);
-        await fetchPatients();
+        await fetchPageData();
         toast({ title: 'Success', description: 'Patient record deleted.' });
     } catch (error) {
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete patient.' });
@@ -112,6 +120,13 @@ export default function PatientsPage() {
   
   const handleViewDetails = (patient: Patient) => {
     setSelectedPatient(patient);
+    const history = allSales
+        .filter(sale => sale.patientId === patient.id)
+        .flatMap(sale => sale.items.map(item => ({...item, date: sale.createdAt})))
+        .sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
+    
+    // This is a simplified version, in a real app you'd likely aggregate by medicine
+    setPatientMedicineHistory(history);
     setIsViewModalOpen(true);
   }
 
@@ -144,7 +159,7 @@ export default function PatientsPage() {
       
       try {
         await updatePatient(selectedPatient.id, updatedPatientData);
-        await fetchPatients();
+        await fetchPageData();
         toast({ title: 'Success', description: 'Patient details updated.' });
         setIsEditModalOpen(false);
         setSelectedPatient(null);
@@ -419,15 +434,15 @@ export default function PatientsPage() {
                                         <TableRow>
                                             <TableHead>Date</TableHead>
                                             <TableHead>Medicine</TableHead>
-                                            <TableHead>Dosage</TableHead>
+                                            <TableHead className="text-right">Quantity</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {selectedPatient.medicineHistory?.length ? selectedPatient.medicineHistory.map((item, index) => (
+                                        {patientMedicineHistory?.length ? patientMedicineHistory.map((item: any, index: number) => (
                                             <TableRow key={index}>
-                                                <TableCell>{item.date}</TableCell>
+                                                <TableCell>{format(parseISO(item.date), 'dd MMM, yyyy')}</TableCell>
                                                 <TableCell>{item.medicine}</TableCell>
-                                                <TableCell>{item.dosage}</TableCell>
+                                                <TableCell className="text-right">{item.quantity}</TableCell>
                                             </TableRow>
                                         )) : (
                                             <TableRow><TableCell colSpan={3} className="text-center">No medicine history found.</TableCell></TableRow>
@@ -571,3 +586,4 @@ export default function PatientsPage() {
     </div>
   );
 }
+
