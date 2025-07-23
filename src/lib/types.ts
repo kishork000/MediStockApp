@@ -32,6 +32,7 @@ export const allAppRoutes: AppRoute[] = [
     { path: "/inventory/add", name: "Add Stock", inSidebar: true },
     { path: "/inventory/returns", name: "Return to Manufacturer", inSidebar: true },
     { path: "/inventory/transfer", name: "Stock Transfer", inSidebar: true },
+    { path: "/inventory/adjustment", name: "Stock Adjustment", inSidebar: true },
     { path: "/inventory/reports", name: "Inventory Reports", inSidebar: true },
     { path: "/inventory/valuation", name: "Valuation Report", inSidebar: true },
     { path: "/diseases", name: "Diseases", inSidebar: true },

@@ -1,6 +1,6 @@
 
 import { db } from '@/lib/firebase-config';
-import { collection, doc, getDocs, query, where, writeBatch, increment, getDoc, setDoc } from 'firebase/firestore';
+import { collection, doc, getDocs, query, where, writeBatch, increment, getDoc, setDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 
 export interface InventoryItem {
     id: string; // Composite key like `${locationId}_${medicineId}`
@@ -18,6 +18,7 @@ export interface SaleItemForInventory {
 }
 
 const inventoryCollectionRef = collection(db, 'inventory');
+const adjustmentsCollectionRef = collection(db, 'adjustments');
 
 /**
  * Gets the current stock for a specific medicine at a specific location.
@@ -147,5 +148,46 @@ export async function moveStock(from: string, to: string, items: { medicineId: s
         }
     }
 
+    await batch.commit();
+}
+
+/**
+ * Directly sets the stock quantity for a specific item at a location and logs the adjustment.
+ * @param locationId The ID of the store or 'warehouse'.
+ * @param medicineId The ID of the medicine.
+ * @param newQuantity The new, correct quantity for the item.
+ * @param reason A string explaining why the adjustment was made.
+ * @param user The user performing the adjustment.
+ */
+export async function adjustStockQuantity(locationId: string, medicineId: string, newQuantity: number, reason: string, user: {id: string, name: string}) {
+    const docRef = doc(db, 'inventory', `${locationId}_${medicineId}`);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+        throw new Error("Cannot adjust stock for an item that does not exist in inventory.");
+    }
+
+    const oldQuantity = docSnap.data().quantity;
+
+    // Create a write batch to perform both operations atomically
+    const batch = writeBatch(db);
+
+    // 1. Set the new quantity in the inventory
+    batch.update(docRef, { quantity: newQuantity });
+
+    // 2. Log the adjustment event
+    const adjustmentLogRef = doc(collection(db, 'adjustments'));
+    batch.set(adjustmentLogRef, {
+        locationId,
+        medicineId,
+        medicineName: docSnap.data().medicineName,
+        oldQuantity,
+        newQuantity,
+        reason,
+        adjustedBy: user.name,
+        adjustedById: user.id,
+        adjustedAt: serverTimestamp(),
+    });
+    
     await batch.commit();
 }
