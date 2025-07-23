@@ -159,6 +159,7 @@ export default function Home() {
             case 'Universal Report': return <BarChart2 />;
             case 'Sales Reports': return <BarChart />;
             case 'Stock Ledger': return <BarChart2 />;
+            case 'Warehouse Stock': return <Warehouse />;
             case 'Store Stock': return <Package />;
             case 'Medicine Master': return <Pill />;
             case 'Manufacturer Master': return <Building />;
@@ -190,6 +191,14 @@ export default function Home() {
           </SidebarHeader>
           <SidebarContent>
             <SidebarMenu>
+                {hasPermission('/') && (
+                    <SidebarMenuItem>
+                        <SidebarMenuButton href="/" tooltip="Dashboard" isActive={pathname === '/'}>
+                            <HomeIcon />
+                            <span>Dashboard</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                )}
                 {sidebarRoutes.filter(r => r.inSidebar && hasPermission(r.path) && !r.path.startsWith('/inventory/')).map((route) => (
                     <SidebarMenuItem key={route.path}>
                         <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname.startsWith(route.path)}>

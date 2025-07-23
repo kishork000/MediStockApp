@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, Filter, Download, ArrowLeft, Pill, Building, Undo, BarChart2 } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, Filter, Download, ArrowLeft, Pill, Building, Undo, BarChart2, Edit, HeartCrack } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -228,12 +228,15 @@ export default function SalesReportPage() {
             case 'Universal Report': return <BarChart2 />;
             case 'Sales Reports': return <BarChart />;
             case 'Warehouse Stock': return <Warehouse />;
+            case 'Stock Ledger': return <BarChart2 />;
             case 'Store Stock': return <Package />;
             case 'Medicine Master': return <Pill />;
             case 'Manufacturer Master': return <Building />;
             case 'Add Stock': return <PlusSquare />;
             case 'Return to Manufacturer': return <Undo />;
             case 'Stock Transfer': return <GitBranch />;
+            case 'Stock Adjustment': return <Edit />;
+            case 'Damaged Stock': return <HeartCrack />;
             case 'Inventory Reports': return <BarChart />;
             case 'Valuation Report': return <TrendingUp />;
             case 'Diseases': return <Activity />;
@@ -258,6 +261,14 @@ export default function SalesReportPage() {
           </SidebarHeader>
           <SidebarContent>
              <SidebarMenu>
+                {hasPermission('/') && (
+                    <SidebarMenuItem>
+                        <SidebarMenuButton href="/" tooltip="Dashboard" isActive={pathname === '/'}>
+                            <HomeIcon />
+                            <span>Dashboard</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                )}
                 {sidebarRoutes.filter(r => r.inSidebar && hasPermission(r.path) && !r.path.startsWith('/inventory/')).map((route) => (
                     <SidebarMenuItem key={route.path}>
                         <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname.startsWith(route.path)}>
