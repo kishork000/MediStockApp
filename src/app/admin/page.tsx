@@ -538,11 +538,9 @@ export default function AdminPage() {
             </TableRow>
             {route.children && route.children.length > 0 && (
                 <CollapsibleContent asChild>
-                    <>
-                        {route.children.map(childRoute => (
-                            <PermissionRow key={childRoute.path} route={childRoute} role={role} level={level + 1} />
-                        ))}
-                    </>
+                    {route.children.map(childRoute => (
+                        <PermissionRow key={childRoute.path} route={childRoute} role={role} level={level + 1} />
+                    ))}
                 </CollapsibleContent>
             )}
         </React.Fragment>
@@ -757,7 +755,7 @@ export default function AdminPage() {
                                     </TableHeader>
                                     <TableBody>
                                         {permissionRoutesTree.map(route => (
-                                            <Collapsible asChild key={route.path} className="w-full">
+                                            <Collapsible asChild key={route.path} className="group">
                                                 <PermissionRow route={route} role="" />
                                             </Collapsible>
                                         ))}
