@@ -67,26 +67,27 @@ export default function Home() {
     setDataLoading(true);
 
     try {
-        const [sales, warehouseStock, downtownStock, uptownStock] = await Promise.all([
-            getSales(),
-            getAvailableStockForLocation('warehouse'),
-            getAvailableStockForLocation('STR002'),
-            getAvailableStockForLocation('STR003'),
-        ]);
+        const sales = await getSales();
+        let userSales: Sale[] = [];
+        let storeStock: InventoryItem[] = [];
 
-        // Filter sales based on user role and assigned store
-        const userSales = user.role === 'Admin'
-            ? sales
-            : sales.filter(s => s.storeId === user.assignedStore);
+        if (user.role === 'Admin') {
+            userSales = sales;
+            const [warehouseStock, downtownStock, uptownStock] = await Promise.all([
+                getAvailableStockForLocation('warehouse'),
+                getAvailableStockForLocation('STR002'),
+                getAvailableStockForLocation('STR003'),
+            ]);
+            storeStock = [...warehouseStock, ...downtownStock, ...uptownStock];
+        } else if (user.assignedStore) {
+            userSales = sales.filter(s => s.storeId === user.assignedStore);
+            storeStock = await getAvailableStockForLocation(user.assignedStore);
+        }
 
-        // Calculate metrics
         const totalRevenue = userSales.reduce((sum, sale) => sum + sale.grandTotal, 0);
         const salesCount = userSales.length;
+        const totalStock = storeStock.reduce((sum, item) => sum + item.quantity, 0);
 
-        const allStock = [...warehouseStock, ...downtownStock, ...uptownStock];
-        const totalStock = allStock.reduce((sum, item) => sum + item.quantity, 0);
-
-        // Generate overview data for the chart (last 12 months)
         const overview = Array.from({ length: 12 }).map((_, i) => {
             const date = subMonths(new Date(), i);
             return {
@@ -109,7 +110,6 @@ export default function Home() {
             stockAvailability: totalStock.toString(),
             subscriptions: salesCount.toString(), // Using sales count as a proxy for prescriptions
             overview,
-            // Note: "change" metrics are not implemented as they require historical data comparison
             revenueChange: " ",
             salesChange: " ",
             stockChange: " ",
@@ -368,5 +368,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
