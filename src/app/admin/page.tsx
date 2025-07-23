@@ -27,9 +27,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useAuth, NewUser, UpdateUser } from "@/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
-import { allAppRoutes, AppRoute, buildRoutesTree } from "@/lib/types";
+import { allAppRoutes, AppRoute } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -124,8 +124,6 @@ export default function AdminPage() {
     const sidebarRoutes = useMemo(() => {
         return allAppRoutes.filter(route => route.path !== '/');
     }, []);
-
-    const permissionRoutesTree = useMemo(() => buildRoutesTree(allAppRoutes), []);
 
      useEffect(() => {
         if (!loading && (!user || user.role !== 'Admin')) {
@@ -351,46 +349,59 @@ export default function AdminPage() {
             const newPermissions = { ...prev };
             const currentPermissions = newPermissions[role] || [];
             if (checked) {
-                newPermissions[role] = [...currentPermissions, route];
+                newPermissions[role] = [...new Set([...currentPermissions, route])];
             } else {
                 newPermissions[role] = currentPermissions.filter(r => r !== route);
             }
             return newPermissions;
         });
     };
-
+    
     const handleParentPermissionChange = (role: string, parentRoute: AppRoute, checked: boolean | 'indeterminate') => {
         if (typeof checked !== 'boolean' || role === 'Admin') return;
-        
-        const childPaths = parentRoute.children?.map(child => child.path) || [];
-        const allPaths = [parentRoute.path, ...childPaths];
-
+    
+        const childPaths = allAppRoutes
+            .filter(r => r.parent === parentRoute.path)
+            .flatMap(child => [child.path, ...(child.tabs?.map(t => `${child.path}#${t.id}`) || [])]);
+    
+        const allPaths = [
+            parentRoute.path, 
+            ...(parentRoute.tabs?.map(t => `${parentRoute.path}#${t.id}`) || []), 
+            ...childPaths
+        ];
+    
         setPermissions(prev => {
             const newPermissions = { ...prev };
             let currentPermissions = newPermissions[role] || [];
-
+    
             if (checked) {
-                // Add all paths, avoiding duplicates
                 currentPermissions = [...new Set([...currentPermissions, ...allPaths])];
             } else {
-                // Remove all paths
                 currentPermissions = currentPermissions.filter(p => !allPaths.includes(p));
             }
             newPermissions[role] = currentPermissions;
             return newPermissions;
         });
     };
-
+    
     const getParentCheckedState = (role: string, parentRoute: AppRoute): boolean | 'indeterminate' => {
         const rolePermissions = permissions[role] || [];
-        const childrenPaths = parentRoute.children?.map(child => child.path) || [];
         
-        const hasAllChildren = childrenPaths.every(path => rolePermissions.includes(path));
-        const hasSomeChildren = childrenPaths.some(path => rolePermissions.includes(path));
-
-        if (hasAllChildren) return true;
-        if (hasSomeChildren) return 'indeterminate';
-        return false;
+        const childPaths = allAppRoutes
+            .filter(r => r.parent === parentRoute.path)
+            .flatMap(child => [child.path, ...(child.tabs?.map(t => `${child.path}#${t.id}`) || [])]);
+    
+        const allPaths = [
+            parentRoute.path,
+            ...(parentRoute.tabs?.map(t => `${parentRoute.path}#${t.id}`) || []),
+            ...childPaths
+        ].filter(p => !allAppRoutes.find(r => r.path === p)?.parent); // Exclude items that are themselves parents
+    
+        const permittedCount = allPaths.filter(p => rolePermissions.includes(p)).length;
+    
+        if (permittedCount === 0) return false;
+        if (permittedCount === allPaths.length) return true;
+        return 'indeterminate';
     };
 
 
@@ -506,62 +517,78 @@ export default function AdminPage() {
         }
     };
 
-    const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory/') && r.inSidebar);
+    const stockManagementRoutes = sidebarRoutes.filter(r => r.parent === '/inventory');
 
-    const PermissionRow = ({ route, role, level = 0 }: { route: AppRoute, role: string, level?: number }) => (
-        <React.Fragment key={route.path}>
-            <TableRow>
-                <TableCell style={{ paddingLeft: `${level * 2}rem` }}>
-                    <div className="flex items-center gap-2">
-                         {route.children && route.children.length > 0 ? (
-                            <CollapsibleTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-6 w-6">
-                                    <ChevronDown className="h-4 w-4 transition-transform duration-200" />
-                                </Button>
-                            </CollapsibleTrigger>
-                        ) : (
-                            <span className="w-6" /> // Spacer
-                        )}
-                        {route.children && route.children.length > 0 ? (
-                            <Folder className="h-5 w-5 text-amber-500"/>
-                        ) : route.path.includes('#') ? (
-                            <CircleDot className="h-5 w-5 text-slate-500" />
-                        ) : (
-                            <File className="h-5 w-5 text-sky-500" />
-                        )}
-                        <span className="font-medium">{route.name}</span>
-                    </div>
-                </TableCell>
-                {Object.keys(permissions).map(roleKey => (
-                    <TableCell key={`${roleKey}-${route.path}`} className="text-center">
-                        <Checkbox 
-                            checked={roleKey === 'Admin' || (route.children && route.children.length > 0 ? getParentCheckedState(roleKey, route) : (permissions[roleKey] || []).includes(route.path))}
-                            onCheckedChange={(checked) => route.children && route.children.length > 0 ? handleParentPermissionChange(roleKey, route, checked) : handlePermissionChange(roleKey, route.path, checked)}
-                            disabled={roleKey === 'Admin'}
-                        />
-                    </TableCell>
-                ))}
-            </TableRow>
-            {route.children && route.children.length > 0 && (
-                <CollapsibleContent asChild>
-                    <TableRow>
-                        <TableCell colSpan={Object.keys(permissions).length + 1} className="p-0">
-                           <Table>
-                               <TableBody>
-                                {route.children.map(childRoute => (
-                                    <Collapsible key={childRoute.path} asChild>
-                                         <PermissionRow route={childRoute} role={role} level={level + 1} />
-                                    </Collapsible>
-                                ))}
-                               </TableBody>
-                           </Table>
-                        </TableCell>
-                    </TableRow>
-                </CollapsibleContent>
-            )}
-        </React.Fragment>
-    );
+    const PermissionRow = ({ route, role, level = 0 }: { route: AppRoute, role: string, level?: number }) => {
+        const children = allAppRoutes.filter(child => child.parent === route.path);
+        const hasChildren = children.length > 0 || (route.tabs && route.tabs.length > 0);
     
+        return (
+            <Collapsible asChild key={route.path}>
+                <React.Fragment>
+                     <TableRow>
+                        <TableCell style={{ paddingLeft: `${level * 2}rem` }}>
+                            <div className="flex items-center gap-2">
+                                 {hasChildren ? (
+                                    <CollapsibleTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6">
+                                            <ChevronDown className="h-4 w-4 transition-transform duration-200" />
+                                        </Button>
+                                    </CollapsibleTrigger>
+                                ) : (
+                                    <span className="w-6" /> // Spacer
+                                )}
+                                {children.length > 0 ? (
+                                    <Folder className="h-5 w-5 text-amber-500"/>
+                                ) : (
+                                    <File className="h-5 w-5 text-sky-500" />
+                                )}
+                                <span className="font-medium">{route.name}</span>
+                            </div>
+                        </TableCell>
+                        {Object.keys(permissions).map(roleKey => (
+                            <TableCell key={`${roleKey}-${route.path}`} className="text-center">
+                                <Checkbox 
+                                    checked={roleKey === 'Admin' || getParentCheckedState(roleKey, route)}
+                                    onCheckedChange={(checked) => handleParentPermissionChange(roleKey, route, checked)}
+                                    disabled={roleKey === 'Admin'}
+                                />
+                            </TableCell>
+                        ))}
+                    </TableRow>
+    
+                    {hasChildren && (
+                        <CollapsibleContent asChild>
+                           <React.Fragment>
+                                {children.map(childRoute => (
+                                    <PermissionRow key={childRoute.path} route={childRoute} role={role} level={level + 1} />
+                                ))}
+                                {route.tabs && route.tabs.map(tab => (
+                                    <TableRow key={`${route.path}#${tab.id}`}>
+                                        <TableCell style={{ paddingLeft: `${(level + 1) * 2}rem` }}>
+                                             <div className="flex items-center gap-2 ml-6">
+                                                <CircleDot className="h-5 w-5 text-slate-500" />
+                                                <span className="font-medium">{tab.name}</span>
+                                             </div>
+                                        </TableCell>
+                                        {Object.keys(permissions).map(roleKey => (
+                                            <TableCell key={`${roleKey}-${route.path}#${tab.id}`} className="text-center">
+                                                <Checkbox 
+                                                    checked={roleKey === 'Admin' || (permissions[roleKey] || []).includes(`${route.path}#${tab.id}`)}
+                                                    onCheckedChange={(checked) => handlePermissionChange(roleKey, `${route.path}#${tab.id}`, checked)}
+                                                    disabled={roleKey === 'Admin'}
+                                                />
+                                            </TableCell>
+                                        ))}
+                                    </TableRow>
+                                ))}
+                            </React.Fragment>
+                        </CollapsibleContent>
+                    )}
+                </React.Fragment>
+            </Collapsible>
+        );
+    };
 
     return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -574,17 +601,41 @@ export default function AdminPage() {
           </SidebarHeader>
           <SidebarContent>
             <SidebarMenu>
-                {sidebarRoutes.filter(r => r.inSidebar && hasPermission(r.path) && !r.path.startsWith('/inventory/')).map((route) => {
-                     const isParentRoute = sidebarRoutes.some(child => child.path.startsWith(route.path + '/') && child.path !== route.path);
-                     const isActive = isParentRoute ? pathname.startsWith(route.path) : pathname === route.path;
-                    return (
+                 {sidebarRoutes.filter(r => r.inSidebar && hasPermission(r.path) && !r.parent).map((route) => (
                     <SidebarMenuItem key={route.path}>
-                        <SidebarMenuButton href={route.path} tooltip={route.name} isActive={isActive}>
+                        <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname.startsWith(route.path) && route.path !== '/'}>
                             {getIcon(route.name)}
                             <span>{route.name}</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
-                );})}
+                ))}
+
+                {hasPermission('Sales') && (
+                    <Collapsible className="w-full" defaultOpen={pathname.startsWith('/sales') || pathname.startsWith('/reports')}>
+                        <CollapsibleTrigger asChild>
+                            <SidebarMenuButton className="justify-between">
+                                <div className="flex items-center gap-3">
+                                    <ShoppingCart />
+                                    <span>Sales Management</span>
+                                </div>
+                                <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                            </SidebarMenuButton>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                            <SidebarMenu className="ml-7 mt-2 border-l pl-3">
+                                {sidebarRoutes.filter(r => r.parent === 'Sales' && hasPermission(r.path)).map((route) => (
+                                    <SidebarMenuItem key={route.path}>
+                                        <SidebarMenuButton href={route.path} tooltip={route.name} size="sm" isActive={pathname === route.path}>
+                                            {getIcon(route.name)}
+                                            <span>{route.name}</span>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                ))}
+                            </SidebarMenu>
+                        </CollapsibleContent>
+                    </Collapsible>
+                )}
+
 
                 {hasPermission('/inventory') && (
                     <Collapsible className="w-full" defaultOpen={pathname.startsWith('/inventory')}>
@@ -755,10 +806,8 @@ export default function AdminPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {permissionRoutesTree.map(route => (
-                                            <Collapsible asChild key={route.path}>
-                                                <PermissionRow route={route} role="" />
-                                            </Collapsible>
+                                        {allAppRoutes.filter(r => !r.parent).map(route => (
+                                            <PermissionRow key={route.path} route={route} role="" />
                                         ))}
                                     </TableBody>
                                 </Table>
