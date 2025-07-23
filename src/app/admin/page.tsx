@@ -253,15 +253,28 @@ export default function AdminPage() {
     const handleAddUser = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
+        const mobile = formData.get("mobile") as string;
+        const altMobile = formData.get("altMobile") as string;
+        
+        if (!/^\d{10}$/.test(mobile)) {
+             toast({ variant: "destructive", title: "Invalid Input", description: "Mobile number must be exactly 10 digits." });
+             return;
+        }
+
+        if (altMobile && !/^\d{10}$/.test(altMobile)) {
+             toast({ variant: "destructive", title: "Invalid Input", description: "Alternate mobile number must be exactly 10 digits." });
+             return;
+        }
+
         const newUser: NewUser = {
             name: (formData.get("name") as string).toUpperCase(),
             email: formData.get("email") as string,
-            mobile: formData.get("mobile") as string,
+            mobile: mobile,
             loginId: (formData.get("loginId") as string).toUpperCase(),
             role: formData.get("role") as string,
             assignedStore: formData.get("assignedStore") as string || undefined,
             password: formData.get("password") as string,
-            altMobile: formData.get("altMobile") as string || undefined,
+            altMobile: altMobile || undefined,
             pan: (formData.get("pan") as string)?.toUpperCase(),
             aadhar: formData.get("aadhar") as string || undefined,
         };
@@ -284,6 +297,19 @@ export default function AdminPage() {
         if (!selectedUser) return;
         const formData = new FormData(e.currentTarget);
         
+        const mobile = formData.get("mobile") as string;
+        const altMobile = formData.get("altMobile") as string;
+        
+        if (!/^\d{10}$/.test(mobile)) {
+             toast({ variant: "destructive", title: "Invalid Input", description: "Mobile number must be exactly 10 digits." });
+             return;
+        }
+
+        if (altMobile && !/^\d{10}$/.test(altMobile)) {
+             toast({ variant: "destructive", title: "Invalid Input", description: "Alternate mobile number must be exactly 10 digits." });
+             return;
+        }
+
         let assignedStoreValue = formData.get("assignedStore") as string;
         if (assignedStoreValue === 'NONE') {
             assignedStoreValue = "";
@@ -292,10 +318,10 @@ export default function AdminPage() {
         const updatedData: UpdateUser = {
             name: (formData.get("name") as string).toUpperCase(),
             email: formData.get("email") as string,
-            mobile: formData.get("mobile") as string,
+            mobile: mobile,
             role: formData.get("role") as string,
             assignedStore: assignedStoreValue || undefined,
-            altMobile: formData.get("altMobile") as string || undefined,
+            altMobile: altMobile || undefined,
             pan: (formData.get("pan") as string)?.toUpperCase(),
             aadhar: formData.get("aadhar") as string || undefined,
         };
@@ -443,7 +469,7 @@ export default function AdminPage() {
 
     const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory/') && r.inSidebar);
 
-  return (
+    return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <Sidebar>
           <SidebarHeader>
@@ -464,7 +490,7 @@ export default function AdminPage() {
                             <span>{route.name}</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
-                )})}
+                );})}
 
                 {hasPermission('/inventory') && (
                     <Collapsible className="w-full" defaultOpen={pathname.startsWith('/inventory')}>
@@ -657,7 +683,7 @@ export default function AdminPage() {
                                                 {Object.keys(permissions).map(role => (
                                                     <TableCell key={`${role}-${route.path}`} className="text-center">
                                                         <Checkbox 
-                                                            checked={role === 'Admin' || permissions[role]?.includes(route.path)}
+                                                            checked={role === 'Admin' || (permissions[role] || []).includes(route.path)}
                                                             onCheckedChange={(checked) => handlePermissionChange(role, route.path, checked)}
                                                             disabled={role === 'Admin'}
                                                         />
@@ -792,11 +818,11 @@ export default function AdminPage() {
                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="mobile">Mobile Number</Label>
-                                        <Input id="mobile" name="mobile" type="tel" placeholder="e.g., 9876543210" required pattern="\\d{10}" title="Mobile number must be 10 digits" />
+                                        <Input id="mobile" name="mobile" type="tel" placeholder="e.g., 9876543210" required />
                                     </div>
                                      <div className="space-y-2">
                                         <Label htmlFor="altMobile">Alt. Mobile No.</Label>
-                                        <Input id="altMobile" name="altMobile" type="tel" pattern="\\d{10}" title="Mobile number must be 10 digits"/>
+                                        <Input id="altMobile" name="altMobile" type="tel" />
                                     </div>
                                  </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -984,80 +1010,78 @@ export default function AdminPage() {
                     </form>
                 </DialogContent>
             </Dialog>
-             <Dialog open={isEditUserModalOpen} onOpenChange={setIsEditUserModalOpen}>
-                 <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh]">
+            <Dialog open={isEditUserModalOpen} onOpenChange={setIsEditUserModalOpen}>
+                <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh]">
                     <DialogHeader>
                         <DialogTitle>Edit User: {selectedUser?.name}</DialogTitle>
                         <DialogDescription>Update the user's details below.</DialogDescription>
                     </DialogHeader>
-                    <ScrollArea className="flex-grow -mx-6">
-                        <div className="px-6">
-                            <form id="edit-user-form" onSubmit={handleUserUpdateSubmit} className="space-y-4 py-4">
+                    <ScrollArea className="flex-grow -mx-6 px-6">
+                        <form id="edit-user-form" onSubmit={handleUserUpdateSubmit} className="space-y-4 py-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-name">Full Name</Label>
+                                <Input id="edit-name" name="name" defaultValue={selectedUser?.name} required style={{ textTransform: 'uppercase' }}/>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="edit-name">Full Name</Label>
-                                    <Input id="edit-name" name="name" defaultValue={selectedUser?.name} required style={{ textTransform: 'uppercase' }}/>
+                                    <Label htmlFor="edit-loginId">Login ID</Label>
+                                    <Input id="edit-loginId" name="loginId" defaultValue={selectedUser?.loginId} disabled style={{ textTransform: 'uppercase' }} />
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="edit-loginId">Login ID</Label>
-                                        <Input id="edit-loginId" name="loginId" defaultValue={selectedUser?.loginId} disabled style={{ textTransform: 'uppercase' }} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="edit-email">Email</Label>
-                                        <Input id="edit-email" name="email" type="email" defaultValue={selectedUser?.email} required />
-                                    </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-email">Email</Label>
+                                    <Input id="edit-email" name="email" type="email" defaultValue={selectedUser?.email} required />
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="edit-mobile">Mobile Number</Label>
-                                        <Input id="edit-mobile" name="mobile" type="tel" defaultValue={selectedUser?.mobile} required pattern="\\d{10}" title="Mobile number must be 10 digits" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="edit-altMobile">Alt. Mobile No.</Label>
-                                        <Input id="edit-altMobile" name="altMobile" type="tel" defaultValue={selectedUser?.altMobile} pattern="\\d{10}" title="Mobile number must be 10 digits"/>
-                                    </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-mobile">Mobile Number</Label>
+                                    <Input id="edit-mobile" name="mobile" type="tel" defaultValue={selectedUser?.mobile} required />
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="edit-pan">PAN Number</Label>
-                                        <Input id="edit-pan" name="pan" defaultValue={selectedUser?.pan} style={{ textTransform: 'uppercase' }} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="edit-aadhar">Aadhar Number</Label>
-                                        <Input id="edit-aadhar" name="aadhar" defaultValue={selectedUser?.aadhar} />
-                                    </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-altMobile">Alt. Mobile No.</Label>
+                                    <Input id="edit-altMobile" name="altMobile" type="tel" defaultValue={selectedUser?.altMobile} />
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="edit-role">Role</Label>
-                                        <Select name="role" defaultValue={selectedUser?.role} required>
-                                            <SelectTrigger id="edit-role">
-                                                <SelectValue placeholder="Select a role" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {Object.keys(permissions).map(role => (
-                                                    <SelectItem key={role} value={role}>{role}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="edit-assignedStore">Assign to Store</Label>
-                                        <Select name="assignedStore" defaultValue={selectedUser?.assignedStore || 'NONE'}>
-                                            <SelectTrigger id="edit-assignedStore">
-                                                <SelectValue placeholder="Select a store" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="NONE">None</SelectItem>
-                                                {stores.map(store => (
-                                                    <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-pan">PAN Number</Label>
+                                    <Input id="edit-pan" name="pan" defaultValue={selectedUser?.pan} style={{ textTransform: 'uppercase' }} />
                                 </div>
-                            </form>
-                        </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-aadhar">Aadhar Number</Label>
+                                    <Input id="edit-aadhar" name="aadhar" defaultValue={selectedUser?.aadhar} />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-role">Role</Label>
+                                    <Select name="role" defaultValue={selectedUser?.role} required>
+                                        <SelectTrigger id="edit-role">
+                                            <SelectValue placeholder="Select a role" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {Object.keys(permissions).map(role => (
+                                                <SelectItem key={role} value={role}>{role}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-assignedStore">Assign to Store</Label>
+                                    <Select name="assignedStore" defaultValue={selectedUser?.assignedStore || 'NONE'}>
+                                        <SelectTrigger id="edit-assignedStore">
+                                            <SelectValue placeholder="Select a store" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="NONE">None</SelectItem>
+                                            {stores.map(store => (
+                                                <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                        </form>
                     </ScrollArea>
                     <DialogFooter className="flex-shrink-0 pt-4 border-t -mx-6 px-6 bg-background">
                         <DialogClose asChild>
