@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
@@ -12,7 +11,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, Pill, Undo, Building, MoreHorizontal, Download, Search } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, Pill, Undo, Building, MoreHorizontal, Download, Search, BarChart2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -46,23 +45,23 @@ export default function WarehouseInventoryPage() {
     const [pageLoading, setPageLoading] = useState(true);
     const [isLedgerLoading, setIsLedgerLoading] = useState(false);
     
-    const [medicines, setMedicines] = useState<Medicine[]>([]);
-    const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
+    const [medicines, setMedicines] = useState(medicines);
+    const [manufacturers, setManufacturers] = useState(manufacturers);
     
-    const [inventory, setInventory] = useState<InventoryItem[]>([]);
-    const [purchases, setPurchases] = useState<Purchase[]>([]);
-    const [transfers, setTransfers] = useState<Transfer[]>([]);
-    const [manufacturerReturns, setManufacturerReturns] = useState<ManufacturerReturn[]>([]);
+    const [inventory, setInventory] = useState(inventory);
+    const [purchases, setPurchases] = useState(purchases);
+    const [transfers, setTransfers] = useState(transfers);
+    const [manufacturerReturns, setManufacturerReturns] = useState(manufacturerReturns);
     
-    const [stockLedger, setStockLedger] = useState<WarehouseLedgerItem[]>([]);
-    const filtersRef = useRef<{dateRange?: DateRange; manufacturerId: string; medicineId: string; invoiceNo: string}>({
+    const [stockLedger, setStockLedger] = useState(stockLedger);
+    const filtersRef = useRef({
         manufacturerId: 'all',
         medicineId: 'all',
         invoiceNo: "",
     });
 
     const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
-    const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && hasPermission(route.path)), [hasPermission]);
+    const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && route.inSidebar), [hasPermission]);
 
     const fetchWarehouseData = useCallback(async () => {
         setPageLoading(true);
@@ -108,30 +107,7 @@ export default function WarehouseInventoryPage() {
             filteredPurchases = filteredPurchases.filter(p => p.invoiceId.toLowerCase().includes(filtersRef.current.invoiceNo.toLowerCase()));
         }
 
-        const transfersInDateRange = transfers.filter(t => isWithinInterval(parseISO(t.date), { start: startDate, end: endDate }));
-        const returnsInDateRange = manufacturerReturns.filter(r => isWithinInterval(parseISO(r.date), { start: startDate, end: endDate }));
-        
-        const medicineMap = new Map<string, Medicine>(medicines.map(m => [m.id, m]));
-        let medicineIds = new Set(inventory.map(i => i.medicineId));
-
-        if (filtersRef.current.medicineId !== 'all') {
-            medicineIds = new Set([filtersRef.current.medicineId]);
-        } else if (filtersRef.current.manufacturerId !== 'all') {
-            const manufacturerMeds = medicines.filter(m => m.manufacturerId === filtersRef.current.manufacturerId).map(m => m.id);
-            medicineIds = new Set(manufacturerMeds);
-        }
-
-        const ledger: WarehouseLedgerItem[] = [];
-
-        for(const medId of medicineIds) {
-            const medicineDetails = medicineMap.get(medId);
-            if (!medicineDetails) continue;
-
-            const currentItem = inventory.find(i => i.medicineId === medId);
-            const balance = currentItem?.quantity || 0;
-
-            const receivedDuringPeriod = filteredPurchases.flatMap(p => p.items).filter(i => i.medicineId === medId).reduce((sum, i) => sum + i.quantity, 0);
-            const transferredDuringPeriod = transfersInDateRange.filter(t => t.from === 'warehouse').flatMap(t => t.items).filter(i => i.medicineId === medId).reduce((sum, i) => sum + i.quantity, 0);
+        const transfersInDateRange = transfers.filter(t => t.from === 'warehouse').flatMap(t => t.items).filter(i => i.medicineId === medId).reduce((sum, i) => sum + i.quantity, 0);
             const returnedFromStoreDuringPeriod = transfersInDateRange.filter(t => t.to === 'warehouse').flatMap(t => t.items).filter(i => i.medicineId === medId).reduce((sum, i) => sum + i.quantity, 0);
             const returnedToMfrDuringPeriod = returnsInDateRange.flatMap(r => r.items).filter(i => i.medicineId === medId).reduce((sum, i) => sum + i.quantity, 0);
 
@@ -162,11 +138,11 @@ export default function WarehouseInventoryPage() {
         }
         let csvContent = "data:text/csv;charset=utf-8,";
         const headers = ["Medicine", "Manufacturer", "Opening", "Received", "Returned (Stores)", "Total Stock", "Returned (MFR)", "Transferred", "Balance"];
-        csvContent += headers.join(",") + "\r\n";
+        csvContent += headers.join(",") + "\n";
 
         stockLedger.forEach(item => {
             const row = [`"${item.medicineName}"`, `"${item.manufacturerName}"`, item.opening, item.received, item.returnedFromStore, item.totalStock, item.returnedToManufacturer, item.transferred, item.balance];
-            csvContent += row.join(",") + "\r\n";
+            csvContent += row.join(",") + "\n";
         });
 
         const encodedUri = encodeURI(csvContent);
@@ -197,6 +173,7 @@ export default function WarehouseInventoryPage() {
             case 'Dashboard': return <HomeIcon />;
             case 'Patients': return <Users2 />;
             case 'Sales': return <ShoppingCart />;
+            case 'Universal Report': return <BarChart2 />;
             case 'Sales Reports': return <BarChart />;
             case 'Warehouse Stock': return <Warehouse />;
             case 'Store Stock': return <Package />;
@@ -259,17 +236,9 @@ export default function WarehouseInventoryPage() {
           </SidebarHeader>
           <SidebarContent>
              <SidebarMenu>
-                {hasPermission('/') && (
-                    <SidebarMenuItem>
-                        <SidebarMenuButton href="/" tooltip="Dashboard" isActive={pathname === '/'}>
-                            <HomeIcon />
-                            <span>Dashboard</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                )}
-                 {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path) && r.path !== '/admin').map((route) => (
+                {sidebarRoutes.filter(r => r.inSidebar && hasPermission(r.path) && !r.path.startsWith('/inventory/')).map((route) => (
                     <SidebarMenuItem key={route.path}>
-                        <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}>
+                        <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname.startsWith(route.path)}>
                             {getIcon(route.name)}
                             <span>{route.name}</span>
                         </SidebarMenuButton>
@@ -289,7 +258,7 @@ export default function WarehouseInventoryPage() {
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                             <SidebarMenu className="ml-7 mt-2 border-l pl-3">
-                                {stockManagementRoutes.map((route) => (
+                                {stockManagementRoutes.filter(route => hasPermission(route.path)).map((route) => (
                                     <SidebarMenuItem key={route.path}>
                                         <SidebarMenuButton href={route.path} tooltip={route.name} size="sm" isActive={pathname === route.path}>
                                             {getIcon(route.name)}
@@ -301,14 +270,6 @@ export default function WarehouseInventoryPage() {
                         </CollapsibleContent>
                     </Collapsible>
                 )}
-                 {hasPermission('/admin') && (
-                    <SidebarMenuItem>
-                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname.startsWith('/admin')}>
-                            {getIcon('Admin')}
-                            <span>Admin</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                 )}
             </SidebarMenu>
           </SidebarContent>
            <SidebarFooter>
@@ -344,14 +305,14 @@ export default function WarehouseInventoryPage() {
                             <SelectTrigger><SelectValue placeholder="Select Manufacturer" /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">All Manufacturers</SelectItem>
-                                {manufacturers.map(m => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
+                                {manufacturers.map(m =>  <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>))}
                             </SelectContent>
                         </Select>
                         <Select onValueChange={(v) => (filtersRef.current.medicineId = v)} defaultValue="all">
                             <SelectTrigger><SelectValue placeholder="Select Medicine" /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">All Medicines</SelectItem>
-                                {medicines.map(m => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
+                                {medicines.map(m =>  <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>))}
                             </SelectContent>
                         </Select>
                     </div>
@@ -392,7 +353,7 @@ export default function WarehouseInventoryPage() {
                             <TableBody>
                                 {isLedgerLoading ? (
                                     Array.from({ length: 5 }).map((_, i) => (
-                                        <TableRow key={i}><TableCell colSpan={8}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
+                                        <TableRow key={i}><TableCell colSpan={8}><div className="h-5 w-full"/></TableCell></TableRow>
                                     ))
                                 ) : stockLedger.length > 0 ? (
                                     stockLedger.map((item) => (

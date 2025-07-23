@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo, useEffect, useState, useCallback, useRef } from "react";
@@ -12,7 +11,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, Download, TrendingUp, Undo, Pill, Building, Search } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, Download, TrendingUp, Undo, Pill, Building, Search, BarChart2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -51,7 +50,7 @@ const storeIdToKeyMap: Record<string, 'warehouse' | 'downtown' | 'uptown'> = {
 
 
 export default function StockReportsPage() {
-    const { user, logout, loading, hasPermission } = useAuth();
+    const { user, logout, loading, hasPermission } } from useAuth();
     const router = useRouter();
     const pathname = usePathname();
     const { toast } = useToast();
@@ -205,7 +204,7 @@ export default function StockReportsPage() {
 
 
     const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
-    const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && route.inSidebar && hasPermission(route.path)), [hasPermission]);
+    const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && route.inSidebar), []);
 
      useEffect(() => {
         if (!loading && !user) {
@@ -226,6 +225,7 @@ export default function StockReportsPage() {
             case 'Dashboard': return <HomeIcon />;
             case 'Patients': return <Users2 />;
             case 'Sales': return <ShoppingCart />;
+            case 'Universal Report': return <BarChart2 />;
             case 'Sales Reports': return <BarChart />;
             case 'Warehouse Stock': return <Warehouse />;
             case 'Store Stock': return <Package />;
@@ -254,18 +254,9 @@ export default function StockReportsPage() {
           </SidebarHeader>
           <SidebarContent>
              <SidebarMenu>
-                {hasPermission('/') && (
-                    <SidebarMenuItem>
-                        <SidebarMenuButton href="/" tooltip="Dashboard" isActive={pathname === '/'}>
-                            <HomeIcon />
-                            <span>Dashboard</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                )}
-                
-                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path) && r.path !== '/admin').map((route) => (
+                {sidebarRoutes.filter(r => r.inSidebar && hasPermission(r.path) && !r.path.startsWith('/inventory/')).map((route) => (
                     <SidebarMenuItem key={route.path}>
-                        <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}>
+                        <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname.startsWith(route.path)}>
                             {getIcon(route.name)}
                             <span>{route.name}</span>
                         </SidebarMenuButton>
@@ -285,7 +276,7 @@ export default function StockReportsPage() {
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                             <SidebarMenu className="ml-7 mt-2 border-l pl-3">
-                                {stockManagementRoutes.map((route) => (
+                                {stockManagementRoutes.filter(route => hasPermission(route.path)).map((route) => (
                                     <SidebarMenuItem key={route.path}>
                                         <SidebarMenuButton href={route.path} tooltip={route.name} size="sm" isActive={pathname === route.path}>
                                             {getIcon(route.name)}
@@ -297,14 +288,6 @@ export default function StockReportsPage() {
                         </CollapsibleContent>
                     </Collapsible>
                 )}
-                 {hasPermission('/admin') && (
-                    <SidebarMenuItem>
-                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname.startsWith('/admin')}>
-                            {getIcon('Admin')}
-                            <span>Admin</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                 )}
             </SidebarMenu>
           </SidebarContent>
            <SidebarFooter>
@@ -313,7 +296,7 @@ export default function StockReportsPage() {
                       <SidebarMenuButton onClick={logout} tooltip="Logout">
                           <LogOut />
                           <span>Logout</span>
-                      </SidebarMenuButton>
+                      SidebarMenuButton>
                   </SidebarMenuItem>
               </SidebarMenu>
           </SidebarFooter>
@@ -345,7 +328,7 @@ export default function StockReportsPage() {
                             <div className="flex flex-col sm:flex-row gap-4">
                                 <Select defaultValue={stockFiltersRef.current.store} onValueChange={(v) => (stockFiltersRef.current.store = v)} disabled={user?.role === 'Pharmacist' && availableStores.length === 1}>
                                     <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Select Store" /></SelectTrigger>
-                                    <SelectContent>{availableStores.map(store => (<SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>))}</SelectContent>
+                                    <SelectContent>{availableStores.map(store => (<SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>)}</SelectContent>
                                 </Select>
                                 <Select defaultValue={stockFiltersRef.current.manufacturer} onValueChange={(v) => (stockFiltersRef.current.manufacturer = v)}>
                                     <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Select Manufacturer" /></SelectTrigger>
@@ -368,7 +351,7 @@ export default function StockReportsPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                     {dataLoading ? (Array.from({length:5}).map((_, i) => <TableRow key={i}><TableCell colSpan={5}><div className="h-4 bg-muted rounded-full w-full animate-pulse"/></TableCell></TableRow>))
+                                     {dataLoading ? (Array.from({length:5}).map((_, i) =>  <TableRow key={i}><TableCell colSpan={5}><div className="h-4 bg-muted rounded-full w-full animate-pulse"/></TableCell></TableRow>))
                                      : filteredStockLevels.length > 0 ? filteredStockLevels.map((item: any) => (
                                         <TableRow key={item.medicineId}>
                                             <TableCell className="font-medium">{item.medicineName}</TableCell>
@@ -399,7 +382,7 @@ export default function StockReportsPage() {
                                 </div>
                                 <Select defaultValue={transferFiltersRef.current.store} onValueChange={(v) => (transferFiltersRef.current.store = v)} disabled={user?.role === 'Pharmacist' && availableStores.length === 1}>
                                     <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Select Store" /></SelectTrigger>
-                                    <SelectContent>{availableStores.map(store => (<SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>))}</SelectContent>
+                                    <SelectContent>{availableStores.map(store => (<SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>)}</SelectContent>
                                 </Select>
                                 <DateRangePicker onUpdate={(values) => (transferFiltersRef.current.dateRange = values.range)} />
                                 <Button onClick={() => applyFilters('transfers')}>Apply Filters</Button>
@@ -417,7 +400,7 @@ export default function StockReportsPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {dataLoading ? (Array.from({length:5}).map((_, i) => <TableRow key={i}><TableCell colSpan={6}><div className="h-4 bg-muted rounded-full w-full animate-pulse"/></TableCell></TableRow>))
+                                    {dataLoading ? (Array.from({length:5}).map((_, i) =>  <TableRow key={i}><TableCell colSpan={6}><div className="h-4 bg-muted rounded-full w-full animate-pulse"/></TableCell></TableRow>))
                                     : filteredTransfers.length > 0 ? filteredTransfers.map((report) => (
                                         <TableRow key={report.id}>
                                             <TableCell className="font-medium">{report.id}</TableCell>
@@ -471,7 +454,7 @@ export default function StockReportsPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {dataLoading ? (Array.from({length:5}).map((_, i) => <TableRow key={i}><TableCell colSpan={5}><div className="h-4 bg-muted rounded-full w-full animate-pulse"/></TableCell></TableRow>))
+                                    {dataLoading ? (Array.from({length:5}).map((_, i) =>  <TableRow key={i}><TableCell colSpan={5}><div className="h-4 bg-muted rounded-full w-full animate-pulse"/></TableCell></TableRow>))
                                     : filteredPurchases.length > 0 ? filteredPurchases.map((purchase) => (
                                         <TableRow key={purchase.invoiceId}>
                                             <TableCell>{purchase.invoiceId}</TableCell>

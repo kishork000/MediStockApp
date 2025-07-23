@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -12,7 +11,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, Download, TrendingUp, Filter, Pill, Building, Undo } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, Download, TrendingUp, Filter, Pill, Building, Undo, BarChart2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -42,7 +41,7 @@ export default function ValuationReportPage() {
     const router = useRouter();
     const pathname = usePathname();
     const [selectedStore, setSelectedStore] = useState("all");
-    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+    const [dateRange, setDateRange] = useState(undefined);
 
     const availableStores = useMemo(() => {
         if (user?.role === 'Admin') {
@@ -93,6 +92,7 @@ export default function ValuationReportPage() {
             case 'Dashboard': return <HomeIcon />;
             case 'Patients': return <Users2 />;
             case 'Sales': return <ShoppingCart />;
+            case 'Universal Report': return <BarChart2 />;
             case 'Sales Reports': return <BarChart />;
             case 'Warehouse Stock': return <Warehouse />;
             case 'Store Stock': return <Package />;
@@ -123,18 +123,9 @@ export default function ValuationReportPage() {
           </SidebarHeader>
           <SidebarContent>
              <SidebarMenu>
-                {hasPermission('/') && (
-                    <SidebarMenuItem>
-                        <SidebarMenuButton href="/" tooltip="Dashboard" isActive={pathname === '/'}>
-                            <HomeIcon />
-                            <span>Dashboard</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                )}
-                
-                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path) && r.path !== '/admin').map((route) => (
+                {sidebarRoutes.filter(r => r.inSidebar && hasPermission(r.path) && !r.path.startsWith('/inventory/')).map((route) => (
                     <SidebarMenuItem key={route.path}>
-                        <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}>
+                        <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname.startsWith(route.path)}>
                             {getIcon(route.name)}
                             <span>{route.name}</span>
                         </SidebarMenuButton>
@@ -166,14 +157,6 @@ export default function ValuationReportPage() {
                         </CollapsibleContent>
                     </Collapsible>
                 )}
-                 {hasPermission('/admin') && (
-                    <SidebarMenuItem>
-                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname.startsWith('/admin')}>
-                            {getIcon('Admin')}
-                            <span>Admin</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                 )}
             </SidebarMenu>
           </SidebarContent>
            <SidebarFooter>

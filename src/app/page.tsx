@@ -1,4 +1,3 @@
-
 "use client";
 
 import {
@@ -11,7 +10,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { DollarSign, Home as HomeIcon, LayoutGrid, Package, Users, CreditCard, ShoppingCart, BarChart, Pill, Download, PlusSquare, Users2, Activity, Settings, GitBranch, LogOut, TrendingUp, Warehouse, BookOpen } from "lucide-react";
+import { DollarSign, Home as HomeIcon, LayoutGrid, Package, Users, CreditCard, ShoppingCart, BarChart, Pill, Download, PlusSquare, Users2, Activity, Settings, GitBranch, LogOut, TrendingUp, Warehouse, BookOpen, BarChart2 } from "lucide-react";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import type { DashboardData } from "./dashboard/types";
 import StatCard from "@/components/dashboard/StatCard";
@@ -151,28 +150,28 @@ export default function Home() {
     );
   }
 
-  const getIcon = (name: string) => {
-    switch (name) {
-        case 'Dashboard': return <HomeIcon />;
-        case 'Patients': return <Users2 />;
-        case 'Sales': return <ShoppingCart />;
-        case 'Universal Report': return <BarChart />;
-        case 'Sales Reports': return <BarChart />;
-        case 'Warehouse Stock': return <Warehouse />;
-        case 'Store Stock': return <Package />;
-        case 'Medicine Master': return <Pill />;
-        case 'Manufacturer Master': return <Building />;
-        case 'Add Stock': return <PlusSquare />;
-        case 'Return to Manufacturer': return <Undo />;
-        case 'Stock Transfer': return <GitBranch />;
-        case 'Inventory Reports': return <BarChart />;
-        case 'Valuation Report': return <TrendingUp />;
-        case 'Diseases': return <Activity />;
-        case 'Documentation': return <BookOpen />;
-        case 'Admin': return <Settings />;
-        default: return <LayoutGrid />;
-    }
-  };
+    const getIcon = (name: string) => {
+        switch (name) {
+            case 'Dashboard': return <HomeIcon />;
+            case 'Patients': return <Users2 />;
+            case 'Sales': return <ShoppingCart />;
+            case 'Universal Report': return <BarChart2 />;
+            case 'Sales Reports': return <BarChart />;
+            case 'Warehouse Stock': return <Warehouse />;
+            case 'Store Stock': return <Package />;
+            case 'Medicine Master': return <Pill />;
+            case 'Manufacturer Master': return <Building />;
+            case 'Add Stock': return <PlusSquare />;
+            case 'Return to Manufacturer': return <Undo />;
+            case 'Stock Transfer': return <GitBranch />;
+            case 'Inventory Reports': return <BarChart />;
+            case 'Valuation Report': return <TrendingUp />;
+            case 'Diseases': return <Activity />;
+            case 'Documentation': return <BookOpen />;
+            case 'Admin': return <Settings />;
+            default: return <LayoutGrid />;
+        }
+    };
 
   const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory/') && r.inSidebar);
 

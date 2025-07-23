@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
@@ -12,7 +11,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, Filter, Download, ArrowLeft, Pill, Building, Undo } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, Filter, Download, ArrowLeft, Pill, Building, Undo, BarChart2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -77,7 +76,7 @@ export default function SalesReportPage() {
     const initialFilters = {
         store: "all",
         pharmacist: "all",
-        dateRange: undefined as DateRange | undefined,
+        dateRange: undefined,
     };
     
     const [activeFilters, setActiveFilters] = useState(initialFilters);
@@ -85,7 +84,7 @@ export default function SalesReportPage() {
 
     
     const [isSalesDetailModalOpen, setIsSalesDetailModalOpen] = useState(false);
-    const [modalView, setModalView] = useState<'summary' | 'cash' | 'online'>('summary');
+    const [modalView, setModalView] = useState('summary');
 
 
     const availableStores = useMemo(() => {
@@ -120,7 +119,7 @@ export default function SalesReportPage() {
             const toDate = endOfDay(currentFilters.dateRange.to);
             data = data.filter(sale => {
                 const saleDate = parseISO(sale.date);
-                return saleDate >= fromDate && saleDate <= toDate;
+                return saleDate >= fromDate && saleDate  < toDate;
             });
         }
         
@@ -165,7 +164,7 @@ export default function SalesReportPage() {
                 acc.push({ name: sale.medicine, quantity: sale.quantity });
             }
             return acc;
-        }, [] as { name: string; quantity: number; }[]).sort((a, b) => b.quantity - a.quantity).slice(0, 5);
+        }, []).sort((a, b) => b.quantity - a.quantity).slice(0, 5);
 
         const pharmacistSales = filteredData.reduce((acc, sale) => {
             const existing = acc.find(item => item.name === sale.pharmacist);
@@ -175,7 +174,7 @@ export default function SalesReportPage() {
                 acc.push({ name: sale.pharmacist, salesValue: sale.total });
             }
             return acc;
-        }, [] as { name: string; salesValue: number; }[]).sort((a, b) => b.salesValue - a.salesValue);
+        }, []).sort((a, b) => b.salesValue - a.salesValue);
         
         const salesOverTime = filteredData.reduce((acc, sale) => {
             const saleDate = format(parseISO(sale.date), "MMM dd");
@@ -186,7 +185,7 @@ export default function SalesReportPage() {
                 acc.push({ date: saleDate, total: sale.total });
             }
             return acc;
-        }, [] as { date: string; total: number; }[]).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        }, []).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
 
         return { totalSalesValue, cashSalesValue, onlineSalesValue, totalItemsSold, highSellingMedicines, pharmacistSales, salesOverTime, cashInvoices, onlineInvoices };
@@ -199,8 +198,8 @@ export default function SalesReportPage() {
     }, []);
 
     const stockManagementRoutes = useMemo(() => {
-        return allAppRoutes.filter(route => route.path.startsWith('/inventory/') && hasPermission(route.path));
-    }, [hasPermission]);
+        return allAppRoutes.filter(route => route.path.startsWith('/inventory/') && route.inSidebar);
+    }, []);
 
      useEffect(() => {
         if (!loading && !user) {
@@ -221,6 +220,7 @@ export default function SalesReportPage() {
             case 'Dashboard': return <HomeIcon />;
             case 'Patients': return <Users2 />;
             case 'Sales': return <ShoppingCart />;
+            case 'Universal Report': return <BarChart2 />;
             case 'Sales Reports': return <BarChart />;
             case 'Warehouse Stock': return <Warehouse />;
             case 'Store Stock': return <Package />;
@@ -253,18 +253,9 @@ export default function SalesReportPage() {
           </SidebarHeader>
           <SidebarContent>
              <SidebarMenu>
-                {hasPermission('/') && (
-                    <SidebarMenuItem>
-                        <SidebarMenuButton href="/" tooltip="Dashboard" isActive={pathname === '/'}>
-                            <HomeIcon />
-                            <span>Dashboard</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                )}
-
-                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path) && r.path !== '/admin').map((route) => (
+                {sidebarRoutes.filter(r => r.inSidebar && hasPermission(r.path) && !r.path.startsWith('/inventory/')).map((route) => (
                     <SidebarMenuItem key={route.path}>
-                        <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname === route.path}>
+                        <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname.startsWith(route.path)}>
                             {getIcon(route.name)}
                             <span>{route.name}</span>
                         </SidebarMenuButton>
@@ -284,7 +275,7 @@ export default function SalesReportPage() {
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                             <SidebarMenu className="ml-7 mt-2 border-l pl-3">
-                                {stockManagementRoutes.map((route) => (
+                                {stockManagementRoutes.filter(route => hasPermission(route.path)).map((route) => (
                                     <SidebarMenuItem key={route.path}>
                                         <SidebarMenuButton href={route.path} tooltip={route.name} size="sm" isActive={pathname === route.path}>
                                             {getIcon(route.name)}
@@ -296,14 +287,6 @@ export default function SalesReportPage() {
                         </CollapsibleContent>
                     </Collapsible>
                 )}
-                 {hasPermission('/admin') && (
-                    <SidebarMenuItem>
-                        <SidebarMenuButton href="/admin" tooltip="Admin" isActive={pathname.startsWith('/admin')}>
-                            {getIcon('Admin')}
-                            <span>Admin</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                 )}
             </SidebarMenu>
           </SidebarContent>
            <SidebarFooter>
@@ -360,7 +343,7 @@ export default function SalesReportPage() {
                                             {pharmacists.map(p => (
                                                 <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                                             ))}
-                                        </SelectContent>
+                                        SelectContent>
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
@@ -400,7 +383,7 @@ export default function SalesReportPage() {
                         <CardHeader>
                             <CardTitle>Sales Over Time</CardTitle>
                             <CardDescription>Total sales value in the selected period.</CardDescription>
-                        </CardHeader>
+                        CardHeader>
                         <CardContent className="h-[300px] w-full">
                            <ChartContainer config={salesOverTimeChartConfig}>
                                <ResponsiveContainer width="100%" height="100%">
@@ -408,11 +391,11 @@ export default function SalesReportPage() {
                                         <CartesianGrid strokeDasharray="3 3" />
                                         <XAxis dataKey="date" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                                         <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `₹${value}`} />
-                                        <Tooltip content={<ChartTooltipContent formatter={(value) => `₹${Number(value).toFixed(2)}`} />} />
+                                        <Tooltip content={formatter={(value) => `₹${Number(value).toFixed(2)}`} />} />
                                         <Area type="monotone" dataKey="total" stroke="var(--color-total)" fill="var(--color-total)" fillOpacity={0.3} />
                                     </AreaChart>
-                               </ResponsiveContainer>
-                           </ChartContainer>
+                               <ResponsiveContainer>
+                           <ChartContainer>
                         </CardContent>
                     </Card>
                      <TopSellingMedicinesChart data={analytics.highSellingMedicines} config={highSellingChartConfig} />
@@ -450,12 +433,12 @@ export default function SalesReportPage() {
                                         <TableCell className="text-right">{sale.total.toFixed(2)}</TableCell>
                                     </TableRow>
                                 ))}
-                            </TableBody>
-                        </Table>
+                            TableBody>
+                        Table>
                     </CardContent>
-                </Card>
+                Card>
             </div>
-        </main>
+        main>
       </div>
       <Dialog open={isSalesDetailModalOpen} onOpenChange={setIsSalesDetailModalOpen}>
         <DialogContent className="sm:max-w-4xl">
@@ -464,7 +447,7 @@ export default function SalesReportPage() {
                 <DialogDescription>
                     Detailed view of cash and online sales for the selected period.
                 </DialogDescription>
-            </DialogHeader>
+            DialogHeader>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
                  <Card>
                     <CardHeader>
@@ -472,7 +455,7 @@ export default function SalesReportPage() {
                         <CardDescription>Total: ₹{analytics.cashSalesValue.toFixed(2)} from {analytics.cashInvoices.length} invoices.</CardDescription>
                     </CardHeader>
                     <CardContent className="max-h-96 overflow-y-auto">
-                        <Table>
+                        Table>
                              <TableHeader>
                                 <TableRow>
                                     <TableHead>Invoice ID</TableHead>
@@ -488,24 +471,24 @@ export default function SalesReportPage() {
                                         <TableCell className="text-right">{inv.total.toFixed(2)}</TableCell>
                                     </TableRow>
                                 ))}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                 </Card>
+                            TableBody>
+                        Table>
+                    CardContent>
+                 Card>
                  <Card>
-                     <CardHeader>
+                     CardHeader>
                         <CardTitle>Online Sales Summary</CardTitle>
                         <CardDescription>Total: ₹{analytics.onlineSalesValue.toFixed(2)} from {analytics.onlineInvoices.length} invoices.</CardDescription>
-                    </CardHeader>
+                    CardHeader>
                      <CardContent className="max-h-96 overflow-y-auto">
-                        <Table>
+                        Table>
                              <TableHeader>
                                 <TableRow>
                                     <TableHead>Invoice ID</TableHead>
                                     <TableHead>Patient</TableHead>
                                     <TableHead className="text-right">Amount (₹)</TableHead>
                                 </TableRow>
-                            </TableHeader>
+                            TableHeader>
                             <TableBody>
                                  {analytics.onlineInvoices.map(inv => (
                                     <TableRow key={inv.invoiceId}>
@@ -514,12 +497,12 @@ export default function SalesReportPage() {
                                         <TableCell className="text-right">{inv.total.toFixed(2)}</TableCell>
                                     </TableRow>
                                 ))}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                 </Card>
-            </div>
-        </DialogContent>
+                            TableBody>
+                        Table>
+                    CardContent>
+                 Card>
+            div>
+        DialogContent>
       </Dialog>
     </div>
   );

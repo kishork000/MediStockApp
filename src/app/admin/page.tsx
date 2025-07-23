@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo, useTransition, useRef } from "react";
@@ -12,7 +11,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Activity, Settings, Store, MoreHorizontal, Trash2, GitBranch, LogOut, ShieldCheck, ChevronDown, Warehouse, TrendingUp, Building, UserPlus, Layers, Box, KeyRound, Pill, Undo, BookOpen } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Activity, Settings, Store, MoreHorizontal, Trash2, GitBranch, LogOut, ShieldCheck, ChevronDown, Warehouse, TrendingUp, Building, UserPlus, Layers, Box, KeyRound, Pill, Undo, BookOpen, BarChart2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -407,6 +406,7 @@ export default function AdminPage() {
             case 'Dashboard': return <HomeIcon />;
             case 'Patients': return <Users2 />;
             case 'Sales': return <ShoppingCart />;
+            case 'Universal Report': return <BarChart2 />;
             case 'Sales Reports': return <BarChart />;
             case 'Warehouse Stock': return <Warehouse />;
             case 'Store Stock': return <Package />;
@@ -437,14 +437,6 @@ export default function AdminPage() {
           </SidebarHeader>
           <SidebarContent>
             <SidebarMenu>
-                {hasPermission('/') && (
-                    <SidebarMenuItem>
-                        <SidebarMenuButton href="/" tooltip="Dashboard" isActive={pathname === '/'}>
-                            <HomeIcon />
-                            <span>Dashboard</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                )}
                 {sidebarRoutes.filter(r => r.inSidebar && hasPermission(r.path) && !r.path.startsWith('/inventory/')).map((route) => (
                     <SidebarMenuItem key={route.path}>
                         <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname.startsWith(route.path)}>
@@ -1060,5 +1052,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
-    
