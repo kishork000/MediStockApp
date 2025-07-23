@@ -37,6 +37,7 @@ import { UnitType, getUnitTypes, addUnitType, deleteUnitType } from "@/services/
 import { PackagingType, getPackagingTypes, addPackagingType, deletePackagingType } from "@/services/packaging-service";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import React from "react";
 
 
 interface User {
@@ -508,7 +509,7 @@ export default function AdminPage() {
     const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory/') && r.inSidebar);
 
     const PermissionRow = ({ route, role, level = 0 }: { route: AppRoute, role: string, level?: number }) => (
-        <Collapsible key={`${role}-${route.path}`} className="w-full">
+        <React.Fragment>
             <TableRow>
                 <TableCell style={{ paddingLeft: `${level * 2}rem` }}>
                     <div className="flex items-center gap-2">
@@ -544,7 +545,7 @@ export default function AdminPage() {
                     </>
                 </CollapsibleContent>
             )}
-        </Collapsible>
+        </React.Fragment>
     );
 
     return (
@@ -756,7 +757,9 @@ export default function AdminPage() {
                                     </TableHeader>
                                     <TableBody>
                                         {permissionRoutesTree.map(route => (
-                                            <PermissionRow key={route.path} route={route} role="" />
+                                            <Collapsible asChild key={route.path} className="w-full">
+                                                <PermissionRow route={route} role="" />
+                                            </Collapsible>
                                         ))}
                                     </TableBody>
                                 </Table>
@@ -1175,3 +1178,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
