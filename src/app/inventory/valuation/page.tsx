@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, Download, TrendingUp, Pill, Building, Undo, BarChart2 } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, Download, TrendingUp, Pill, Building, Undo, BarChart2, Edit, HeartCrack } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -57,6 +57,7 @@ export default function ValuationReportPage() {
     const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
     const [allInventory, setAllInventory] = useState<InventoryItem[]>([]);
     const [valuationData, setValuationData] = useState<ValuationItem[]>([]);
+    const [reportGenerated, setReportGenerated] = useState(false);
 
     const filtersRef = useRef({ store: "all", manufacturer: "all" });
 
@@ -89,6 +90,10 @@ export default function ValuationReportPage() {
     
     useEffect(() => {
         if (user) {
+            // Set initial filter for non-admin users
+            if(user.role === 'Pharmacist' && user.assignedStore) {
+                filtersRef.current.store = user.assignedStore;
+            }
             fetchData();
         }
     }, [user, fetchData]);
@@ -128,14 +133,8 @@ export default function ValuationReportPage() {
             }
         }
         setValuationData(Array.from(valuationMap.values()));
+        setReportGenerated(true);
     }, [medicines, allInventory]);
-
-    // Initial calculation on data load
-    useEffect(() => {
-        if (!pageLoading) {
-            calculateValuation();
-        }
-    }, [pageLoading, calculateValuation]);
     
      const handleApplyFilters = () => {
         calculateValuation();
@@ -143,9 +142,11 @@ export default function ValuationReportPage() {
     };
 
     const handleResetFilters = () => {
-        filtersRef.current = { store: "all", manufacturer: "all" };
-        calculateValuation();
-        toast({ title: 'Filters Reset', description: 'Showing complete valuation report.' });
+        const defaultStore = (user?.role === 'Pharmacist' && user.assignedStore) ? user.assignedStore : 'all';
+        filtersRef.current = { store: defaultStore, manufacturer: "all" };
+        setValuationData([]);
+        setReportGenerated(false);
+        toast({ title: 'Filters Reset', description: 'Apply filters to generate a new report.' });
     };
 
     const handleDownloadReport = () => {
@@ -298,7 +299,7 @@ export default function ValuationReportPage() {
                             <Select 
                                 defaultValue={filtersRef.current.store} 
                                 onValueChange={(v) => (filtersRef.current.store = v)}
-                                disabled={user?.role === 'Pharmacist' && availableStores.length === 1}
+                                disabled={availableStores.length <= 1}
                             >
                                 <SelectTrigger className="w-full sm:w-[200px]">
                                     <SelectValue placeholder="Select Location" />
@@ -324,7 +325,9 @@ export default function ValuationReportPage() {
                                 </SelectContent>
                             </Select>
                             <div className="flex gap-2">
-                                <Button onClick={handleApplyFilters}>Apply</Button>
+                                <Button onClick={handleApplyFilters} disabled={pageLoading}>
+                                    {pageLoading ? 'Loading...' : 'Apply'}
+                                </Button>
                                 <Button onClick={handleResetFilters} variant="outline">Reset</Button>
                             </div>
                         </div>
@@ -353,7 +356,7 @@ export default function ValuationReportPage() {
                                             <TableCell><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
                                         </TableRow>
                                     ))
-                                ) : valuationData.length > 0 ? (
+                                ) : reportGenerated && valuationData.length > 0 ? (
                                     valuationData.map((item) => (
                                         <TableRow key={item.medicineId}>
                                             <TableCell className="font-medium">{item.medicineName}</TableCell>
@@ -364,17 +367,23 @@ export default function ValuationReportPage() {
                                         </TableRow>
                                     ))
                                 ) : (
-                                  <TableRow><TableCell colSpan={5} className="h-24 text-center">No data to display for the selected filters.</TableCell></TableRow>
+                                  <TableRow><TableCell colSpan={5} className="h-24 text-center">
+                                      {reportGenerated ? 'No data to display for the selected filters.' : 'Please apply filters to generate the report.'}
+                                  </TableCell></TableRow>
                                 )}
                             </TableBody>
                         </Table>
                     </div>
-                     <div className="mt-6 flex justify-between items-center">
-                        <Button size="sm" variant="outline" onClick={handleDownloadReport}><Download className="mr-2" /> Download Report</Button>
-                        <div className="text-right">
-                            <p className="text-lg font-bold">Total Stock Valuation: ₹{totalValuation.toFixed(2)}</p>
+                    {reportGenerated && (
+                         <div className="mt-6 flex justify-between items-center">
+                            <Button size="sm" variant="outline" onClick={handleDownloadReport} disabled={valuationData.length === 0}>
+                                <Download className="mr-2" /> Download Report
+                            </Button>
+                            <div className="text-right">
+                                <p className="text-lg font-bold">Total Stock Valuation: ₹{totalValuation.toFixed(2)}</p>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </CardContent>
             </Card>
         </main>
