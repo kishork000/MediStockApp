@@ -12,10 +12,11 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, Download, TrendingUp, Undo, Pill, Building, Search, BarChart2 } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, Download, TrendingUp, Undo, Pill, Building, Search, BarChart2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { allAppRoutes } from "@/lib/types";
@@ -75,6 +76,9 @@ export default function StockReportsPage() {
     const purchaseFiltersRef = useRef({ manufacturer: "all", dateRange: undefined as DateRange | undefined, searchId: "" });
 
     const [dataLoading, setDataLoading] = useState(true);
+    
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+    const [selectedItemDetails, setSelectedItemDetails] = useState<Purchase | Transfer | null>(null);
 
      const availableStores = useMemo(() => {
         if (user?.role === 'Admin') return allStores;
@@ -202,6 +206,11 @@ export default function StockReportsPage() {
             setFilteredPurchases(purchases);
         }
     }
+    
+    const openDetailsModal = (item: Purchase | Transfer) => {
+        setSelectedItemDetails(item);
+        setIsDetailModalOpen(true);
+    };
 
 
     const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
@@ -398,10 +407,11 @@ export default function StockReportsPage() {
                                         <TableHead>Date</TableHead>
                                         <TableHead className="text-center">No. of Items</TableHead>
                                         <TableHead className="text-right">Status</TableHead>
+                                        <TableHead>Action</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {dataLoading ? (Array.from({length:5}).map((_, i) =>  <TableRow key={i}><TableCell colSpan={6}><div className="h-4 bg-muted rounded-full w-full animate-pulse"/></TableCell></TableRow>))
+                                    {dataLoading ? (Array.from({length:5}).map((_, i) =>  <TableRow key={i}><TableCell colSpan={7}><div className="h-4 bg-muted rounded-full w-full animate-pulse"/></TableCell></TableRow>))
                                     : filteredTransfers.length > 0 ? filteredTransfers.map((report) => (
                                         <TableRow key={report.id}>
                                             <TableCell className="font-medium">{report.id}</TableCell>
@@ -412,9 +422,14 @@ export default function StockReportsPage() {
                                             <TableCell className="text-right">
                                                 <Badge>{report.status}</Badge>
                                             </TableCell>
+                                             <TableCell className="text-right">
+                                                <Button variant="outline" size="icon" onClick={() => openDetailsModal(report)}>
+                                                    <Eye className="h-4 w-4" />
+                                                </Button>
+                                            </TableCell>
                                         </TableRow>
                                     )) : (
-                                      <TableRow><TableCell colSpan={6} className="h-24 text-center">No transfer data to display for the selected filters.</TableCell></TableRow>
+                                      <TableRow><TableCell colSpan={7} className="h-24 text-center">No transfer data to display for the selected filters.</TableCell></TableRow>
                                     )}
                                 </TableBody>
                             </Table>
@@ -452,10 +467,11 @@ export default function StockReportsPage() {
                                         <TableHead>Manufacturer</TableHead>
                                         <TableHead className="text-center">No. of Items</TableHead>
                                         <TableHead className="text-right">Amount (₹)</TableHead>
+                                        <TableHead>Action</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {dataLoading ? (Array.from({length:5}).map((_, i) =>  <TableRow key={i}><TableCell colSpan={5}><div className="h-4 bg-muted rounded-full w-full animate-pulse"/></TableCell></TableRow>))
+                                    {dataLoading ? (Array.from({length:5}).map((_, i) =>  <TableRow key={i}><TableCell colSpan={6}><div className="h-4 bg-muted rounded-full w-full animate-pulse"/></TableCell></TableRow>))
                                     : filteredPurchases.length > 0 ? filteredPurchases.map((purchase) => (
                                         <TableRow key={purchase.invoiceId}>
                                             <TableCell>{purchase.invoiceId}</TableCell>
@@ -463,9 +479,14 @@ export default function StockReportsPage() {
                                             <TableCell>{purchase.manufacturerName}</TableCell>
                                             <TableCell className="text-center">{purchase.items.length}</TableCell>
                                             <TableCell className="text-right">{purchase.totalAmount.toFixed(2)}</TableCell>
+                                            <TableCell className="text-right">
+                                                <Button variant="outline" size="icon" onClick={() => openDetailsModal(purchase)}>
+                                                    <Eye className="h-4 w-4" />
+                                                </Button>
+                                            </TableCell>
                                         </TableRow>
                                     )) : (
-                                      <TableRow><TableCell colSpan={5} className="h-24 text-center">No purchase data to display for the selected filters.</TableCell></TableRow>
+                                      <TableRow><TableCell colSpan={6} className="h-24 text-center">No purchase data to display for the selected filters.</TableCell></TableRow>
                                     )}
                                 </TableBody>
                             </Table>
@@ -475,6 +496,48 @@ export default function StockReportsPage() {
             </Tabs>
         </main>
       </div>
+
+       <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
+            <DialogContent className="sm:max-w-lg">
+                 {selectedItemDetails && (
+                    <>
+                        <DialogHeader>
+                            <DialogTitle>
+                                {'invoiceId' in selectedItemDetails ? 'Purchase Details' : 'Transfer/Return Details'}
+                            </DialogTitle>
+                            <DialogDescription>
+                                Invoice ID: {'invoiceId' in selectedItemDetails ? selectedItemDetails.invoiceId : selectedItemDetails.id}
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Medicine</TableHead>
+                                        <TableHead>Quantity</TableHead>
+                                        {'pricePerUnit' in selectedItemDetails.items[0] && <TableHead className="text-right">Price/Unit (₹)</TableHead>}
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {selectedItemDetails.items.map((item, index) => (
+                                        <TableRow key={index}>
+                                            <TableCell>{item.medicineName}</TableCell>
+                                            <TableCell>{item.quantity}</TableCell>
+                                            {'pricePerUnit' in item && <TableCell className="text-right">{item.pricePerUnit.toFixed(2)}</TableCell>}
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                        <DialogFooter>
+                            <DialogClose asChild>
+                                <Button type="button" variant="secondary">Close</Button>
+                            </DialogClose>
+                        </DialogFooter>
+                    </>
+                )}
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }
