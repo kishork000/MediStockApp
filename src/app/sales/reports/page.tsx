@@ -22,7 +22,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { DateRange } from "react-day-picker";
 import { isWithinInterval, parseISO, startOfDay, endOfDay, format } from "date-fns";
 import { SalesByPharmacistChart } from "@/components/sales/SalesByPharmacistChart";
@@ -100,7 +100,6 @@ export default function SalesReportPage() {
         try {
             const salesData = await getSales();
             setAllSales(salesData);
-            setFilteredData(salesData.flatMap(s => s.items.map(i => ({...s, ...i}))));
             
             const uniquePharmacists = [...new Set(salesData.map(s => s.soldBy))];
             setPharmacists([
@@ -206,7 +205,7 @@ export default function SalesReportPage() {
         }, []).sort((a, b) => b.salesValue - a.salesValue);
         
         const salesOverTime = filteredData.reduce((acc: { date: string; total: number }[], sale: any) => {
-            const saleDate = format(parseISO(sale.date), "MMM dd");
+            const saleDate = format(parseISO(sale.createdAt), "MMM dd");
             const existing = acc.find(item => item.date === saleDate);
             if (existing) {
                 existing.total += sale.total;
