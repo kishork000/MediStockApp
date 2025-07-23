@@ -317,7 +317,7 @@ export default function StockReportsPage() {
           <SidebarContent>
              <SidebarMenu>
                 {sidebarRoutes.filter(r => r.inSidebar && hasPermission(r.path) && !r.path.startsWith('/inventory/')).map((route) => {
-                     const isParentRoute = sidebarRoutes.some(child => child.path.startsWith(route.path) && child.path !== route.path);
+                     const isParentRoute = sidebarRoutes.some(child => child.path.startsWith(route.path + '/') && child.path !== route.path);
                      const isActive = isParentRoute ? pathname.startsWith(route.path) : pathname === route.path;
                     return (
                     <SidebarMenuItem key={route.path}>

@@ -173,6 +173,7 @@ export default function Home() {
             case 'Diseases': return <Activity />;
             case 'Documentation': return <BookOpen />;
             case 'Admin': return <Settings />;
+            case 'Profit & Loss Report': return <TrendingUp />;
             default: return <LayoutGrid />;
         }
     };
@@ -199,14 +200,17 @@ export default function Home() {
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 )}
-                {sidebarRoutes.filter(r => r.inSidebar && hasPermission(r.path) && !r.path.startsWith('/inventory/')).map((route) => (
+                {sidebarRoutes.filter(r => r.inSidebar && hasPermission(r.path) && !r.path.startsWith('/inventory/')).map((route) => {
+                     const isParentRoute = sidebarRoutes.some(child => child.path.startsWith(route.path + '/') && child.path !== route.path);
+                     const isActive = isParentRoute ? pathname.startsWith(route.path) : pathname === route.path;
+                    return (
                     <SidebarMenuItem key={route.path}>
-                        <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname.startsWith(route.path)}>
+                        <SidebarMenuButton href={route.path} tooltip={route.name} isActive={isActive}>
                             {getIcon(route.name)}
                             <span>{route.name}</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
-                ))}
+                )})}
 
                 {hasPermission('/inventory') && (
                     <Collapsible className="w-full" defaultOpen={pathname.startsWith('/inventory')}>

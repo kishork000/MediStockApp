@@ -69,7 +69,7 @@ const initialStores: Store[] = [
 
 
 export default function AdminPage() {
-    const { user, logout, loading, permissions, setPermissions, hasPermission, users: userList, createUser, updateUser, deleteUser: deleteUserFromContext, addRole, editRole, deleteRole } from useAuth();
+    const { user, logout, loading, permissions, setPermissions, hasPermission, users: userList, createUser, updateUser, deleteUser: deleteUserFromContext, addRole, editRole, deleteRole } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
     const { toast } = useToast();
@@ -451,7 +451,7 @@ export default function AdminPage() {
                     </SidebarMenuItem>
                 )}
                 {sidebarRoutes.filter(r => r.inSidebar && hasPermission(r.path) && !r.path.startsWith('/inventory/')).map((route) => {
-                     const isParentRoute = sidebarRoutes.some(child => child.path.startsWith(route.path) && child.path !== route.path);
+                     const isParentRoute = sidebarRoutes.some(child => child.path.startsWith(route.path + '/') && child.path !== route.path);
                      const isActive = isParentRoute ? pathname.startsWith(route.path) : pathname === route.path;
                     return (
                     <SidebarMenuItem key={route.path}>

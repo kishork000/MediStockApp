@@ -196,7 +196,7 @@ export default function ProfitLossReportPage() {
                             </SidebarMenuItem>
                         )}
                         {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path)).map((route) => {
-                             const isParentRoute = sidebarRoutes.some(child => child.path.startsWith(route.path) && child.path !== route.path);
+                             const isParentRoute = sidebarRoutes.some(child => child.path.startsWith(route.path + '/') && child.path !== route.path);
                              const isActive = isParentRoute ? pathname.startsWith(route.path) : pathname === route.path;
                             return (
                             <SidebarMenuItem key={route.path}>
