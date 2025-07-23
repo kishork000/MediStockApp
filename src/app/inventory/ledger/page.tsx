@@ -20,7 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InventoryItem, getAvailableStockForLocation } from "@/services/inventory-service";
 import { Medicine, getMedicines } from "@/services/medicine-service";
@@ -33,11 +33,19 @@ import { Purchase, getPurchases } from "@/services/purchase-service";
 import { Transfer, getTransfers } from "@/services/transfer-service";
 import { getManufacturerReturns, ManufacturerReturn } from "@/services/return-service";
 import { isWithinInterval, startOfDay, endOfDay, parseISO, format } from "date-fns";
-import type { WarehouseLedgerItem } from "@/lib/report-types";
+import type { WarehouseLedgerItem, StoreLedgerItem } from "@/lib/report-types";
 import { Input } from "@/components/ui/input";
+import { getSales, Sale } from "@/services/sales-service";
 
 
-export default function WarehouseInventoryPage() {
+const allLocations = [
+    { id: "warehouse", name: "Main Warehouse" },
+    { id: "STR002", name: "Downtown Pharmacy" },
+    { id: "STR003", name: "Uptown Health" },
+];
+
+
+export default function StockLedgerPage() {
     const { user, logout, loading, hasPermission } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
@@ -46,52 +54,59 @@ export default function WarehouseInventoryPage() {
     const [pageLoading, setPageLoading] = useState(true);
     const [isLedgerLoading, setIsLedgerLoading] = useState(false);
     
+    // Master Data
     const [medicines, setMedicines] = useState<Medicine[]>([]);
-    const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
     
-    const [inventory, setInventory] = useState<InventoryItem[]>([]);
-    const [purchases, setPurchases] = useState<Purchase[]>([]);
-    const [transfers, setTransfers] = useState<Transfer[]>([]);
-    const [manufacturerReturns, setManufacturerReturns] = useState<ManufacturerReturn[]>([]);
-    
-    const [stockLedger, setStockLedger] = useState<WarehouseLedgerItem[]>([]);
-    const filtersRef = useRef<{ dateRange?: DateRange; manufacturerId: string; medicineId: string; invoiceNo: string; }>({
-        manufacturerId: 'all',
+    // Transactional Data
+    const [allInventory, setAllInventory] = useState<InventoryItem[]>([]);
+    const [allPurchases, setAllPurchases] = useState<Purchase[]>([]);
+    const [allTransfers, setAllTransfers] = useState<Transfer[]>([]);
+    const [allManufacturerReturns, setAllManufacturerReturns] = useState<ManufacturerReturn[]>([]);
+    const [allSales, setAllSales] = useState<Sale[]>([]);
+
+    const [stockLedger, setStockLedger] = useState<(WarehouseLedgerItem | StoreLedgerItem)[]>([]);
+    const filtersRef = useRef<{ dateRange?: DateRange; locationId: string; medicineId: string; }>({
+        locationId: 'warehouse',
         medicineId: 'all',
-        invoiceNo: "",
     });
 
     const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
     const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && route.inSidebar), [hasPermission]);
 
-    const fetchWarehouseData = useCallback(async () => {
+    const fetchAllData = useCallback(async () => {
         setPageLoading(true);
         try {
-            const [stockItems, meds, mans, pur, trans, mfrReturns] = await Promise.all([
+            const [
+                stockWarehouse, stockDowntown, stockUptown, 
+                meds, 
+                pur, trans, mfrReturns, sales
+            ] = await Promise.all([
                 getAvailableStockForLocation('warehouse'),
+                getAvailableStockForLocation('STR002'),
+                getAvailableStockForLocation('STR003'),
                 getMedicines(),
-                getManufacturers(),
                 getPurchases(),
                 getTransfers(),
                 getManufacturerReturns(),
+                getSales()
             ]);
-            setInventory(stockItems);
+            setAllInventory([...stockWarehouse, ...stockDowntown, ...stockUptown]);
             setMedicines(meds);
-            setManufacturers(mans);
-            setPurchases(pur);
-            setTransfers(trans);
-            setManufacturerReturns(mfrReturns);
+            setAllPurchases(pur);
+            setAllTransfers(trans);
+            setAllManufacturerReturns(mfrReturns);
+            setAllSales(sales);
         } catch (error) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Failed to load warehouse data.' });
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to load ledger data.' });
         }
         setPageLoading(false);
     }, [toast]);
     
     useEffect(() => {
         if(user) {
-            fetchWarehouseData();
+            fetchAllData();
         }
-    }, [user, fetchWarehouseData]);
+    }, [user, fetchAllData]);
     
     const calculateStockLedger = useCallback(() => {
         if (!filtersRef.current.dateRange?.from || !filtersRef.current.dateRange?.to) {
@@ -102,86 +117,65 @@ export default function WarehouseInventoryPage() {
 
         const startDate = startOfDay(filtersRef.current.dateRange.from);
         const endDate = endOfDay(filtersRef.current.dateRange.to);
+        const locationId = filtersRef.current.locationId;
 
         const medicineMap = new Map(medicines.map(m => [m.id, m]));
         
         let medicineIdsToProcess: string[];
-
-        // Start with all medicines that have current inventory
-        let initialMedSet = new Set(inventory.map(i => i.medicineId));
-
-        // Filter by medicine if selected
         if (filtersRef.current.medicineId !== 'all') {
              medicineIdsToProcess = [filtersRef.current.medicineId];
-        } else if (filtersRef.current.manufacturerId !== 'all') {
-            const medIdsForManufacturer = medicines
-                .filter(m => m.manufacturerId === filtersRef.current.manufacturerId)
-                .map(m => m.id);
-            medicineIdsToProcess = medIdsForManufacturer;
         } else {
-             medicineIdsToProcess = Array.from(initialMedSet);
+             const locationInventory = allInventory.filter(i => i.locationId === locationId);
+             medicineIdsToProcess = Array.from(new Set(locationInventory.map(i => i.medicineId)));
         }
 
-        const ledger: WarehouseLedgerItem[] = [];
+        const ledger: (WarehouseLedgerItem | StoreLedgerItem)[] = [];
 
         for(const medId of medicineIdsToProcess) {
             const medicineDetails = medicineMap.get(medId);
             if (!medicineDetails) continue;
 
-            // Apply invoice filter at the very end if present
-            if (filtersRef.current.invoiceNo) {
-                 const purchaseInvoicesForItem = purchases
-                    .filter(p => p.items.some(item => item.medicineId === medId))
-                    .map(p => p.invoiceId);
-                
-                if (!purchaseInvoicesForItem.some(inv => inv.toLowerCase().includes(filtersRef.current.invoiceNo.toLowerCase()))) {
-                    continue; // Skip this medicine if it's not in the filtered invoices
-                }
-            }
-
-
-            const currentStock = inventory.find(i => i.medicineId === medId)?.quantity || 0;
+            const currentStock = allInventory.find(i => i.medicineId === medId && i.locationId === locationId)?.quantity || 0;
             const balance = currentStock;
 
-            const purchasesDuringPeriod = purchases.filter(p => isWithinInterval(parseISO(p.date), { start: startDate, end: endDate }))
-                .flatMap(p => p.items)
-                .filter(i => i.medicineId === medId)
-                .reduce((sum, i) => sum + i.quantity, 0);
+            if (locationId === 'warehouse') {
+                 const purchasesDuringPeriod = allPurchases.filter(p => isWithinInterval(parseISO(p.date), { start: startDate, end: endDate }))
+                    .flatMap(p => p.items).filter(i => i.medicineId === medId).reduce((sum, i) => sum + i.quantity, 0);
+                 const transferredDuringPeriod = allTransfers.filter(t => t.from === 'warehouse' && isWithinInterval(parseISO(t.date), { start: startDate, end: endDate }))
+                    .flatMap(t => t.items).filter(i => i.medicineId === medId).reduce((sum, i) => sum + i.quantity, 0);
+                 const returnedFromStoreDuringPeriod = allTransfers.filter(t => t.to === 'warehouse' && isWithinInterval(parseISO(t.date), { start: startDate, end: endDate }))
+                    .flatMap(t => t.items).filter(i => i.medicineId === medId).reduce((sum, i) => sum + i.quantity, 0);
+                 const returnedToMfrDuringPeriod = allManufacturerReturns.filter(r => isWithinInterval(parseISO(r.date), { start: startDate, end: endDate }))
+                    .flatMap(r => r.items).filter(i => i.medicineId === medId).reduce((sum, i) => sum + i.quantity, 0);
+                
+                const opening = balance - purchasesDuringPeriod - returnedFromStoreDuringPeriod + transferredDuringPeriod + returnedToMfrDuringPeriod;
+                const totalStock = opening + purchasesDuringPeriod + returnedFromStoreDuringPeriod;
 
-            const transferredDuringPeriod = transfers.filter(t => t.from === 'warehouse' && isWithinInterval(parseISO(t.date), { start: startDate, end: endDate }))
-                .flatMap(t => t.items)
-                .filter(i => i.medicineId === medId)
-                .reduce((sum, i) => sum + i.quantity, 0);
+                ledger.push({
+                    type: 'warehouse', medicineId: medId, medicineName: medicineDetails.name, manufacturerName: medicineDetails.manufacturerName,
+                    opening, received: purchasesDuringPeriod, totalStock, returnedFromStore: returnedFromStoreDuringPeriod,
+                    returnedToManufacturer: returnedToMfrDuringPeriod, transferred: transferredDuringPeriod, balance,
+                });
 
-            const returnedFromStoreDuringPeriod = transfers.filter(t => t.to === 'warehouse' && isWithinInterval(parseISO(t.date), { start: startDate, end: endDate }))
-                .flatMap(t => t.items)
-                .filter(i => i.medicineId === medId)
-                .reduce((sum, i) => sum + i.quantity, 0);
+            } else { // Store Ledger
+                const salesDuringPeriod = allSales.filter(s => s.storeId === locationId && isWithinInterval(parseISO(s.createdAt), { start: startDate, end: endDate }))
+                    .flatMap(s => s.items).filter(i => i.medicineValue === medId).reduce((sum, i) => sum + i.quantity, 0);
+                const receivedFromWH = allTransfers.filter(t => t.to === locationId && isWithinInterval(parseISO(t.date), { start: startDate, end: endDate }))
+                    .flatMap(t => t.items).filter(i => i.medicineId === medId).reduce((sum, i) => sum + i.quantity, 0);
+                const returnedToWH = allTransfers.filter(t => t.from === locationId && isWithinInterval(parseISO(t.date), { start: startDate, end: endDate }))
+                    .flatMap(t => t.items).filter(i => i.medicineId === medId).reduce((sum, i) => sum + i.quantity, 0);
 
-            const returnedToMfrDuringPeriod = manufacturerReturns.filter(r => isWithinInterval(parseISO(r.date), { start: startDate, end: endDate }))
-                .flatMap(r => r.items)
-                .filter(i => i.medicineId === medId)
-                .reduce((sum, i) => sum + i.quantity, 0);
-            
-            const opening = balance - purchasesDuringPeriod - returnedFromStoreDuringPeriod + transferredDuringPeriod + returnedToMfrDuringPeriod;
-            const totalStock = opening + purchasesDuringPeriod + returnedFromStoreDuringPeriod;
-            
-            ledger.push({
-                medicineId: medId,
-                medicineName: medicineDetails.name,
-                manufacturerName: medicineDetails.manufacturerName,
-                opening,
-                received: purchasesDuringPeriod,
-                totalStock,
-                returnedFromStore: returnedFromStoreDuringPeriod,
-                returnedToManufacturer: returnedToMfrDuringPeriod,
-                transferred: transferredDuringPeriod,
-                balance,
-            });
+                const opening = balance - receivedFromWH + salesDuringPeriod + returnedToWH;
+
+                 ledger.push({
+                    type: 'store', medicineId: medId, medicineName: medicineDetails.name, opening,
+                    received: receivedFromWH, sales: salesDuringPeriod, returned: returnedToWH, balance,
+                });
+            }
         }
         setStockLedger(ledger);
         setIsLedgerLoading(false);
-    }, [inventory, medicines, purchases, transfers, manufacturerReturns, toast]);
+    }, [allInventory, medicines, allPurchases, allTransfers, allManufacturerReturns, allSales, toast]);
 
 
     const handleDownloadReport = () => {
@@ -190,28 +184,37 @@ export default function WarehouseInventoryPage() {
             return;
         }
         let csvContent = "data:text/csv;charset=utf-8,";
-        const headers = ["Medicine", "Manufacturer", "Opening", "Received", "Returned (Stores)", "Total Stock", "Returned (MFR)", "Transferred", "Balance"];
+        
+        let headers: string[];
+        if (filtersRef.current.locationId === 'warehouse') {
+             headers = ["Medicine", "Manufacturer", "Opening", "Received (Purchase)", "Returned (Stores)", "Total Stock", "Returned (MFR)", "Transferred (to Stores)", "Balance"];
+        } else {
+             headers = ["Medicine", "Opening", "Received (from WH)", "Sales", "Returned (to WH)", "Balance"];
+        }
         csvContent += headers.join(",") + "\n";
 
         stockLedger.forEach(item => {
-            const row = [`"${item.medicineName}"`, `"${item.manufacturerName}"`, item.opening, item.received, item.returnedFromStore, item.totalStock, item.returnedToManufacturer, item.transferred, item.balance];
+            let row: (string | number)[];
+            if(item.type === 'warehouse') {
+                 row = [`"${item.medicineName}"`, `"${item.manufacturerName}"`, item.opening, item.received, item.returnedFromStore, item.totalStock, item.returnedToManufacturer, item.transferred, item.balance];
+            } else {
+                 row = [`"${item.medicineName}"`, item.opening, item.received, item.sales, item.returned, item.balance];
+            }
             csvContent += row.join(",") + "\n";
         });
 
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `warehouse_stock_report_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+        link.setAttribute("download", `${filtersRef.current.locationId}_stock_report_${format(new Date(), 'yyyy-MM-dd')}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
     };
 
     const handleResetFilters = () => {
-        filtersRef.current = { dateRange: undefined, manufacturerId: 'all', medicineId: 'all', invoiceNo: '' };
-        // To re-render the components with cleared values
+        filtersRef.current = { dateRange: undefined, locationId: 'warehouse', medicineId: 'all' };
         setStockLedger([]);
-        // We can optionally call calculateStockLedger() if we want to show a default report on reset
     };
 
 
@@ -229,6 +232,7 @@ export default function WarehouseInventoryPage() {
             case 'Universal Report': return <BarChart2 />;
             case 'Sales Reports': return <BarChart />;
             case 'Warehouse Stock': return <Warehouse />;
+            case 'Stock Ledger': return <BarChart2 />;
             case 'Store Stock': return <Package />;
             case 'Medicine Master': return <Pill />;
             case 'Manufacturer Master': return <Building />;
@@ -263,7 +267,7 @@ export default function WarehouseInventoryPage() {
                     <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
                         <SidebarTrigger />
                         <div className="flex w-full items-center justify-between">
-                            <h1 className="text-xl font-semibold">Warehouse Stock Ledger</h1>
+                            <h1 className="text-xl font-semibold">Stock Ledger</h1>
                             <ThemeToggle />
                         </div>
                     </header>
@@ -340,7 +344,7 @@ export default function WarehouseInventoryPage() {
         <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
            <SidebarTrigger />
            <div className="flex w-full items-center justify-between">
-              <h1 className="text-xl font-semibold">Warehouse Stock Ledger</h1>
+              <h1 className="text-xl font-semibold">Stock Ledger</h1>
               <ThemeToggle />
            </div>
         </header>
@@ -348,17 +352,15 @@ export default function WarehouseInventoryPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Filter Report</CardTitle>
-                    <CardDescription>Use filters to generate the stock ledger report for a specific period.</CardDescription>
+                    <CardDescription>Use filters to generate the stock ledger report for a specific period and location.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         <DateRangePicker onUpdate={(v) => (filtersRef.current.dateRange = v.range)} />
-                        <Input placeholder="Search by Invoice No..." defaultValue={filtersRef.current.invoiceNo} onChange={e => (filtersRef.current.invoiceNo = e.target.value)} />
-                        <Select onValueChange={(v) => (filtersRef.current.manufacturerId = v)} defaultValue="all">
-                            <SelectTrigger><SelectValue placeholder="Select Manufacturer" /></SelectTrigger>
+                         <Select onValueChange={(v) => (filtersRef.current.locationId = v)} defaultValue="warehouse">
+                            <SelectTrigger><SelectValue placeholder="Select Location" /></SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">All Manufacturers</SelectItem>
-                                {manufacturers.map(m =>  <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
+                                {allLocations.map(l =>  <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                         <Select onValueChange={(v) => (filtersRef.current.medicineId = v)} defaultValue="all">
@@ -381,8 +383,8 @@ export default function WarehouseInventoryPage() {
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                     <div>
-                        <CardTitle>Stock Ledger Report</CardTitle>
-                        <CardDescription>Detailed stock movement in the main warehouse.</CardDescription>
+                        <CardTitle>Stock Ledger: {allLocations.find(l => l.id === filtersRef.current.locationId)?.name}</CardTitle>
+                        <CardDescription>Detailed stock movement report.</CardDescription>
                     </div>
                     <Button onClick={handleDownloadReport} variant="outline" size="sm" disabled={stockLedger.length === 0}>
                         <Download className="mr-2" /> Download Report
@@ -392,16 +394,27 @@ export default function WarehouseInventoryPage() {
                     <div className="hidden md:block relative w-full overflow-auto rounded-lg border">
                         <Table>
                             <TableHeader>
-                                <TableRow>
-                                    <TableHead>Medicine</TableHead>
-                                    <TableHead>Opening</TableHead>
-                                    <TableHead>Received</TableHead>
-                                    <TableHead>Total Stock</TableHead>
-                                    <TableHead>Returned (Stores)</TableHead>
-                                    <TableHead>Transferred</TableHead>
-                                    <TableHead>Returned (MFR)</TableHead>
-                                    <TableHead className="font-bold">Balance</TableHead>
-                                </TableRow>
+                                {filtersRef.current.locationId === 'warehouse' ? (
+                                    <TableRow>
+                                        <TableHead>Medicine</TableHead>
+                                        <TableHead>Opening</TableHead>
+                                        <TableHead>Received</TableHead>
+                                        <TableHead>Total</TableHead>
+                                        <TableHead>Ret (Stores)</TableHead>
+                                        <TableHead>Transferred</TableHead>
+                                        <TableHead>Ret (MFR)</TableHead>
+                                        <TableHead className="font-bold">Balance</TableHead>
+                                    </TableRow>
+                                ) : (
+                                     <TableRow>
+                                        <TableHead>Medicine</TableHead>
+                                        <TableHead>Opening</TableHead>
+                                        <TableHead>Received</TableHead>
+                                        <TableHead>Sales</TableHead>
+                                        <TableHead>Returned</TableHead>
+                                        <TableHead className="font-bold">Balance</TableHead>
+                                    </TableRow>
+                                )}
                             </TableHeader>
                             <TableBody>
                                 {isLedgerLoading ? (
@@ -410,6 +423,7 @@ export default function WarehouseInventoryPage() {
                                     ))
                                 ) : stockLedger.length > 0 ? (
                                     stockLedger.map((item) => (
+                                        item.type === 'warehouse' ? (
                                         <TableRow key={item.medicineId}>
                                             <TableCell className="font-medium">{item.medicineName}</TableCell>
                                             <TableCell>{item.opening}</TableCell>
@@ -420,6 +434,16 @@ export default function WarehouseInventoryPage() {
                                             <TableCell className="text-red-600">-{item.returnedToManufacturer}</TableCell>
                                             <TableCell className="font-bold">{item.balance}</TableCell>
                                         </TableRow>
+                                        ) : (
+                                        <TableRow key={item.medicineId}>
+                                            <TableCell className="font-medium">{item.medicineName}</TableCell>
+                                            <TableCell>{item.opening}</TableCell>
+                                            <TableCell className="text-green-600">+{item.received}</TableCell>
+                                            <TableCell className="text-red-600">-{item.sales}</TableCell>
+                                            <TableCell className="text-orange-600">-{item.returned}</TableCell>
+                                            <TableCell className="font-bold">{item.balance}</TableCell>
+                                        </TableRow>
+                                        )
                                     ))
                                 ) : (
                                     <TableRow>
@@ -441,5 +465,3 @@ export default function WarehouseInventoryPage() {
     </div>
   );
 }
-
-    
