@@ -20,8 +20,8 @@ export interface User {
 
 const initialPermissions: RolePermissions = {
     Admin: allAppRoutes.map(r => r.path),
-    Pharmacist: ['/', '/patients', '/sales', '/inventory/stores', '/inventory/reports', '/inventory/transfer', '/inventory/valuation', '/inventory/ledger'],
-    Supervisor: ['/', '/patients', '/sales', '/sales/reports', '/inventory', '/inventory/stores', '/inventory/master', '/inventory/manufacturer', '/inventory/add', '/inventory/returns', '/inventory/transfer', '/inventory/reports', '/inventory/valuation', '/inventory/ledger', '/inventory/adjustment', '/inventory/damaged' ]
+    Pharmacist: ['/', '/patients', '/sales', '/inventory/stores', '/inventory/reports', '/inventory/transfer', '/inventory/valuation', '/inventory/ledger', '/reports/profit-loss'],
+    Supervisor: ['/', '/patients', '/sales', '/sales/reports', '/inventory', '/inventory/stores', '/inventory/master', '/inventory/manufacturer', '/inventory/add', '/inventory/returns', '/inventory/transfer', '/inventory/reports', '/inventory/valuation', '/inventory/ledger', '/inventory/adjustment', '/inventory/damaged', '/reports/profit-loss' ]
 };
 
 let mockUsers: User[] = [
@@ -126,6 +126,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         // Allow access to admin sub-pages if /admin is permitted
         if (path.startsWith('/admin/') && userPermissions.includes('/admin')) {
+            return true;
+        }
+        
+        if (path.startsWith('/reports/') && userPermissions.includes('/reports')) {
             return true;
         }
 

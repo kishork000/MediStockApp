@@ -12,12 +12,10 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, Pill, Building, Undo, Search, Download, BarChart2, Edit, HeartCrack } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, Pill, Building, Undo, Download, BarChart2, Edit, HeartCrack, DollarSign, Percent } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DateRangePicker } from "@/components/dashboard/DateRangePicker";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,6 +30,13 @@ import { Sale, getSales } from "@/services/sales-service";
 import { getMedicines, Medicine } from "@/services/medicine-service";
 import { Skeleton } from "@/components/ui/skeleton";
 
+interface ProfitLossItem extends Omit<Sale, 'items'> {
+    medicineName: string;
+    quantity: number;
+    purchasePrice: number;
+    sellingPrice: number;
+    profit: number;
+}
 
 const allStores = [
     { value: "all", label: "All Stores" },
@@ -39,7 +44,7 @@ const allStores = [
     { value: "STR003", label: "Uptown Health" },
 ];
 
-export default function UniversalReportPage() {
+export default function ProfitLossReportPage() {
     const { user, logout, loading, hasPermission } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
@@ -47,22 +52,15 @@ export default function UniversalReportPage() {
 
     const [allSales, setAllSales] = useState<Sale[]>([]);
     const [medicines, setMedicines] = useState<Medicine[]>([]);
-    const [pharmacists, setPharmacists] = useState<string[]>([]);
     const [dataLoading, setDataLoading] = useState(true);
 
     const initialFilters = {
         dateRange: undefined as DateRange | undefined,
-        patientId: "",
-        patientMobile: "",
-        medicineId: "all",
         storeId: "all",
-        pharmacistName: "all",
-        invoiceNo: "",
     };
 
     const [activeFilters, setActiveFilters] = useState(initialFilters);
     const filtersRef = useRef(initialFilters);
-
 
     const fetchReportData = useCallback(async () => {
         setDataLoading(true);
@@ -70,10 +68,6 @@ export default function UniversalReportPage() {
             const [salesData, medData] = await Promise.all([getSales(), getMedicines()]);
             setAllSales(salesData);
             setMedicines(medData);
-            
-            const uniquePharmacists = [...new Set(salesData.map(s => s.soldBy))];
-            setPharmacists(uniquePharmacists);
-
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error', description: 'Failed to load report data.' });
         }
@@ -86,51 +80,51 @@ export default function UniversalReportPage() {
         }
     }, [user, fetchReportData]);
 
-    const filteredSales = useMemo(() => {
-        return allSales.filter(sale => {
+    const reportItems = useMemo(() => {
+        const medicineMap = new Map(medicines.map(m => [m.id, m]));
+        
+        const filteredSales = allSales.filter(sale => {
             let matches = true;
             if (activeFilters.dateRange?.from && activeFilters.dateRange?.to) {
                 if (!isWithinInterval(parseISO(sale.createdAt), { start: activeFilters.dateRange.from, end: activeFilters.dateRange.to })) {
                     matches = false;
                 }
             }
-            if (activeFilters.patientId && !sale.patientId.toLowerCase().includes(activeFilters.patientId.toLowerCase())) {
-                matches = false;
-            }
-            if (activeFilters.patientMobile && !sale.patientMobile.includes(activeFilters.patientMobile)) {
-                matches = false;
-            }
             if (activeFilters.storeId !== "all" && sale.storeId !== activeFilters.storeId) {
                 matches = false;
             }
-            if (activeFilters.pharmacistName !== "all" && sale.soldBy !== activeFilters.pharmacistName) {
-                matches = false;
-            }
-             if (activeFilters.invoiceNo && !sale.invoiceId.toLowerCase().includes(activeFilters.invoiceNo.toLowerCase())) {
-                matches = false;
-            }
-            if (activeFilters.medicineId !== 'all') {
-                if (!sale.items.some(item => item.medicineValue === activeFilters.medicineId)) {
-                    matches = false;
-                }
-            }
             return matches;
         });
-    }, [allSales, activeFilters]);
-    
-    const reportItems = useMemo(() => {
+
         return filteredSales.flatMap(sale => 
-            sale.items.map(item => ({
-                ...item,
-                invoiceId: sale.invoiceId,
-                date: sale.createdAt,
-                patientName: sale.patientName,
-                patientMobile: sale.patientMobile,
-                storeName: sale.storeName,
-                soldBy: sale.soldBy,
-            }))
-        );
-    }, [filteredSales]);
+            sale.items.map(item => {
+                const medicineDetails = medicineMap.get(item.medicineValue);
+                const purchasePrice = medicineDetails?.purchasePrice || 0;
+                const profit = (item.price - purchasePrice) * item.quantity;
+
+                return {
+                    invoiceId: sale.invoiceId,
+                    date: sale.createdAt,
+                    patientName: sale.patientName,
+                    storeName: sale.storeName,
+                    soldBy: sale.soldBy,
+                    medicineName: item.medicine,
+                    quantity: item.quantity,
+                    purchasePrice: purchasePrice,
+                    sellingPrice: item.price,
+                    profit: profit,
+                };
+            })
+        ).sort((a,b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
+    }, [allSales, medicines, activeFilters]);
+
+    const analytics = useMemo(() => {
+        const totalRevenue = reportItems.reduce((acc, item) => acc + (item.sellingPrice * item.quantity), 0);
+        const totalCogs = reportItems.reduce((acc, item) => acc + (item.purchasePrice * item.quantity), 0);
+        const totalProfit = totalRevenue - totalCogs;
+        const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
+        return { totalRevenue, totalCogs, totalProfit, profitMargin };
+    }, [reportItems]);
 
     const handleApplyFilters = () => {
         setActiveFilters({...filtersRef.current});
@@ -139,42 +133,6 @@ export default function UniversalReportPage() {
     const handleResetFilters = () => {
         filtersRef.current = initialFilters;
         setActiveFilters(initialFilters);
-    };
-
-    const handleDownload = () => {
-        if (reportItems.length === 0) {
-            toast({ variant: 'destructive', title: 'No Data', description: 'There is no data to download for the current filters.' });
-            return;
-        }
-
-        let csvContent = "data:text/csv;charset=utf-8,";
-        const headers = ["Invoice ID", "Date", "Patient Name", "Patient Mobile", "Store", "Pharmacist", "Medicine", "Quantity", "Price", "GST %", "Total"];
-        csvContent += headers.join(",") + "\r\n";
-
-        reportItems.forEach(item => {
-            const row = [
-                item.invoiceId,
-                format(parseISO(item.date), 'yyyy-MM-dd HH:mm'),
-                `"${item.patientName}"`,
-                item.patientMobile,
-                item.storeName,
-                item.soldBy,
-                `"${item.medicine}"`,
-                item.quantity,
-                item.price.toFixed(2),
-                item.gst,
-                item.total.toFixed(2),
-            ];
-            csvContent += row.join(",") + "\r\n";
-        });
-
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "universal_sales_report.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
     };
 
     const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
@@ -287,114 +245,110 @@ export default function UniversalReportPage() {
                 <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
                     <SidebarTrigger />
                     <div className="flex w-full items-center justify-between">
-                        <h1 className="text-xl font-semibold">Universal Sales Report</h1>
+                        <h1 className="text-xl font-semibold">Profit & Loss Report</h1>
                         <ThemeToggle />
                     </div>
                 </header>
                 <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Filter Report</CardTitle>
-                            <CardDescription>Use any combination of filters to generate a sales report. All sales data is shown by default.</CardDescription>
+                            <CardTitle>Profitability Analysis</CardTitle>
+                            <CardDescription>Filter by date range and store to analyze your profit margins.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div className="flex flex-col md:flex-row md:items-end gap-4">
                                 <div className="space-y-2">
-                                    <Label>Date Range</Label>
-                                    <DateRangePicker onUpdate={(values) => (filtersRef.current.dateRange = values.range)} className="w-full" />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="invoiceNo">Invoice No.</Label>
-                                    <Input id="invoiceNo" placeholder="INV-..." defaultValue={filtersRef.current.invoiceNo} onChange={e => (filtersRef.current.invoiceNo = e.target.value)} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="patientId">Patient ID</Label>
-                                    <Input id="patientId" placeholder="PAT-..." defaultValue={filtersRef.current.patientId} onChange={e => (filtersRef.current.patientId = e.target.value)} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="patientMobile">Patient Mobile</Label>
-                                    <Input id="patientMobile" placeholder="987..." defaultValue={filtersRef.current.patientMobile} onChange={e => (filtersRef.current.patientMobile = e.target.value)} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="storeId">Store</Label>
                                     <Select defaultValue={filtersRef.current.storeId} onValueChange={v => (filtersRef.current.storeId = v)}>
-                                        <SelectTrigger id="storeId"><SelectValue placeholder="Select Store" /></SelectTrigger>
+                                        <SelectTrigger className="w-full md:w-[200px]"><SelectValue placeholder="Select Store" /></SelectTrigger>
                                         <SelectContent>{allStores.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="pharmacistName">Pharmacist</Label>
-                                    <Select defaultValue={filtersRef.current.pharmacistName} onValueChange={v => (filtersRef.current.pharmacistName = v)}>
-                                        <SelectTrigger id="pharmacistName"><SelectValue placeholder="Select Pharmacist" /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">All Pharmacists</SelectItem>
-                                            {pharmacists.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
+                                    <DateRangePicker onUpdate={(values) => (filtersRef.current.dateRange = values.range)} />
                                 </div>
-                                <div className="space-y-2 lg:col-span-2">
-                                    <Label htmlFor="medicineId">Medicine</Label>
-                                    <Select defaultValue={filtersRef.current.medicineId} onValueChange={v => (filtersRef.current.medicineId = v)}>
-                                        <SelectTrigger id="medicineId"><SelectValue placeholder="Select Medicine" /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">All Medicines</SelectItem>
-                                            {medicines.map(m => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
+                                <div className="flex items-center gap-4">
+                                    <Button onClick={handleApplyFilters}>Apply Filters</Button>
+                                    <Button onClick={handleResetFilters} variant="outline">Reset Filters</Button>
                                 </div>
-                            </div>
-                            <div className="flex items-center gap-4 pt-2">
-                                <Button onClick={handleApplyFilters}>Apply Filters</Button>
-                                <Button onClick={handleResetFilters} variant="outline">Reset Filters</Button>
                             </div>
                         </CardContent>
                     </Card>
 
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">₹{analytics.totalRevenue.toFixed(2)}</div>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Total COGS</CardTitle>
+                                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">₹{analytics.totalCogs.toFixed(2)}</div>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Total Profit</CardTitle>
+                                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold text-green-600">₹{analytics.totalProfit.toFixed(2)}</div>
+                            </CardContent>
+                        </Card>
+                         <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Profit Margin</CardTitle>
+                                <Percent className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{analytics.profitMargin.toFixed(2)}%</div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
                     <Card>
-                        <CardHeader className="flex flex-row items-center justify-between">
-                            <div>
-                                <CardTitle>Report Results</CardTitle>
-                                <CardDescription>Found {reportItems.length} matching sale items.</CardDescription>
-                            </div>
-                            <Button onClick={handleDownload} variant="outline" size="sm">
-                                <Download className="mr-2" /> Download Report
-                            </Button>
+                        <CardHeader>
+                            <CardTitle>Detailed Report</CardTitle>
+                            <CardDescription>Line-item breakdown of profit for each sale.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Invoice</TableHead>
-                                        <TableHead className="hidden md:table-cell">Date</TableHead>
-                                        <TableHead>Patient</TableHead>
+                                        <TableHead>Date</TableHead>
                                         <TableHead>Medicine</TableHead>
-                                        <TableHead className="text-center">Qty</TableHead>
-                                        <TableHead className="text-center">GST%</TableHead>
-                                        <TableHead className="text-right">Total (₹)</TableHead>
+                                        <TableHead className="text-right">Qty</TableHead>
+                                        <TableHead className="text-right">Purchase Price (₹)</TableHead>
+                                        <TableHead className="text-right">Selling Price (₹)</TableHead>
+                                        <TableHead className="text-right">Profit (₹)</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {dataLoading ? (
                                         Array.from({ length: 10 }).map((_, i) => (
-                                            <TableRow key={i}>
-                                                <TableCell colSpan={7}><Skeleton className="h-5 w-full" /></TableCell>
-                                            </TableRow>
+                                            <TableRow key={i}><TableCell colSpan={6}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
                                         ))
                                     ) : reportItems.length > 0 ? (
                                         reportItems.map((item, index) => (
                                             <TableRow key={`${item.invoiceId}-${index}`}>
-                                                <TableCell className="font-medium">{item.invoiceId}</TableCell>
-                                                <TableCell className="hidden md:table-cell">{format(parseISO(item.date), 'dd MMM, yyyy')}</TableCell>
-                                                <TableCell>{item.patientName}</TableCell>
-                                                <TableCell>{item.medicine}</TableCell>
-                                                <TableCell className="text-center">{item.quantity}</TableCell>
-                                                <TableCell className="text-center">{item.gst}%</TableCell>
-                                                <TableCell className="text-right font-bold">{item.total.toFixed(2)}</TableCell>
+                                                <TableCell>{format(parseISO(item.date), 'dd MMM, yyyy')}</TableCell>
+                                                <TableCell>{item.medicineName}</TableCell>
+                                                <TableCell className="text-right">{item.quantity}</TableCell>
+                                                <TableCell className="text-right">{item.purchasePrice.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right">{item.sellingPrice.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right font-bold text-green-600">{item.profit.toFixed(2)}</TableCell>
                                             </TableRow>
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={7} className="h-24 text-center">No sales data found for the selected filters.</TableCell>
+                                            <TableCell colSpan={6} className="h-24 text-center">No sales data found for the selected filters.</TableCell>
                                         </TableRow>
                                     )}
                                 </TableBody>
