@@ -1,6 +1,6 @@
 
 import { db } from '@/lib/firebase-config';
-import { collection, getDocs, doc, addDoc, updateDoc, deleteDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, addDoc, updateDoc, deleteDoc, serverTimestamp, getDoc, setDoc } from 'firebase/firestore';
 import { UserRole } from '@/lib/types';
 
 export interface User {
@@ -59,7 +59,14 @@ export async function getUser(id: string): Promise<User | null> {
 
 export async function addUser(user: NewUser) {
     const { password, ...userData } = user; // Exclude password before saving
-    return await addDoc(userCollectionRef, {
+    
+    // Get current user count to create a simple numeric ID
+    const userSnapshot = await getDocs(userCollectionRef);
+    const newUserId = (userSnapshot.size + 1).toString();
+
+    const userDocRef = doc(db, 'users', newUserId);
+    
+    return await setDoc(userDocRef, {
         ...userData,
         createdAt: serverTimestamp(),
     });
