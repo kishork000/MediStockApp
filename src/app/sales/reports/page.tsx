@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
@@ -73,7 +74,11 @@ export default function SalesReportPage() {
 
     const [filteredData, setFilteredData] = useState(salesData);
     
-    const initialFilters = {
+    const initialFilters: {
+        store: string;
+        pharmacist: string;
+        dateRange: DateRange | undefined;
+    } = {
         store: "all",
         pharmacist: "all",
         dateRange: undefined,
@@ -156,7 +161,7 @@ export default function SalesReportPage() {
         const onlineInvoices = filteredData.filter(s => s.paymentMethod === 'Online');
 
 
-        const highSellingMedicines = filteredData.reduce((acc, sale) => {
+        const highSellingMedicines = filteredData.reduce((acc: { name: string; quantity: number }[], sale: any) => {
             const existing = acc.find(item => item.name === sale.medicine);
             if (existing) {
                 existing.quantity += sale.quantity;
@@ -166,7 +171,7 @@ export default function SalesReportPage() {
             return acc;
         }, []).sort((a, b) => b.quantity - a.quantity).slice(0, 5);
 
-        const pharmacistSales = filteredData.reduce((acc, sale) => {
+        const pharmacistSales = filteredData.reduce((acc: { name: string; salesValue: number }[], sale: any) => {
             const existing = acc.find(item => item.name === sale.pharmacist);
             if (existing) {
                 existing.salesValue += sale.total;
@@ -176,7 +181,7 @@ export default function SalesReportPage() {
             return acc;
         }, []).sort((a, b) => b.salesValue - a.salesValue);
         
-        const salesOverTime = filteredData.reduce((acc, sale) => {
+        const salesOverTime = filteredData.reduce((acc: { date: string; total: number }[], sale: any) => {
             const saleDate = format(parseISO(sale.date), "MMM dd");
             const existing = acc.find(item => item.date === saleDate);
             if (existing) {
@@ -343,7 +348,7 @@ export default function SalesReportPage() {
                                             {pharmacists.map(p => (
                                                 <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                                             ))}
-                                        SelectContent>
+                                        </SelectContent>
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
@@ -383,7 +388,7 @@ export default function SalesReportPage() {
                         <CardHeader>
                             <CardTitle>Sales Over Time</CardTitle>
                             <CardDescription>Total sales value in the selected period.</CardDescription>
-                        CardHeader>
+                        </CardHeader>
                         <CardContent className="h-[300px] w-full">
                            <ChartContainer config={salesOverTimeChartConfig}>
                                <ResponsiveContainer width="100%" height="100%">
@@ -391,11 +396,11 @@ export default function SalesReportPage() {
                                         <CartesianGrid strokeDasharray="3 3" />
                                         <XAxis dataKey="date" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                                         <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `₹${value}`} />
-                                        <Tooltip content={formatter={(value) => `₹${Number(value).toFixed(2)}`} />} />
+                                        <Tooltip content={<ChartTooltipContent formatter={(value) => `₹${Number(value).toFixed(2)}`} />} />
                                         <Area type="monotone" dataKey="total" stroke="var(--color-total)" fill="var(--color-total)" fillOpacity={0.3} />
                                     </AreaChart>
-                               <ResponsiveContainer>
-                           <ChartContainer>
+                               </ResponsiveContainer>
+                           </ChartContainer>
                         </CardContent>
                     </Card>
                      <TopSellingMedicinesChart data={analytics.highSellingMedicines} config={highSellingChartConfig} />
@@ -433,12 +438,12 @@ export default function SalesReportPage() {
                                         <TableCell className="text-right">{sale.total.toFixed(2)}</TableCell>
                                     </TableRow>
                                 ))}
-                            TableBody>
-                        Table>
+                            </TableBody>
+                        </Table>
                     </CardContent>
-                Card>
+                </Card>
             </div>
-        main>
+        </main>
       </div>
       <Dialog open={isSalesDetailModalOpen} onOpenChange={setIsSalesDetailModalOpen}>
         <DialogContent className="sm:max-w-4xl">
@@ -447,7 +452,7 @@ export default function SalesReportPage() {
                 <DialogDescription>
                     Detailed view of cash and online sales for the selected period.
                 </DialogDescription>
-            DialogHeader>
+            </DialogHeader>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
                  <Card>
                     <CardHeader>
@@ -455,7 +460,7 @@ export default function SalesReportPage() {
                         <CardDescription>Total: ₹{analytics.cashSalesValue.toFixed(2)} from {analytics.cashInvoices.length} invoices.</CardDescription>
                     </CardHeader>
                     <CardContent className="max-h-96 overflow-y-auto">
-                        Table>
+                        <Table>
                              <TableHeader>
                                 <TableRow>
                                     <TableHead>Invoice ID</TableHead>
@@ -471,24 +476,24 @@ export default function SalesReportPage() {
                                         <TableCell className="text-right">{inv.total.toFixed(2)}</TableCell>
                                     </TableRow>
                                 ))}
-                            TableBody>
-                        Table>
-                    CardContent>
-                 Card>
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                 </Card>
                  <Card>
-                     CardHeader>
+                     <CardHeader>
                         <CardTitle>Online Sales Summary</CardTitle>
                         <CardDescription>Total: ₹{analytics.onlineSalesValue.toFixed(2)} from {analytics.onlineInvoices.length} invoices.</CardDescription>
-                    CardHeader>
+                    </CardHeader>
                      <CardContent className="max-h-96 overflow-y-auto">
-                        Table>
+                        <Table>
                              <TableHeader>
                                 <TableRow>
                                     <TableHead>Invoice ID</TableHead>
                                     <TableHead>Patient</TableHead>
                                     <TableHead className="text-right">Amount (₹)</TableHead>
                                 </TableRow>
-                            TableHeader>
+                            </TableHeader>
                             <TableBody>
                                  {analytics.onlineInvoices.map(inv => (
                                     <TableRow key={inv.invoiceId}>
@@ -497,12 +502,12 @@ export default function SalesReportPage() {
                                         <TableCell className="text-right">{inv.total.toFixed(2)}</TableCell>
                                     </TableRow>
                                 ))}
-                            TableBody>
-                        Table>
-                    CardContent>
-                 Card>
-            div>
-        DialogContent>
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                 </Card>
+            </div>
+        </DialogContent>
       </Dialog>
     </div>
   );
