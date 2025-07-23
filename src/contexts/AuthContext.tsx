@@ -20,7 +20,7 @@ interface AuthContextType {
     logout: () => void;
     loading: boolean;
     permissions: RolePermissions;
-    setPermissions: (permissions: RolePermissions) => void;
+    setPermissions: React.Dispatch<React.SetStateAction<RolePermissions>>;
     hasPermission: (path: string) => boolean;
     createUser: (newUser: NewUser) => Promise<void>;
     updateUser: (userId: string, updatedData: UpdateUser) => Promise<void>;
@@ -36,7 +36,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [usersState, setUsersState] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
-    const [permissions, setPermissionsState] = useState<RolePermissions>(initialPermissions);
+    const [permissions, setPermissionsState] = useState<RolePermissions>({});
     const router = useRouter();
     const pathname = usePathname();
 
@@ -68,22 +68,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 if (storedPermissions) {
                     setPermissionsState(JSON.parse(storedPermissions));
                 } else {
+                     setPermissionsState(initialPermissions);
                     localStorage.setItem('medi-stock-permissions', JSON.stringify(initialPermissions));
                 }
 
             } catch (error) {
                 console.error("Failed to parse from localStorage", error);
                 localStorage.clear();
+                setPermissionsState(initialPermissions);
             }
             setLoading(false);
         }
         initializeApp();
     }, [fetchUsers]);
+    
+    const setPermissions = (newPermissions: RolePermissions | ((prevState: RolePermissions) => RolePermissions)) => {
+        const updatedPermissions = typeof newPermissions === 'function' ? newPermissions(permissions) : newPermissions;
+        setPermissionsState(updatedPermissions);
+        localStorage.setItem('medi-stock-permissions', JSON.stringify(updatedPermissions));
+    };
 
-    const setPermissions = useCallback((newPermissions: RolePermissions) => {
-        setPermissionsState(newPermissions);
-        localStorage.setItem('medi-stock-permissions', JSON.stringify(newPermissions));
-    }, []);
 
     const hasPermission = useCallback((path: string): boolean => {
         if (!user) return false;
@@ -91,16 +95,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         const userPermissions = permissions[user.role] || [];
         
-        if (path === '/inventory') {
-            return userPermissions.some(p => p.startsWith('/inventory/'));
+        // Grant access to parent if any child is accessible
+        if(path === '/inventory') {
+             return allAppRoutes.some(route => route.parent === '/inventory' && userPermissions.includes(route.path));
         }
-        
-        // Allow access to admin sub-pages if /admin is permitted
-        if (path.startsWith('/admin/') && userPermissions.includes('/admin')) {
-            return true;
+        if(path === 'Sales') { // Virtual parent
+             return allAppRoutes.some(route => route.parent === 'Sales' && userPermissions.includes(route.path));
         }
-        
-        if (path.startsWith('/reports/') && userPermissions.includes('/reports')) {
+
+        // Grant access to child if parent is accessible (for URL navigation)
+        const route = allAppRoutes.find(r => r.path === path);
+        if (route?.parent && userPermissions.includes(route.parent)) {
             return true;
         }
 
@@ -188,7 +193,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
         const newPermissions = { ...permissions, [roleName]: [] };
         setPermissions(newPermissions);
-    }, [permissions, setPermissions]);
+    }, [permissions]);
 
     const editRole = useCallback(async (oldRoleName: string, newRoleName: string) => {
         if (oldRoleName === 'Admin') {
@@ -198,22 +203,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             throw new Error(`Role "${newRoleName}" already exists.`);
         }
 
-        // Create a new permissions object with the updated role name
-        const newPermissions = { ...permissions };
-        newPermissions[newRoleName] = newPermissions[oldRoleName];
-        delete newPermissions[oldRoleName];
-        setPermissions(newPermissions);
+        const newPermissionsData = { ...permissions };
+        newPermissionsData[newRoleName] = newPermissionsData[oldRoleName];
+        delete newPermissionsData[oldRoleName];
+        setPermissions(newPermissionsData);
 
-        // Update users with the old role to the new role
         const usersToUpdate = usersState.filter(u => u.role === oldRoleName);
         for (const userToUpdate of usersToUpdate) {
             await updateUserService(userToUpdate.id, { role: newRoleName as UserRole });
         }
         
-        // Re-fetch all users to reflect the change
         const updatedUsers = await fetchUsers();
 
-        // Update the currently logged-in user if their role changed
         if (user?.role === oldRoleName) {
             const updatedCurrentUser = updatedUsers.find(u => u.id === user.id);
             if (updatedCurrentUser) {
@@ -221,7 +222,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 localStorage.setItem('medi-stock-user', JSON.stringify(updatedCurrentUser));
             }
         }
-    }, [permissions, setPermissions, usersState, user, fetchUsers]);
+    }, [permissions, usersState, user, fetchUsers]);
 
 
     const deleteRole = useCallback(async (roleName: string) => {
@@ -234,10 +235,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const newPermissions = { ...permissions };
         delete newPermissions[roleName];
         setPermissions(newPermissions);
-    }, [permissions, setPermissions, usersState]);
+    }, [permissions, usersState]);
 
 
-    const value = useMemo(() => ({ user, users: usersState, login, logout, loading, permissions, setPermissions, hasPermission, createUser, updateUser, deleteUser, addRole, editRole, deleteRole }), [user, usersState, login, logout, loading, permissions, setPermissions, hasPermission, createUser, updateUser, deleteUser, addRole, editRole, deleteRole]);
+    const value = useMemo(() => ({ user, users: usersState, login, logout, loading, permissions, setPermissions, hasPermission, createUser, updateUser, deleteUser, addRole, editRole, deleteRole }), [user, usersState, login, logout, loading, permissions, hasPermission, createUser, updateUser, deleteUser, addRole, editRole, deleteRole]);
 
     return (
         <AuthContext.Provider value={value}>

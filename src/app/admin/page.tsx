@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Activity, Settings, Store, MoreHorizontal, Trash2, GitBranch, LogOut, ShieldCheck, ChevronDown, Warehouse, TrendingUp, Building, UserPlus, Layers, Box, KeyRound, Pill, Undo, BookOpen, BarChart2, Edit, HeartCrack } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users, ShoppingCart, BarChart, PlusSquare, Users2, Activity, Settings, Store, MoreHorizontal, Trash2, GitBranch, LogOut, ShieldCheck, ChevronDown, Warehouse, TrendingUp, Building, UserPlus, Layers, Box, KeyRound, Pill, Undo, BookOpen, BarChart2, Edit, HeartCrack, Folder, File, CircleDot } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -27,7 +27,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useAuth, NewUser, UpdateUser } from "@/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
-import { allAppRoutes, AppRoute } from "@/lib/types";
+import { allAppRoutes, AppRoute, buildRoutesTree } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useToast } from "@/hooks/use-toast";
@@ -123,6 +123,8 @@ export default function AdminPage() {
     const sidebarRoutes = useMemo(() => {
         return allAppRoutes.filter(route => route.path !== '/');
     }, []);
+
+    const permissionRoutesTree = useMemo(() => buildRoutesTree(allAppRoutes), []);
 
      useEffect(() => {
         if (!loading && (!user || user.role !== 'Admin')) {
@@ -344,16 +346,52 @@ export default function AdminPage() {
     const handlePermissionChange = (role: string, route: string, checked: boolean | 'indeterminate') => {
         if (typeof checked !== 'boolean' || role === 'Admin') return;
         
-        const newPermissions = { ...permissions };
-        const currentPermissions = newPermissions[role] || [];
-        
-        if (checked) {
-            newPermissions[role] = [...currentPermissions, route];
-        } else {
-            newPermissions[role] = currentPermissions.filter(r => r !== route);
-        }
-        setPermissions(newPermissions);
+        setPermissions(prev => {
+            const newPermissions = { ...prev };
+            const currentPermissions = newPermissions[role] || [];
+            if (checked) {
+                newPermissions[role] = [...currentPermissions, route];
+            } else {
+                newPermissions[role] = currentPermissions.filter(r => r !== route);
+            }
+            return newPermissions;
+        });
     };
+
+    const handleParentPermissionChange = (role: string, parentRoute: AppRoute, checked: boolean | 'indeterminate') => {
+        if (typeof checked !== 'boolean' || role === 'Admin') return;
+        
+        const childPaths = parentRoute.children?.map(child => child.path) || [];
+        const allPaths = [parentRoute.path, ...childPaths];
+
+        setPermissions(prev => {
+            const newPermissions = { ...prev };
+            let currentPermissions = newPermissions[role] || [];
+
+            if (checked) {
+                // Add all paths, avoiding duplicates
+                currentPermissions = [...new Set([...currentPermissions, ...allPaths])];
+            } else {
+                // Remove all paths
+                currentPermissions = currentPermissions.filter(p => !allPaths.includes(p));
+            }
+            newPermissions[role] = currentPermissions;
+            return newPermissions;
+        });
+    };
+
+    const getParentCheckedState = (role: string, parentRoute: AppRoute): boolean | 'indeterminate' => {
+        const rolePermissions = permissions[role] || [];
+        const childrenPaths = parentRoute.children?.map(child => child.path) || [];
+        
+        const hasAllChildren = childrenPaths.every(path => rolePermissions.includes(path));
+        const hasSomeChildren = childrenPaths.some(path => rolePermissions.includes(path));
+
+        if (hasAllChildren) return true;
+        if (hasSomeChildren) return 'indeterminate';
+        return false;
+    };
+
 
     const handleAddUnitType = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -468,6 +506,46 @@ export default function AdminPage() {
     };
 
     const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory/') && r.inSidebar);
+
+    const PermissionRow = ({ route, role, level = 0 }: { route: AppRoute, role: string, level?: number }) => (
+        <Collapsible key={`${role}-${route.path}`} className="w-full">
+            <TableRow>
+                <TableCell style={{ paddingLeft: `${level * 2}rem` }}>
+                    <div className="flex items-center gap-2">
+                        {route.children && route.children.length > 0 ? (
+                            <CollapsibleTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-6 w-6">
+                                    <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-0 group-data-[state=closed]:-rotate-90" />
+                                </Button>
+                            </CollapsibleTrigger>
+                        ) : (
+                            <span className="w-6" /> // Spacer
+                        )}
+                        {route.children && route.children.length > 0 ? <Folder className="h-5 w-5 text-amber-500"/> : <File className="h-5 w-5 text-sky-500" />}
+                        <span className="font-medium">{route.name}</span>
+                    </div>
+                </TableCell>
+                {Object.keys(permissions).map(roleKey => (
+                    <TableCell key={`${roleKey}-${route.path}`} className="text-center">
+                        <Checkbox 
+                            checked={roleKey === 'Admin' || (route.children && route.children.length > 0 ? getParentCheckedState(roleKey, route) : (permissions[roleKey] || []).includes(route.path))}
+                            onCheckedChange={(checked) => route.children && route.children.length > 0 ? handleParentPermissionChange(roleKey, route, checked) : handlePermissionChange(roleKey, route.path, checked)}
+                            disabled={roleKey === 'Admin'}
+                        />
+                    </TableCell>
+                ))}
+            </TableRow>
+            {route.children && route.children.length > 0 && (
+                <CollapsibleContent asChild>
+                    <>
+                        {route.children.map(childRoute => (
+                            <PermissionRow key={childRoute.path} route={childRoute} role={role} level={level + 1} />
+                        ))}
+                    </>
+                </CollapsibleContent>
+            )}
+        </Collapsible>
+    );
 
     return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -666,30 +744,19 @@ export default function AdminPage() {
                             <CardDescription>Define which pages each role can access. Changes are saved automatically.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="overflow-x-auto">
+                            <div className="overflow-x-auto rounded-lg border">
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead className="w-[250px]">Page / Feature</TableHead>
+                                            <TableHead className="w-[350px]">Feature / Page</TableHead>
                                             {Object.keys(permissions).map(role => (
                                                 <TableHead key={role} className="text-center">{role}</TableHead>
                                             ))}
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {allAppRoutes.map(route => (
-                                            <TableRow key={route.path}>
-                                                <TableCell className="font-medium">{route.name}</TableCell>
-                                                {Object.keys(permissions).map(role => (
-                                                    <TableCell key={`${role}-${route.path}`} className="text-center">
-                                                        <Checkbox 
-                                                            checked={role === 'Admin' || (permissions[role] || []).includes(route.path)}
-                                                            onCheckedChange={(checked) => handlePermissionChange(role, route.path, checked)}
-                                                            disabled={role === 'Admin'}
-                                                        />
-                                                    </TableCell>
-                                                ))}
-                                            </TableRow>
+                                        {permissionRoutesTree.map(route => (
+                                            <PermissionRow key={route.path} route={route} role="" />
                                         ))}
                                     </TableBody>
                                 </Table>
