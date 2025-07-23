@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
@@ -45,16 +46,16 @@ export default function WarehouseInventoryPage() {
     const [pageLoading, setPageLoading] = useState(true);
     const [isLedgerLoading, setIsLedgerLoading] = useState(false);
     
-    const [medicines, setMedicines] = useState(medicines);
-    const [manufacturers, setManufacturers] = useState(manufacturers);
+    const [medicines, setMedicines] = useState<Medicine[]>([]);
+    const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
     
-    const [inventory, setInventory] = useState(inventory);
-    const [purchases, setPurchases] = useState(purchases);
-    const [transfers, setTransfers] = useState(transfers);
-    const [manufacturerReturns, setManufacturerReturns] = useState(manufacturerReturns);
+    const [inventory, setInventory] = useState<InventoryItem[]>([]);
+    const [purchases, setPurchases] = useState<Purchase[]>([]);
+    const [transfers, setTransfers] = useState<Transfer[]>([]);
+    const [manufacturerReturns, setManufacturerReturns] = useState<ManufacturerReturn[]>([]);
     
-    const [stockLedger, setStockLedger] = useState(stockLedger);
-    const filtersRef = useRef({
+    const [stockLedger, setStockLedger] = useState<WarehouseLedgerItem[]>([]);
+    const filtersRef = useRef<{ dateRange?: DateRange; manufacturerId: string; medicineId: string; invoiceNo: string; }>({
         manufacturerId: 'all',
         medicineId: 'all',
         invoiceNo: "",
@@ -102,24 +103,75 @@ export default function WarehouseInventoryPage() {
         const startDate = startOfDay(filtersRef.current.dateRange.from);
         const endDate = endOfDay(filtersRef.current.dateRange.to);
 
-        let filteredPurchases = purchases.filter(p => isWithinInterval(parseISO(p.date), { start: startDate, end: endDate }));
-        if(filtersRef.current.invoiceNo) {
-            filteredPurchases = filteredPurchases.filter(p => p.invoiceId.toLowerCase().includes(filtersRef.current.invoiceNo.toLowerCase()));
+        const medicineMap = new Map(medicines.map(m => [m.id, m]));
+        
+        let medicineIdsToProcess: string[];
+
+        // Start with all medicines that have current inventory
+        let initialMedSet = new Set(inventory.map(i => i.medicineId));
+
+        // Filter by medicine if selected
+        if (filtersRef.current.medicineId !== 'all') {
+             medicineIdsToProcess = [filtersRef.current.medicineId];
+        } else if (filtersRef.current.manufacturerId !== 'all') {
+            const medIdsForManufacturer = medicines
+                .filter(m => m.manufacturerId === filtersRef.current.manufacturerId)
+                .map(m => m.id);
+            medicineIdsToProcess = medIdsForManufacturer;
+        } else {
+             medicineIdsToProcess = Array.from(initialMedSet);
         }
 
-        const transfersInDateRange = transfers.filter(t => t.from === 'warehouse').flatMap(t => t.items).filter(i => i.medicineId === medId).reduce((sum, i) => sum + i.quantity, 0);
-            const returnedFromStoreDuringPeriod = transfersInDateRange.filter(t => t.to === 'warehouse').flatMap(t => t.items).filter(i => i.medicineId === medId).reduce((sum, i) => sum + i.quantity, 0);
-            const returnedToMfrDuringPeriod = returnsInDateRange.flatMap(r => r.items).filter(i => i.medicineId === medId).reduce((sum, i) => sum + i.quantity, 0);
+        const ledger: WarehouseLedgerItem[] = [];
 
-            const opening = balance - receivedDuringPeriod - returnedFromStoreDuringPeriod + transferredDuringPeriod + returnedToMfrDuringPeriod;
-            const totalStock = opening + receivedDuringPeriod + returnedFromStoreDuringPeriod;
+        for(const medId of medicineIdsToProcess) {
+            const medicineDetails = medicineMap.get(medId);
+            if (!medicineDetails) continue;
+
+            // Apply invoice filter at the very end if present
+            if (filtersRef.current.invoiceNo) {
+                 const purchaseInvoicesForItem = purchases
+                    .filter(p => p.items.some(item => item.medicineId === medId))
+                    .map(p => p.invoiceId);
+                
+                if (!purchaseInvoicesForItem.some(inv => inv.toLowerCase().includes(filtersRef.current.invoiceNo.toLowerCase()))) {
+                    continue; // Skip this medicine if it's not in the filtered invoices
+                }
+            }
+
+
+            const currentStock = inventory.find(i => i.medicineId === medId)?.quantity || 0;
+            const balance = currentStock;
+
+            const purchasesDuringPeriod = purchases.filter(p => isWithinInterval(parseISO(p.date), { start: startDate, end: endDate }))
+                .flatMap(p => p.items)
+                .filter(i => i.medicineId === medId)
+                .reduce((sum, i) => sum + i.quantity, 0);
+
+            const transferredDuringPeriod = transfers.filter(t => t.from === 'warehouse' && isWithinInterval(parseISO(t.date), { start: startDate, end: endDate }))
+                .flatMap(t => t.items)
+                .filter(i => i.medicineId === medId)
+                .reduce((sum, i) => sum + i.quantity, 0);
+
+            const returnedFromStoreDuringPeriod = transfers.filter(t => t.to === 'warehouse' && isWithinInterval(parseISO(t.date), { start: startDate, end: endDate }))
+                .flatMap(t => t.items)
+                .filter(i => i.medicineId === medId)
+                .reduce((sum, i) => sum + i.quantity, 0);
+
+            const returnedToMfrDuringPeriod = manufacturerReturns.filter(r => isWithinInterval(parseISO(r.date), { start: startDate, end: endDate }))
+                .flatMap(r => r.items)
+                .filter(i => i.medicineId === medId)
+                .reduce((sum, i) => sum + i.quantity, 0);
+            
+            const opening = balance - purchasesDuringPeriod - returnedFromStoreDuringPeriod + transferredDuringPeriod + returnedToMfrDuringPeriod;
+            const totalStock = opening + purchasesDuringPeriod + returnedFromStoreDuringPeriod;
             
             ledger.push({
                 medicineId: medId,
                 medicineName: medicineDetails.name,
                 manufacturerName: medicineDetails.manufacturerName,
                 opening,
-                received: receivedDuringPeriod,
+                received: purchasesDuringPeriod,
                 totalStock,
                 returnedFromStore: returnedFromStoreDuringPeriod,
                 returnedToManufacturer: returnedToMfrDuringPeriod,
@@ -130,6 +182,7 @@ export default function WarehouseInventoryPage() {
         setStockLedger(ledger);
         setIsLedgerLoading(false);
     }, [inventory, medicines, purchases, transfers, manufacturerReturns, toast]);
+
 
     const handleDownloadReport = () => {
         if (stockLedger.length === 0) {
@@ -305,14 +358,14 @@ export default function WarehouseInventoryPage() {
                             <SelectTrigger><SelectValue placeholder="Select Manufacturer" /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">All Manufacturers</SelectItem>
-                                {manufacturers.map(m =>  <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>))}
+                                {manufacturers.map(m =>  <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                         <Select onValueChange={(v) => (filtersRef.current.medicineId = v)} defaultValue="all">
                             <SelectTrigger><SelectValue placeholder="Select Medicine" /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">All Medicines</SelectItem>
-                                {medicines.map(m =>  <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>))}
+                                {medicines.map(m =>  <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -353,7 +406,7 @@ export default function WarehouseInventoryPage() {
                             <TableBody>
                                 {isLedgerLoading ? (
                                     Array.from({ length: 5 }).map((_, i) => (
-                                        <TableRow key={i}><TableCell colSpan={8}><div className="h-5 w-full"/></TableCell></TableRow>
+                                        <TableRow key={i}><TableCell colSpan={8}><Skeleton className="h-5 w-full"/></TableCell></TableRow>
                                     ))
                                 ) : stockLedger.length > 0 ? (
                                     stockLedger.map((item) => (
@@ -388,3 +441,5 @@ export default function WarehouseInventoryPage() {
     </div>
   );
 }
+
+    
