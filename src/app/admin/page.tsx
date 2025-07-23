@@ -71,7 +71,7 @@ const initialStores: Store[] = [
 
 
 export default function AdminPage() {
-    const { user, logout, loading, permissions, setPermissions, hasPermission, users: userList, createUser, updateUser, deleteUser: deleteUserFromContext, addRole, editRole, deleteRole } = useAuth();
+    const { user, logout, loading, permissions, setPermissions, hasPermission, users: userList, createUser, updateUser, deleteUser: deleteUserFromContext, addRole, editRole, deleteRole } from useAuth();
     const router = useRouter();
     const pathname = usePathname();
     const { toast } = useToast();
@@ -452,14 +452,6 @@ export default function AdminPage() {
           </SidebarHeader>
           <SidebarContent>
             <SidebarMenu>
-                {hasPermission('/') && (
-                    <SidebarMenuItem>
-                        <SidebarMenuButton href="/" tooltip="Dashboard" isActive={pathname === '/'}>
-                            <HomeIcon />
-                            <span>Dashboard</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                )}
                 {sidebarRoutes.filter(r => r.inSidebar && hasPermission(r.path) && !r.path.startsWith('/inventory/')).map((route) => {
                      const isParentRoute = sidebarRoutes.some(child => child.path.startsWith(route.path + '/') && child.path !== route.path);
                      const isActive = isParentRoute ? pathname.startsWith(route.path) : pathname === route.path;
@@ -991,14 +983,14 @@ export default function AdminPage() {
                 </DialogContent>
             </Dialog>
              <Dialog open={isEditUserModalOpen} onOpenChange={setIsEditUserModalOpen}>
-                <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh]">
+                 <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh]">
                     <DialogHeader>
                         <DialogTitle>Edit User: {selectedUser?.name}</DialogTitle>
                         <DialogDescription>Update the user's details below.</DialogDescription>
                     </DialogHeader>
-                    <div className="flex-1 overflow-y-auto -mx-6 px-6">
-                        <form id="edit-user-form" onSubmit={handleUserUpdateSubmit} className="space-y-4">
-                            <div className="space-y-2">
+                    <div className="flex-grow overflow-y-auto -mx-6 px-6">
+                        <form id="edit-user-form" onSubmit={handleUserUpdateSubmit} className="space-y-4 py-4">
+                             <div className="space-y-2">
                                 <Label htmlFor="edit-name">Full Name</Label>
                                 <Input id="edit-name" name="name" defaultValue={selectedUser?.name} required style={{ textTransform: 'uppercase' }}/>
                             </div>
@@ -1063,7 +1055,7 @@ export default function AdminPage() {
                             </div>
                         </form>
                     </div>
-                    <DialogFooter className="pt-6 border-t -mx-6 px-6 pb-0 bg-background sticky bottom-0">
+                    <DialogFooter className="flex-shrink-0 pt-4 border-t">
                         <DialogClose asChild>
                             <Button type="button" variant="secondary" onClick={() => setIsEditUserModalOpen(false)}>Cancel</Button>
                         </DialogClose>
