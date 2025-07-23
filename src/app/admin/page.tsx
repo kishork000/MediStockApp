@@ -509,7 +509,7 @@ export default function AdminPage() {
     const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory/') && r.inSidebar);
 
     const PermissionRow = ({ route, role, level = 0 }: { route: AppRoute, role: string, level?: number }) => (
-        <Collapsible asChild key={route.path} className="group">
+        <Collapsible asChild key={route.path}>
             <React.Fragment>
                 <TableRow>
                     <TableCell style={{ paddingLeft: `${level * 2}rem` }}>
@@ -538,12 +538,16 @@ export default function AdminPage() {
                     ))}
                 </TableRow>
                 {route.children && route.children.length > 0 && (
-                     <CollapsibleContent>
+                    <CollapsibleContent asChild>
                         <TableRow>
                            <TableCell colSpan={Object.keys(permissions).length + 1} className="p-0">
-                                {route.children.map(childRoute => (
-                                    <PermissionRow key={childRoute.path} route={childRoute} role={role} level={level + 1} />
-                                ))}
+                                <Table>
+                                    <TableBody>
+                                        {route.children.map(childRoute => (
+                                            <PermissionRow key={childRoute.path} route={childRoute} role={role} level={level + 1} />
+                                        ))}
+                                    </TableBody>
+                                </Table>
                            </TableCell>
                         </TableRow>
                     </CollapsibleContent>
@@ -1180,5 +1184,7 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
 
     
