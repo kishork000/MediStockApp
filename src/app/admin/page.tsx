@@ -997,8 +997,8 @@ export default function AdminPage() {
                         <DialogDescription>Update the user's details below.</DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handleUserUpdateSubmit}>
-                        <ScrollArea className="max-h-[70vh]">
-                            <div className="grid gap-4 py-4 px-6">
+                        <ScrollArea className="max-h-[70vh] p-6">
+                           <div className="space-y-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="edit-name">Full Name</Label>
                                     <Input id="edit-name" name="name" defaultValue={selectedUser?.name} required style={{ textTransform: 'uppercase' }}/>
@@ -1064,7 +1064,7 @@ export default function AdminPage() {
                                 </div>
                             </div>
                         </ScrollArea>
-                        <DialogFooter className="pt-6">
+                        <DialogFooter className="pt-6 border-t mt-4">
                             <DialogClose asChild>
                                 <Button type="button" variant="secondary" onClick={() => setIsEditUserModalOpen(false)}>Cancel</Button>
                             </DialogClose>
@@ -1090,3 +1090,4 @@ export default function AdminPage() {
     </div>
   );
 }
+
