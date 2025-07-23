@@ -226,6 +226,7 @@ export default function SalesReportPage() {
             case 'Patients': return <Users2 />;
             case 'Sales': return <ShoppingCart />;
             case 'Universal Report': return <BarChart2 />;
+            case 'Profit & Loss Report': return <TrendingUp />;
             case 'Sales Reports': return <BarChart />;
             case 'Warehouse Stock': return <Warehouse />;
             case 'Stock Ledger': return <BarChart2 />;
@@ -269,14 +270,17 @@ export default function SalesReportPage() {
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 )}
-                {sidebarRoutes.filter(r => r.inSidebar && hasPermission(r.path) && !r.path.startsWith('/inventory/')).map((route) => (
+                {sidebarRoutes.filter(r => r.inSidebar && hasPermission(r.path) && !r.path.startsWith('/inventory/')).map((route) => {
+                     const isParentRoute = sidebarRoutes.some(child => child.path.startsWith(route.path) && child.path !== route.path);
+                     const isActive = isParentRoute ? pathname.startsWith(route.path) : pathname === route.path;
+                    return (
                     <SidebarMenuItem key={route.path}>
-                        <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname.startsWith(route.path)}>
+                        <SidebarMenuButton href={route.path} tooltip={route.name} isActive={isActive}>
                             {getIcon(route.name)}
                             <span>{route.name}</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
-                ))}
+                )})}
 
                 {hasPermission('/inventory') && (
                     <Collapsible className="w-full" defaultOpen={pathname.startsWith('/inventory')}>
@@ -316,7 +320,7 @@ export default function SalesReportPage() {
               </SidebarMenu>
           </SidebarFooter>
       </Sidebar>
-      <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14 group-[[data-sidebar-state=expanded]]:sm:pl-56">
+      <div className="flex flex-col sm:gap-4 sm:py-4">
         <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
            <SidebarTrigger />
            <div className="flex w-full items-center justify-between">

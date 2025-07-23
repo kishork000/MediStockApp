@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, Download, TrendingUp, Undo, Pill, Building, Search, BarChart2, Eye } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, Download, TrendingUp, Undo, Pill, Building, Search, BarChart2, Eye, Edit, HeartCrack } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -35,6 +35,7 @@ import { useToast } from "@/hooks/use-toast";
 import { DateRangePicker } from "@/components/dashboard/DateRangePicker";
 import { DateRange } from "react-day-picker";
 import { format, parseISO, isWithinInterval } from "date-fns";
+import { Skeleton } from "@/components/ui/skeleton";
 
 
 const allStores = [
@@ -71,7 +72,7 @@ export default function StockReportsPage() {
     const [filteredPurchases, setFilteredPurchases] = useState<Purchase[]>([]);
     
     // Refs for pending filter values
-    const stockFiltersRef = useRef({ store: "all", manufacturer: "all" });
+    const stockFiltersRef = useRef({ store: "all", manufacturer: "all", search: "" });
     const transferFiltersRef = useRef({ store: "all", dateRange: undefined as DateRange | undefined, searchId: "" });
     const purchaseFiltersRef = useRef({ manufacturer: "all", dateRange: undefined as DateRange | undefined, searchId: "" });
 
@@ -155,7 +156,11 @@ export default function StockReportsPage() {
             let filtered = [...stockLevels];
             const storeFilter = stockFiltersRef.current.store;
             const manufacturerFilter = stockFiltersRef.current.manufacturer;
+            const searchFilter = stockFiltersRef.current.search.toLowerCase();
 
+            if (searchFilter) {
+                filtered = filtered.filter(item => item.medicineName.toLowerCase().includes(searchFilter));
+            }
             if (storeFilter !== 'all') {
                 const storeKey = storeIdToKeyMap[storeFilter];
                 if (storeKey) {
@@ -196,7 +201,7 @@ export default function StockReportsPage() {
     
     const resetFilters = (tab: string) => {
         if (tab === 'levels') {
-            stockFiltersRef.current = { store: "all", manufacturer: "all" };
+            stockFiltersRef.current = { store: "all", manufacturer: "all", search: "" };
             setFilteredStockLevels(stockLevels);
         } else if (tab === 'transfers') {
             transferFiltersRef.current = { store: "all", dateRange: undefined, searchId: "" };
@@ -205,11 +210,62 @@ export default function StockReportsPage() {
             purchaseFiltersRef.current = { manufacturer: "all", dateRange: undefined, searchId: "" };
             setFilteredPurchases(purchases);
         }
+        // Re-render with default filters
+        applyFilters(tab);
     }
     
     const openDetailsModal = (item: Purchase | Transfer) => {
         setSelectedItemDetails(item);
         setIsDetailModalOpen(true);
+    };
+
+    const downloadReport = (tab: string) => {
+        let csvContent = "data:text/csv;charset=utf-8,";
+        let headers: string[] = [];
+        let rows: any[] = [];
+        let filename = `report_${new Date().toISOString().split('T')[0]}.csv`;
+
+        if (tab === 'levels') {
+            headers = ["Medicine", "Warehouse", "Downtown", "Uptown", "Total Stock"];
+            rows = filteredStockLevels;
+            filename = `stock_levels_report.csv`;
+            csvContent += headers.join(",") + "\n";
+            rows.forEach(item => {
+                let row = [ `"${item.medicineName}"`, item.warehouse, item.downtown, item.uptown, item.total ];
+                csvContent += row.join(",") + "\n";
+            });
+        } else if (tab === 'transfers') {
+            headers = ["ID", "From", "To", "Date", "Items", "Status"];
+            rows = filteredTransfers;
+            filename = `transfers_report.csv`;
+            csvContent += headers.join(",") + "\n";
+             rows.forEach(item => {
+                let row = [ item.id, allStores.find(s => s.id === item.from)?.name, allStores.find(s => s.id === item.to)?.name, format(parseISO(item.date), 'dd MMM, yyyy'), item.items.length, item.status];
+                csvContent += row.join(",") + "\n";
+            });
+        } else if (tab === 'purchase') {
+            headers = ["Invoice ID", "Date", "Manufacturer", "Items", "Amount"];
+            rows = filteredPurchases;
+            filename = `purchases_report.csv`;
+            csvContent += headers.join(",") + "\n";
+             rows.forEach(item => {
+                let row = [ item.invoiceId, format(parseISO(item.date), 'dd MMM, yyyy'), `"${item.manufacturerName}"`, item.items.length, item.totalAmount.toFixed(2)];
+                csvContent += row.join(",") + "\n";
+            });
+        }
+        
+        if(rows.length === 0) {
+            toast({ variant: 'destructive', title: 'No Data', description: 'Cannot download an empty report.'});
+            return;
+        }
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
 
@@ -222,28 +278,24 @@ export default function StockReportsPage() {
         }
     }, [user, loading, router]);
 
-    if (loading || !user) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="text-2xl">Loading...</div>
-            </div>
-        );
-    }
-
     const getIcon = (name: string) => {
         switch (name) {
             case 'Dashboard': return <HomeIcon />;
             case 'Patients': return <Users2 />;
             case 'Sales': return <ShoppingCart />;
             case 'Universal Report': return <BarChart2 />;
+            case 'Profit & Loss Report': return <TrendingUp />;
             case 'Sales Reports': return <BarChart />;
             case 'Warehouse Stock': return <Warehouse />;
+            case 'Stock Ledger': return <BarChart2 />;
             case 'Store Stock': return <Package />;
             case 'Medicine Master': return <Pill />;
             case 'Manufacturer Master': return <Building />;
             case 'Add Stock': return <PlusSquare />;
             case 'Return to Manufacturer': return <Undo />;
             case 'Stock Transfer': return <GitBranch />;
+            case 'Stock Adjustment': return <Edit />;
+            case 'Damaged Stock': return <HeartCrack />;
             case 'Inventory Reports': return <BarChart />;
             case 'Valuation Report': return <TrendingUp />;
             case 'Diseases': return <Activity />;
@@ -264,14 +316,17 @@ export default function StockReportsPage() {
           </SidebarHeader>
           <SidebarContent>
              <SidebarMenu>
-                {sidebarRoutes.filter(r => r.inSidebar && hasPermission(r.path) && !r.path.startsWith('/inventory/')).map((route) => (
+                {sidebarRoutes.filter(r => r.inSidebar && hasPermission(r.path) && !r.path.startsWith('/inventory/')).map((route) => {
+                     const isParentRoute = sidebarRoutes.some(child => child.path.startsWith(route.path) && child.path !== route.path);
+                     const isActive = isParentRoute ? pathname.startsWith(route.path) : pathname === route.path;
+                    return (
                     <SidebarMenuItem key={route.path}>
-                        <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname.startsWith(route.path)}>
+                        <SidebarMenuButton href={route.path} tooltip={route.name} isActive={isActive}>
                             {getIcon(route.name)}
                             <span>{route.name}</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
-                ))}
+                )})}
 
                 {hasPermission('/inventory') && (
                     <Collapsible className="w-full" defaultOpen={pathname.startsWith('/inventory')}>
@@ -311,7 +366,7 @@ export default function StockReportsPage() {
               </SidebarMenu>
           </SidebarFooter>
       </Sidebar>
-      <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14 group-[[data-sidebar-state=expanded]]:sm:pl-56">
+      <div className="flex flex-col sm:gap-4 sm:py-4">
         <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
            <SidebarTrigger />
            <div className="flex w-full items-center justify-between">
@@ -323,11 +378,16 @@ export default function StockReportsPage() {
         </header>
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList>
-                    <TabsTrigger value="levels">Overall Stock Levels</TabsTrigger>
-                    <TabsTrigger value="transfers">Inter-Store Transfers</TabsTrigger>
-                    <TabsTrigger value="purchase">Purchase History</TabsTrigger>
-                </TabsList>
+                <div className="flex justify-between items-center flex-wrap gap-4">
+                    <TabsList>
+                        <TabsTrigger value="levels">Overall Stock Levels</TabsTrigger>
+                        <TabsTrigger value="transfers">Inter-Store Transfers</TabsTrigger>
+                        <TabsTrigger value="purchase">Purchase History</TabsTrigger>
+                    </TabsList>
+                    <Button variant="outline" size="sm" onClick={() => downloadReport(activeTab)}>
+                       <Download className="mr-2 h-4 w-4"/> Download Report
+                    </Button>
+                </div>
                 <TabsContent value="levels">
                      <Card>
                         <CardHeader>
@@ -336,6 +396,10 @@ export default function StockReportsPage() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="flex flex-col sm:flex-row gap-4">
+                                <div className="relative flex-grow">
+                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input type="search" placeholder="Search by medicine name..." className="pl-8" defaultValue={stockFiltersRef.current.search} onChange={e => (stockFiltersRef.current.search = e.target.value)} />
+                                </div>
                                 <Select defaultValue={stockFiltersRef.current.store} onValueChange={(v) => (stockFiltersRef.current.store = v)} disabled={user?.role === 'Pharmacist' && availableStores.length === 1}>
                                     <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Select Store" /></SelectTrigger>
                                     <SelectContent>{availableStores.map(store => (<SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>))}</SelectContent>
@@ -361,7 +425,7 @@ export default function StockReportsPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                     {dataLoading ? (Array.from({length:5}).map((_, i) =>  <TableRow key={i}><TableCell colSpan={5}><div className="h-4 bg-muted rounded-full w-full animate-pulse"/></TableCell></TableRow>))
+                                     {dataLoading ? (Array.from({length:5}).map((_, i) =>  <TableRow key={i}><TableCell colSpan={5}><Skeleton className="h-5"/></TableCell></TableRow>))
                                      : filteredStockLevels.length > 0 ? filteredStockLevels.map((item: any) => (
                                         <TableRow key={item.medicineId}>
                                             <TableCell className="font-medium">{item.medicineName}</TableCell>
@@ -411,7 +475,7 @@ export default function StockReportsPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {dataLoading ? (Array.from({length:5}).map((_, i) =>  <TableRow key={i}><TableCell colSpan={7}><div className="h-4 bg-muted rounded-full w-full animate-pulse"/></TableCell></TableRow>))
+                                    {dataLoading ? (Array.from({length:5}).map((_, i) =>  <TableRow key={i}><TableCell colSpan={7}><Skeleton className="h-5"/></TableCell></TableRow>))
                                     : filteredTransfers.length > 0 ? filteredTransfers.map((report) => (
                                         <TableRow key={report.id}>
                                             <TableCell className="font-medium">{report.id}</TableCell>
@@ -471,7 +535,7 @@ export default function StockReportsPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {dataLoading ? (Array.from({length:5}).map((_, i) =>  <TableRow key={i}><TableCell colSpan={6}><div className="h-4 bg-muted rounded-full w-full animate-pulse"/></TableCell></TableRow>))
+                                    {dataLoading ? (Array.from({length:5}).map((_, i) =>  <TableRow key={i}><TableCell colSpan={6}><Skeleton className="h-5"/></TableCell></TableRow>))
                                     : filteredPurchases.length > 0 ? filteredPurchases.map((purchase) => (
                                         <TableRow key={purchase.invoiceId}>
                                             <TableCell>{purchase.invoiceId}</TableCell>

@@ -69,7 +69,7 @@ const initialStores: Store[] = [
 
 
 export default function AdminPage() {
-    const { user, logout, loading, permissions, setPermissions, hasPermission, users: userList, createUser, updateUser, deleteUser: deleteUserFromContext, addRole, editRole, deleteRole } = useAuth();
+    const { user, logout, loading, permissions, setPermissions, hasPermission, users: userList, createUser, updateUser, deleteUser: deleteUserFromContext, addRole, editRole, deleteRole } from useAuth();
     const router = useRouter();
     const pathname = usePathname();
     const { toast } = useToast();
@@ -408,6 +408,7 @@ export default function AdminPage() {
             case 'Patients': return <Users2 />;
             case 'Sales': return <ShoppingCart />;
             case 'Universal Report': return <BarChart2 />;
+            case 'Profit & Loss Report': return <TrendingUp />;
             case 'Sales Reports': return <BarChart />;
             case 'Warehouse Stock': return <Warehouse />;
             case 'Stock Ledger': return <BarChart2 />;
@@ -449,14 +450,17 @@ export default function AdminPage() {
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 )}
-                {sidebarRoutes.filter(r => r.inSidebar && hasPermission(r.path) && !r.path.startsWith('/inventory/')).map((route) => (
+                {sidebarRoutes.filter(r => r.inSidebar && hasPermission(r.path) && !r.path.startsWith('/inventory/')).map((route) => {
+                     const isParentRoute = sidebarRoutes.some(child => child.path.startsWith(route.path) && child.path !== route.path);
+                     const isActive = isParentRoute ? pathname.startsWith(route.path) : pathname === route.path;
+                    return (
                     <SidebarMenuItem key={route.path}>
-                        <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname.startsWith(route.path)}>
+                        <SidebarMenuButton href={route.path} tooltip={route.name} isActive={isActive}>
                             {getIcon(route.name)}
                             <span>{route.name}</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
-                ))}
+                )})}
 
                 {hasPermission('/inventory') && (
                     <Collapsible className="w-full" defaultOpen={pathname.startsWith('/inventory')}>
