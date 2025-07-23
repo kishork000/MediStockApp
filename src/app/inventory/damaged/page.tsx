@@ -25,7 +25,8 @@ import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useToast } from "@/hooks/use-toast";
-import { getAvailableStockForLocation, InventoryItem, getStockLevel, adjustStockQuantity } from "@/services/inventory-service";
+import { getAvailableStockForLocation, InventoryItem } from "@/services/inventory-service";
+import { recordDamagedStock } from "@/services/damaged-stock-service";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const allLocations = [
@@ -35,7 +36,7 @@ const allLocations = [
 ];
 
 
-export default function StockAdjustmentPage() {
+export default function DamagedStockPage() {
     const { user, logout, loading, hasPermission } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
@@ -43,8 +44,7 @@ export default function StockAdjustmentPage() {
 
     const [location, setLocation] = useState("");
     const [medicineId, setMedicineId] = useState("");
-    const [currentQuantity, setCurrentQuantity] = useState<number | null>(null);
-    const [newQuantity, setNewQuantity] = useState("");
+    const [quantity, setQuantity] = useState("1");
     const [reason, setReason] = useState("");
     
     const [locationStock, setLocationStock] = useState<InventoryItem[]>([]);
@@ -57,8 +57,8 @@ export default function StockAdjustmentPage() {
     const handleLocationChange = useCallback(async (selectedLocation: string) => {
         setLocation(selectedLocation);
         setMedicineId("");
-        setCurrentQuantity(null);
-        setNewQuantity("");
+        setQuantity("1");
+        setReason("");
         if (selectedLocation) {
             setIsStockLoading(true);
             try {
@@ -74,45 +74,48 @@ export default function StockAdjustmentPage() {
         }
     }, [toast]);
 
-    const handleMedicineChange = useCallback(async (selectedMedicineId: string) => {
-        setMedicineId(selectedMedicineId);
-        if (selectedMedicineId && location) {
-            const qty = await getStockLevel(location, selectedMedicineId);
-            setCurrentQuantity(qty);
-            setNewQuantity(String(qty));
-        } else {
-            setCurrentQuantity(null);
-            setNewQuantity("");
-        }
-    }, [location]);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        if (!location || !medicineId || newQuantity === "" || !reason.trim() || !user) {
+        const selectedStockItem = locationStock.find(item => item.medicineId === medicineId);
+
+        if (!location || !medicineId || !quantity || !reason.trim() || !user || !selectedStockItem) {
             toast({ variant: 'destructive', title: 'Error', description: 'Please fill out all fields.' });
             return;
         }
 
-        const newQty = parseInt(newQuantity, 10);
-        if (isNaN(newQty) || newQty < 0) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Please enter a valid, non-negative quantity.' });
+        const qtyToRemove = parseInt(quantity, 10);
+        if (isNaN(qtyToRemove) || qtyToRemove <= 0) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Please enter a valid, positive quantity.' });
+            return;
+        }
+        
+        if (qtyToRemove > selectedStockItem.quantity) {
+             toast({ variant: 'destructive', title: 'Error', description: `Cannot remove more than available stock (${selectedStockItem.quantity}).` });
             return;
         }
         
         setIsSubmitting(true);
         try {
-            await adjustStockQuantity(location, medicineId, newQty, reason, { id: user.id, name: user.name });
-            toast({ title: 'Success', description: 'Stock quantity has been updated.' });
+            await recordDamagedStock(
+                location,
+                medicineId,
+                selectedStockItem.medicineName,
+                qtyToRemove,
+                reason,
+                { id: user.id, name: user.name }
+            );
+
+            toast({ title: 'Success', description: 'Damaged stock has been recorded and inventory updated.' });
             
             // Reset form
             handleLocationChange(location); // Refetch stock for the location
             setMedicineId("");
-            setCurrentQuantity(null);
-            setNewQuantity("");
+            setQuantity("1");
             setReason("");
 
         } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Error', description: error.message || 'Failed to adjust stock.' });
+            toast({ variant: 'destructive', title: 'Error', description: error.message || 'Failed to record damaged stock.' });
         } finally {
             setIsSubmitting(false);
         }
@@ -229,15 +232,15 @@ export default function StockAdjustmentPage() {
         <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
            <SidebarTrigger />
            <div className="flex w-full items-center justify-between">
-              <h1 className="text-xl font-semibold">Stock Adjustment</h1>
+              <h1 className="text-xl font-semibold">Damaged Stock Adjustment</h1>
               <ThemeToggle />
            </div>
         </header>
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
             <Card className="max-w-2xl mx-auto w-full">
                 <CardHeader>
-                    <CardTitle>Manual Stock Correction</CardTitle>
-                    <CardDescription>Use this form to manually correct stock quantities. All adjustments are logged for auditing.</CardDescription>
+                    <CardTitle>Record Damaged Stock</CardTitle>
+                    <CardDescription>Use this form to write off damaged or expired stock. This action is irreversible and logged for auditing.</CardDescription>
                 </CardHeader>
                 <CardContent>
                      <form className="space-y-6" onSubmit={handleSubmit}>
@@ -257,36 +260,30 @@ export default function StockAdjustmentPage() {
 
                          <div className="space-y-2">
                            <Label htmlFor="medicine">Medicine</Label>
-                           <Select value={medicineId} onValueChange={handleMedicineChange} disabled={!location || isStockLoading} required>
+                           <Select value={medicineId} onValueChange={setMedicineId} disabled={!location || isStockLoading} required>
                                <SelectTrigger id="medicine">
                                    <SelectValue placeholder={isStockLoading ? "Loading medicines..." : "Select a medicine"} />
                                </SelectTrigger>
                                <SelectContent>
                                    {locationStock.map(item => (
-                                       <SelectItem key={item.medicineId} value={item.medicineId}>{item.medicineName}</SelectItem>
+                                       <SelectItem key={item.medicineId} value={item.medicineId}>{item.medicineName} (Avail: {item.quantity})</SelectItem>
                                    ))}
                                </SelectContent>
                            </Select>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="current-qty">Current Quantity</Label>
-                                {currentQuantity === null ? <Skeleton className="h-10"/> : <Input id="current-qty" value={currentQuantity} disabled /> }
-                            </div>
-                             <div className="space-y-2">
-                                <Label htmlFor="new-qty">New Quantity</Label>
-                                <Input id="new-qty" type="number" value={newQuantity} onChange={e => setNewQuantity(e.target.value)} disabled={currentQuantity === null} required />
-                            </div>
-                        </div>
-
                         <div className="space-y-2">
-                           <Label htmlFor="reason">Reason for Adjustment</Label>
-                           <Textarea id="reason" placeholder="e.g., Physical stock count correction for June." value={reason} onChange={e => setReason(e.target.value)} required />
+                            <Label htmlFor="quantity">Quantity to Write-Off</Label>
+                            <Input id="quantity" type="number" value={quantity} onChange={e => setQuantity(e.target.value)} disabled={!medicineId} required min="1"/>
+                        </div>
+                       
+                        <div className="space-y-2">
+                           <Label htmlFor="reason">Reason for Damage/Write-Off</Label>
+                           <Textarea id="reason" placeholder="e.g., Expired batch, Water damage to packaging." value={reason} onChange={e => setReason(e.target.value)} required />
                         </div>
                         
                         <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting ? "Submitting..." : <><Edit className="mr-2 h-4 w-4" /> Adjust Stock</>}
+                            {isSubmitting ? "Submitting..." : <><HeartCrack className="mr-2 h-4 w-4" /> Record Damaged Stock</>}
                         </Button>
                     </form>
                 </CardContent>

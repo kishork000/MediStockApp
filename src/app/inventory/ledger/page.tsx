@@ -12,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, Pill, Undo, Building, MoreHorizontal, Download, Search, BarChart2 } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, TrendingUp, Pill, Undo, Building, MoreHorizontal, Download, Search, BarChart2, Edit, HeartCrack } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -32,6 +32,7 @@ import { Manufacturer, getManufacturers } from "@/services/manufacturer-service"
 import { Purchase, getPurchases } from "@/services/purchase-service";
 import { Transfer, getTransfers } from "@/services/transfer-service";
 import { getManufacturerReturns, ManufacturerReturn } from "@/services/return-service";
+import { DamagedStockLog, getDamagedStockLogs } from "@/services/damaged-stock-service";
 import { isWithinInterval, startOfDay, endOfDay, parseISO, format } from "date-fns";
 import type { WarehouseLedgerItem, StoreLedgerItem } from "@/lib/report-types";
 import { Input } from "@/components/ui/input";
@@ -63,6 +64,7 @@ export default function StockLedgerPage() {
     const [allTransfers, setAllTransfers] = useState<Transfer[]>([]);
     const [allManufacturerReturns, setAllManufacturerReturns] = useState<ManufacturerReturn[]>([]);
     const [allSales, setAllSales] = useState<Sale[]>([]);
+    const [allDamagedStock, setAllDamagedStock] = useState<DamagedStockLog[]>([]);
 
     const [stockLedger, setStockLedger] = useState<(WarehouseLedgerItem | StoreLedgerItem)[]>([]);
     const filtersRef = useRef<{ dateRange?: DateRange; locationId: string; medicineId: string; }>({
@@ -79,7 +81,7 @@ export default function StockLedgerPage() {
             const [
                 stockWarehouse, stockDowntown, stockUptown, 
                 meds, 
-                pur, trans, mfrReturns, sales
+                pur, trans, mfrReturns, sales, damaged
             ] = await Promise.all([
                 getAvailableStockForLocation('warehouse'),
                 getAvailableStockForLocation('STR002'),
@@ -88,7 +90,8 @@ export default function StockLedgerPage() {
                 getPurchases(),
                 getTransfers(),
                 getManufacturerReturns(),
-                getSales()
+                getSales(),
+                getDamagedStockLogs()
             ]);
             setAllInventory([...stockWarehouse, ...stockDowntown, ...stockUptown]);
             setMedicines(meds);
@@ -96,6 +99,7 @@ export default function StockLedgerPage() {
             setAllTransfers(trans);
             setAllManufacturerReturns(mfrReturns);
             setAllSales(sales);
+            setAllDamagedStock(damaged);
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error', description: 'Failed to load ledger data.' });
         }
@@ -147,14 +151,16 @@ export default function StockLedgerPage() {
                     .flatMap(t => t.items).filter(i => i.medicineId === medId).reduce((sum, i) => sum + i.quantity, 0);
                  const returnedToMfrDuringPeriod = allManufacturerReturns.filter(r => isWithinInterval(parseISO(r.date), { start: startDate, end: endDate }))
                     .flatMap(r => r.items).filter(i => i.medicineId === medId).reduce((sum, i) => sum + i.quantity, 0);
-                
-                const opening = balance - purchasesDuringPeriod - returnedFromStoreDuringPeriod + transferredDuringPeriod + returnedToMfrDuringPeriod;
+                 const damagedDuringPeriod = allDamagedStock.filter(d => d.locationId === locationId && d.medicineId === medId && isWithinInterval(parseISO(d.date), { start: startDate, end: endDate }))
+                    .reduce((sum, d) => sum + d.quantity, 0);
+
+                const opening = balance - purchasesDuringPeriod - returnedFromStoreDuringPeriod + transferredDuringPeriod + returnedToMfrDuringPeriod + damagedDuringPeriod;
                 const totalStock = opening + purchasesDuringPeriod + returnedFromStoreDuringPeriod;
 
                 ledger.push({
                     type: 'warehouse', medicineId: medId, medicineName: medicineDetails.name, manufacturerName: medicineDetails.manufacturerName,
                     opening, received: purchasesDuringPeriod, totalStock, returnedFromStore: returnedFromStoreDuringPeriod,
-                    returnedToManufacturer: returnedToMfrDuringPeriod, transferred: transferredDuringPeriod, balance,
+                    returnedToManufacturer: returnedToMfrDuringPeriod, transferred: transferredDuringPeriod, damaged: damagedDuringPeriod, balance,
                 });
 
             } else { // Store Ledger
@@ -164,18 +170,20 @@ export default function StockLedgerPage() {
                     .flatMap(t => t.items).filter(i => i.medicineId === medId).reduce((sum, i) => sum + i.quantity, 0);
                 const returnedToWH = allTransfers.filter(t => t.from === locationId && isWithinInterval(parseISO(t.date), { start: startDate, end: endDate }))
                     .flatMap(t => t.items).filter(i => i.medicineId === medId).reduce((sum, i) => sum + i.quantity, 0);
+                const damagedDuringPeriod = allDamagedStock.filter(d => d.locationId === locationId && d.medicineId === medId && isWithinInterval(parseISO(d.date), { start: startDate, end: endDate }))
+                    .reduce((sum, d) => sum + d.quantity, 0);
 
-                const opening = balance - receivedFromWH + salesDuringPeriod + returnedToWH;
+                const opening = balance - receivedFromWH + salesDuringPeriod + returnedToWH + damagedDuringPeriod;
 
                  ledger.push({
                     type: 'store', medicineId: medId, medicineName: medicineDetails.name, opening,
-                    received: receivedFromWH, sales: salesDuringPeriod, returned: returnedToWH, balance,
+                    received: receivedFromWH, sales: salesDuringPeriod, returned: returnedToWH, damaged: damagedDuringPeriod, balance,
                 });
             }
         }
         setStockLedger(ledger);
         setIsLedgerLoading(false);
-    }, [allInventory, medicines, allPurchases, allTransfers, allManufacturerReturns, allSales, toast]);
+    }, [allInventory, medicines, allPurchases, allTransfers, allManufacturerReturns, allSales, allDamagedStock, toast]);
 
 
     const handleDownloadReport = () => {
@@ -187,18 +195,18 @@ export default function StockLedgerPage() {
         
         let headers: string[];
         if (filtersRef.current.locationId === 'warehouse') {
-             headers = ["Medicine", "Manufacturer", "Opening", "Received (Purchase)", "Returned (Stores)", "Total Stock", "Returned (MFR)", "Transferred (to Stores)", "Balance"];
+             headers = ["Medicine", "Manufacturer", "Opening", "Received (Purchase)", "Returned (Stores)", "Total Stock", "Returned (MFR)", "Transferred (to Stores)", "Damaged", "Balance"];
         } else {
-             headers = ["Medicine", "Opening", "Received (from WH)", "Sales", "Returned (to WH)", "Balance"];
+             headers = ["Medicine", "Opening", "Received (from WH)", "Sales", "Returned (to WH)", "Damaged", "Balance"];
         }
         csvContent += headers.join(",") + "\n";
 
         stockLedger.forEach(item => {
             let row: (string | number)[];
             if(item.type === 'warehouse') {
-                 row = [`"${item.medicineName}"`, `"${item.manufacturerName}"`, item.opening, item.received, item.returnedFromStore, item.totalStock, item.returnedToManufacturer, item.transferred, item.balance];
+                 row = [`"${item.medicineName}"`, `"${item.manufacturerName}"`, item.opening, item.received, item.returnedFromStore, item.totalStock, item.returnedToManufacturer, item.transferred, item.damaged, item.balance];
             } else {
-                 row = [`"${item.medicineName}"`, item.opening, item.received, item.sales, item.returned, item.balance];
+                 row = [`"${item.medicineName}"`, item.opening, item.received, item.sales, item.returned, item.damaged, item.balance];
             }
             csvContent += row.join(",") + "\n";
         });
@@ -239,6 +247,8 @@ export default function StockLedgerPage() {
             case 'Add Stock': return <PlusSquare />;
             case 'Return to Manufacturer': return <Undo />;
             case 'Stock Transfer': return <GitBranch />;
+            case 'Stock Adjustment': return <Edit />;
+            case 'Damaged Stock': return <HeartCrack />;
             case 'Inventory Reports': return <BarChart />;
             case 'Valuation Report': return <TrendingUp />;
             case 'Diseases': return <Activity />;
@@ -403,6 +413,7 @@ export default function StockLedgerPage() {
                                         <TableHead>Ret (Stores)</TableHead>
                                         <TableHead>Transferred</TableHead>
                                         <TableHead>Ret (MFR)</TableHead>
+                                        <TableHead>Damaged</TableHead>
                                         <TableHead className="font-bold">Balance</TableHead>
                                     </TableRow>
                                 ) : (
@@ -412,6 +423,7 @@ export default function StockLedgerPage() {
                                         <TableHead>Received</TableHead>
                                         <TableHead>Sales</TableHead>
                                         <TableHead>Returned</TableHead>
+                                        <TableHead>Damaged</TableHead>
                                         <TableHead className="font-bold">Balance</TableHead>
                                     </TableRow>
                                 )}
@@ -419,7 +431,7 @@ export default function StockLedgerPage() {
                             <TableBody>
                                 {isLedgerLoading ? (
                                     Array.from({ length: 5 }).map((_, i) => (
-                                        <TableRow key={i}><TableCell colSpan={8}><Skeleton className="h-5 w-full"/></TableCell></TableRow>
+                                        <TableRow key={i}><TableCell colSpan={9}><Skeleton className="h-5 w-full"/></TableCell></TableRow>
                                     ))
                                 ) : stockLedger.length > 0 ? (
                                     stockLedger.map((item) => (
@@ -432,6 +444,7 @@ export default function StockLedgerPage() {
                                             <TableCell className="text-blue-600">+{item.returnedFromStore}</TableCell>
                                             <TableCell className="text-orange-600">-{item.transferred}</TableCell>
                                             <TableCell className="text-red-600">-{item.returnedToManufacturer}</TableCell>
+                                            <TableCell className="text-red-600">-{item.damaged}</TableCell>
                                             <TableCell className="font-bold">{item.balance}</TableCell>
                                         </TableRow>
                                         ) : (
@@ -441,13 +454,14 @@ export default function StockLedgerPage() {
                                             <TableCell className="text-green-600">+{item.received}</TableCell>
                                             <TableCell className="text-red-600">-{item.sales}</TableCell>
                                             <TableCell className="text-orange-600">-{item.returned}</TableCell>
+                                            <TableCell className="text-red-600">-{item.damaged}</TableCell>
                                             <TableCell className="font-bold">{item.balance}</TableCell>
                                         </TableRow>
                                         )
                                     ))
                                 ) : (
                                     <TableRow>
-                                        <TableCell colSpan={8} className="h-24 text-center">
+                                        <TableCell colSpan={9} className="h-24 text-center">
                                             {filtersRef.current.dateRange ? 'No stock movement data for this period.' : 'Please select a date range and apply filters to see the report.'}
                                         </TableCell>
                                     </TableRow>
@@ -465,5 +479,3 @@ export default function StockLedgerPage() {
     </div>
   );
 }
-
-    

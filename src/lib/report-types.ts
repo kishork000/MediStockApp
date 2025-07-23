@@ -10,6 +10,7 @@ export interface WarehouseLedgerItem {
     returnedFromStore: number;
     returnedToManufacturer: number;
     transferred: number; // to stores
+    damaged: number;
     balance: number;
 }
 
@@ -21,5 +22,6 @@ export interface StoreLedgerItem {
     received: number; // from warehouse
     sales: number;
     returned: number; // to warehouse
+    damaged: number;
     balance: number;
 }
