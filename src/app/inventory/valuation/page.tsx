@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -11,7 +12,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, Download, TrendingUp, Filter, Pill, Building, Undo, BarChart2 } from "lucide-react";
+import { Home as HomeIcon, LayoutGrid, Package, Users2, ShoppingCart, BarChart, PlusSquare, Activity, Settings, GitBranch, LogOut, ChevronDown, Warehouse, Download, TrendingUp, Pill, Building, Undo, BarChart2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -19,55 +20,162 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DateRangePicker } from "@/components/dashboard/DateRangePicker";
-import { DateRange } from "react-day-picker";
-import { addDays, isWithinInterval } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
+import { getMedicines, Medicine } from "@/services/medicine-service";
+import { getAvailableStockForLocation, InventoryItem } from "@/services/inventory-service";
+import { getManufacturers, Manufacturer } from "@/services/manufacturer-service";
+import { format } from 'date-fns';
 
-
-const valuationData: any[] = [];
+interface ValuationItem {
+    medicineId: string;
+    medicineName: string;
+    manufacturerId: string;
+    manufacturerName: string;
+    purchasePrice: number;
+    quantity: number;
+    valuation: number;
+}
 
 const allStores = [
     { id: "all", name: "All Locations" },
-    { id: "STR001", name: "Main Warehouse" },
+    { id: "warehouse", name: "Main Warehouse" },
     { id: "STR002", name: "Downtown Pharmacy" },
     { id: "STR003", name: "Uptown Health" },
 ];
-
 
 export default function ValuationReportPage() {
     const { user, logout, loading, hasPermission } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
-    const [selectedStore, setSelectedStore] = useState("all");
-    const [dateRange, setDateRange] = useState(undefined);
+    const { toast } = useToast();
+
+    const [pageLoading, setPageLoading] = useState(true);
+    const [medicines, setMedicines] = useState<Medicine[]>([]);
+    const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
+    const [allInventory, setAllInventory] = useState<InventoryItem[]>([]);
+    const [valuationData, setValuationData] = useState<ValuationItem[]>([]);
+
+    const filtersRef = useRef({ store: "all", manufacturer: "all" });
 
     const availableStores = useMemo(() => {
-        if (user?.role === 'Admin') {
-            return allStores;
-        }
+        if (user?.role === 'Admin') return allStores;
         if (user?.role === 'Pharmacist' && user.assignedStore) {
             return allStores.filter(s => s.id === user.assignedStore);
         }
         return [];
     }, [user]);
-
-    useEffect(() => {
-        if (user?.role === 'Pharmacist' && availableStores.length > 0) {
-            setSelectedStore(availableStores[0].id);
-        } else if (user?.role === 'Admin') {
-            setSelectedStore('all');
+    
+     const fetchData = useCallback(async () => {
+        setPageLoading(true);
+        try {
+            const [meds, mans, warehouseStock, downtownStock, uptownStock] = await Promise.all([
+                getMedicines(),
+                getManufacturers(),
+                getAvailableStockForLocation("warehouse"),
+                getAvailableStockForLocation("STR002"),
+                getAvailableStockForLocation("STR003"),
+            ]);
+            setMedicines(meds);
+            setManufacturers(mans);
+            setAllInventory([...warehouseStock, ...downtownStock, ...uptownStock]);
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to load necessary data for valuation.' });
         }
-    }, [user, availableStores]);
+        setPageLoading(false);
+    }, [toast]);
+    
+    useEffect(() => {
+        if (user) {
+            fetchData();
+        }
+    }, [user, fetchData]);
 
+    const calculateValuation = useCallback(() => {
+        const medicineMap = new Map(medicines.map(m => [m.id, m]));
+        let filteredInventory = [...allInventory];
 
-    const filteredValuationData = useMemo(() => {
-        if (!dateRange?.from || !dateRange?.to) return valuationData;
-        // In a real app, filtering would also apply to the selected store.
-        return valuationData.filter(item => isWithinInterval(item.date, { start: dateRange.from!, end: dateRange.to! }));
-    }, [dateRange]);
+        if (filtersRef.current.store !== 'all') {
+            filteredInventory = filteredInventory.filter(item => item.locationId === filtersRef.current.store);
+        }
 
+        const valuationMap = new Map<string, ValuationItem>();
+
+        for (const item of filteredInventory) {
+            const medicineDetails = medicineMap.get(item.medicineId);
+            if (!medicineDetails) continue;
+
+            if (filtersRef.current.manufacturer !== 'all' && medicineDetails.manufacturerId !== filtersRef.current.manufacturer) {
+                continue;
+            }
+
+            const existing = valuationMap.get(item.medicineId);
+            if (existing) {
+                existing.quantity += item.quantity;
+                existing.valuation += item.quantity * medicineDetails.purchasePrice;
+            } else {
+                valuationMap.set(item.medicineId, {
+                    medicineId: item.medicineId,
+                    medicineName: item.medicineName,
+                    manufacturerId: medicineDetails.manufacturerId,
+                    manufacturerName: medicineDetails.manufacturerName,
+                    purchasePrice: medicineDetails.purchasePrice,
+                    quantity: item.quantity,
+                    valuation: item.quantity * medicineDetails.purchasePrice,
+                });
+            }
+        }
+        setValuationData(Array.from(valuationMap.values()));
+    }, [medicines, allInventory]);
+
+    // Initial calculation on data load
+    useEffect(() => {
+        if (!pageLoading) {
+            calculateValuation();
+        }
+    }, [pageLoading, calculateValuation]);
+    
+     const handleApplyFilters = () => {
+        calculateValuation();
+        toast({ title: 'Filters Applied', description: 'Valuation report has been updated.' });
+    };
+
+    const handleResetFilters = () => {
+        filtersRef.current = { store: "all", manufacturer: "all" };
+        calculateValuation();
+        toast({ title: 'Filters Reset', description: 'Showing complete valuation report.' });
+    };
+
+    const handleDownloadReport = () => {
+        if (valuationData.length === 0) {
+            toast({ variant: "destructive", title: "No data", description: "There is no data to download." });
+            return;
+        }
+        let csvContent = "data:text/csv;charset=utf-8,";
+        const headers = ["Medicine", "Manufacturer", "Purchase Price", "Total Quantity", "Valuation"];
+        csvContent += headers.join(",") + "\r\n";
+
+        valuationData.forEach(item => {
+            const row = [
+                `"${item.medicineName}"`,
+                `"${item.manufacturerName}"`,
+                item.purchasePrice.toFixed(2),
+                item.quantity,
+                item.valuation.toFixed(2)
+            ];
+            csvContent += row.join(",") + "\r\n";
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `stock_valuation_report_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
     const sidebarRoutes = useMemo(() => {
         return allAppRoutes.filter(route => route.path !== '/');
@@ -79,7 +187,7 @@ export default function ValuationReportPage() {
         }
     }, [user, loading, router]);
 
-    if (loading || !user) {
+    if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
                 <div className="text-2xl">Loading...</div>
@@ -110,7 +218,7 @@ export default function ValuationReportPage() {
     };
     
     const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory/') && r.inSidebar);
-    const totalValuation = filteredValuationData.reduce((acc, item) => acc + (item.balance * item.price), 0);
+    const totalValuation = valuationData.reduce((acc, item) => acc + item.valuation, 0);
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -184,12 +292,12 @@ export default function ValuationReportPage() {
                     <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                         <div>
                             <CardTitle>Inventory Valuation</CardTitle>
-                            <CardDescription>Detailed report of stock movement and valuation.</CardDescription>
+                            <CardDescription>Calculate the financial value of your inventory based on purchase price.</CardDescription>
                         </div>
                          <div className="flex flex-wrap items-center gap-4">
                             <Select 
-                                value={selectedStore} 
-                                onValueChange={setSelectedStore}
+                                defaultValue={filtersRef.current.store} 
+                                onValueChange={(v) => (filtersRef.current.store = v)}
                                 disabled={user?.role === 'Pharmacist' && availableStores.length === 1}
                             >
                                 <SelectTrigger className="w-full sm:w-[200px]">
@@ -201,7 +309,24 @@ export default function ValuationReportPage() {
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <DateRangePicker onUpdate={(values) => setDateRange(values.range)} />
+                            <Select 
+                                defaultValue={filtersRef.current.manufacturer} 
+                                onValueChange={(v) => (filtersRef.current.manufacturer = v)}
+                            >
+                                <SelectTrigger className="w-full sm:w-[200px]">
+                                    <SelectValue placeholder="Select Manufacturer" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Manufacturers</SelectItem>
+                                     {manufacturers.map(man => (
+                                        <SelectItem key={man.id} value={man.id}>{man.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <div className="flex gap-2">
+                                <Button onClick={handleApplyFilters}>Apply</Button>
+                                <Button onClick={handleResetFilters} variant="outline">Reset</Button>
+                            </div>
                         </div>
                     </div>
                 </CardHeader>
@@ -211,31 +336,41 @@ export default function ValuationReportPage() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead className="min-w-[200px]">Medicine</TableHead>
-                                    <TableHead className="text-right">Opening Stock</TableHead>
-                                    <TableHead className="text-right">Received</TableHead>
-                                    <TableHead className="text-right">Sales</TableHead>
-                                    <TableHead className="text-right font-semibold">Balance Stock</TableHead>
+                                    <TableHead>Manufacturer</TableHead>
+                                    <TableHead className="text-right">Unit Price (₹)</TableHead>
+                                    <TableHead className="text-right">Quantity</TableHead>
                                     <TableHead className="text-right font-bold">Valuation (₹)</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredValuationData.length > 0 ? filteredValuationData.map((item, index) => (
-                                    <TableRow key={`${item.medicine}-${index}`}>
-                                        <TableCell className="font-medium">{item.medicine}</TableCell>
-                                        <TableCell className="text-right">{item.opening}</TableCell>
-                                        <TableCell className="text-right">{item.received}</TableCell>
-                                        <TableCell className="text-right">{item.sales}</TableCell>
-                                        <TableCell className="text-right font-semibold">{item.balance}</TableCell>
-                                        <TableCell className="text-right font-bold">{(item.balance * item.price).toFixed(2)}</TableCell>
-                                    </TableRow>
-                                )) : (
-                                  <TableRow><TableCell colSpan={6} className="h-24 text-center">No data to display.</TableCell></TableRow>
+                                {pageLoading ? (
+                                    Array.from({ length: 5 }).map((_, i) => (
+                                        <TableRow key={i}>
+                                            <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : valuationData.length > 0 ? (
+                                    valuationData.map((item) => (
+                                        <TableRow key={item.medicineId}>
+                                            <TableCell className="font-medium">{item.medicineName}</TableCell>
+                                            <TableCell>{item.manufacturerName}</TableCell>
+                                            <TableCell className="text-right">{item.purchasePrice.toFixed(2)}</TableCell>
+                                            <TableCell className="text-right">{item.quantity}</TableCell>
+                                            <TableCell className="text-right font-bold">{item.valuation.toFixed(2)}</TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                  <TableRow><TableCell colSpan={5} className="h-24 text-center">No data to display for the selected filters.</TableCell></TableRow>
                                 )}
                             </TableBody>
                         </Table>
                     </div>
                      <div className="mt-6 flex justify-between items-center">
-                        <Button size="sm" variant="outline"><Download className="mr-2" /> Download Report</Button>
+                        <Button size="sm" variant="outline" onClick={handleDownloadReport}><Download className="mr-2" /> Download Report</Button>
                         <div className="text-right">
                             <p className="text-lg font-bold">Total Stock Valuation: ₹{totalValuation.toFixed(2)}</p>
                         </div>
@@ -247,3 +382,4 @@ export default function ValuationReportPage() {
     </div>
   );
 }
+
