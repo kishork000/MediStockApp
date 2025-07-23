@@ -565,9 +565,8 @@ export default function AdminPage() {
                                 <TableBody>
                                     {users.map((u) => (
                                         <TableRow key={u.id}>
-                                            <TableCell>
-                                                <Button variant="link" className="p-0 h-auto font-medium md:hidden" onClick={() => openEditUserModal(u)}>{u.name}</Button>
-                                                <span className="font-medium hidden md:inline">{u.name}</span>
+                                            <TableCell className="font-medium">
+                                                <Button variant="link" className="p-0 h-auto" onClick={() => openEditUserModal(u)}>{u.name}</Button>
                                             </TableCell>
                                             <TableCell className="hidden sm:table-cell">{u.loginId}</TableCell>
                                             <TableCell className="hidden sm:table-cell">{u.email}</TableCell>
