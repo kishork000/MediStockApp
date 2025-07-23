@@ -991,14 +991,14 @@ export default function AdminPage() {
                 </DialogContent>
             </Dialog>
              <Dialog open={isEditUserModalOpen} onOpenChange={setIsEditUserModalOpen}>
-                <DialogContent className="sm:max-w-lg">
+                <DialogContent className="sm:max-w-lg flex flex-col">
                     <DialogHeader>
                         <DialogTitle>Edit User: {selectedUser?.name}</DialogTitle>
                         <DialogDescription>Update the user's details below.</DialogDescription>
                     </DialogHeader>
-                    <form onSubmit={handleUserUpdateSubmit}>
-                        <ScrollArea className="max-h-[70vh] p-6">
-                           <div className="space-y-4">
+                    <form onSubmit={handleUserUpdateSubmit} className="flex-1 overflow-hidden flex flex-col">
+                        <ScrollArea className="flex-1 -mx-6">
+                           <div className="space-y-4 px-6">
                                 <div className="space-y-2">
                                     <Label htmlFor="edit-name">Full Name</Label>
                                     <Input id="edit-name" name="name" defaultValue={selectedUser?.name} required style={{ textTransform: 'uppercase' }}/>
@@ -1064,7 +1064,7 @@ export default function AdminPage() {
                                 </div>
                             </div>
                         </ScrollArea>
-                        <DialogFooter className="pt-6 border-t mt-4">
+                        <DialogFooter className="pt-6 border-t mt-4 -mx-6 px-6 pb-0 bg-background">
                             <DialogClose asChild>
                                 <Button type="button" variant="secondary" onClick={() => setIsEditUserModalOpen(false)}>Cancel</Button>
                             </DialogClose>
@@ -1090,4 +1090,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
