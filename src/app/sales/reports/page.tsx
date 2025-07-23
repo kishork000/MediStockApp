@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -24,26 +24,19 @@ import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { DateRange } from "react-day-picker";
-import { addDays, parseISO, startOfDay, endOfDay, format } from "date-fns";
+import { isWithinInterval, parseISO, startOfDay, endOfDay, format } from "date-fns";
 import { SalesByPharmacistChart } from "@/components/sales/SalesByPharmacistChart";
 import { TopSellingMedicinesChart } from "@/components/sales/TopSellingMedicinesChart";
 import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-
-const salesData: any[] = [];
+import { Sale, SaleItem, getSales } from "@/services/sales-service";
+import { useToast } from "@/hooks/use-toast";
 
 const allStores = [
     { id: "all", name: "All Stores", storeId: "all" },
-    { id: "Downtown Pharmacy", name: "Downtown Pharmacy", storeId: "STR002" },
-    { id: "Uptown Health", name: "Uptown Health", storeId: "STR003" },
-];
-
-const pharmacists = [
-    { id: "all", name: "All Pharmacists" },
-    { id: "Pharmacist One", name: "Pharmacist One" },
-    { id: "Pharmacist Two", name: "Pharmacist Two" },
-    { id: "Admin User", name: "Admin User" },
+    { id: "STR002", name: "Downtown Pharmacy", storeId: "STR002" },
+    { id: "STR003", name: "Uptown Health", storeId: "STR003" },
 ];
 
 const salesOverTimeChartConfig = {
@@ -71,8 +64,11 @@ export default function SalesReportPage() {
     const { user, logout, loading, hasPermission } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
+    const { toast } = useToast();
 
-    const [filteredData, setFilteredData] = useState(salesData);
+    const [allSales, setAllSales] = useState<Sale[]>([]);
+    const [pharmacists, setPharmacists] = useState<{id: string, name: string}[]>([]);
+    const [filteredData, setFilteredData] = useState<any[]>([]);
     
     const initialFilters: {
         store: string;
@@ -87,10 +83,8 @@ export default function SalesReportPage() {
     const [activeFilters, setActiveFilters] = useState(initialFilters);
     const filtersRef = useRef(initialFilters);
 
-    
     const [isSalesDetailModalOpen, setIsSalesDetailModalOpen] = useState(false);
     const [modalView, setModalView] = useState('summary');
-
 
     const availableStores = useMemo(() => {
         if (user?.role === 'Admin') {
@@ -102,33 +96,67 @@ export default function SalesReportPage() {
         return [];
     }, [user]);
 
+    const fetchReportData = useCallback(async () => {
+        try {
+            const salesData = await getSales();
+            setAllSales(salesData);
+            setFilteredData(salesData.flatMap(s => s.items.map(i => ({...i, ...s}))));
+            
+            const uniquePharmacists = [...new Set(salesData.map(s => s.soldBy))];
+            setPharmacists([
+                { id: 'all', name: 'All Pharmacists' },
+                ...uniquePharmacists.map(p => ({ id: p, name: p }))
+            ]);
+
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to load sales data.' });
+        }
+    }, [toast]);
+
+    useEffect(() => {
+        if (user) {
+            fetchReportData();
+        }
+    }, [user, fetchReportData]);
+
     
     const handleApplyFilters = () => {
-        let data = [...salesData];
+        let salesToFilter = [...allSales];
         const currentFilters = filtersRef.current;
         setActiveFilters(currentFilters);
 
         if (currentFilters.store !== "all") {
-            const store = allStores.find(s => s.id === currentFilters.store);
-            if (store) {
-                 data = data.filter(sale => sale.storeId === store.storeId);
-            }
+             salesToFilter = salesToFilter.filter(sale => sale.storeId === currentFilters.store);
         }
 
         if (currentFilters.pharmacist !== "all") {
-            data = data.filter(sale => sale.pharmacist === currentFilters.pharmacist);
+            salesToFilter = salesToFilter.filter(sale => sale.soldBy === currentFilters.pharmacist);
         }
 
         if (currentFilters.dateRange?.from && currentFilters.dateRange?.to) {
             const fromDate = startOfDay(currentFilters.dateRange.from);
             const toDate = endOfDay(currentFilters.dateRange.to);
-            data = data.filter(sale => {
-                const saleDate = parseISO(sale.date);
+            salesToFilter = salesToFilter.filter(sale => {
+                const saleDate = parseISO(sale.createdAt);
                 return saleDate >= fromDate && saleDate  < toDate;
             });
         }
         
-        setFilteredData(data);
+        const reportItems = salesToFilter.flatMap(sale => 
+            sale.items.map(item => ({
+                ...item,
+                invoiceId: sale.invoiceId,
+                date: sale.createdAt,
+                patientName: sale.patientName,
+                patientMobile: sale.patientMobile,
+                storeName: sale.storeName,
+                soldBy: sale.soldBy,
+                paymentMethod: sale.paymentMethod,
+                total: item.quantity * item.price
+            }))
+        );
+
+        setFilteredData(reportItems);
     };
 
     const handleResetFilters = () => {
@@ -139,16 +167,13 @@ export default function SalesReportPage() {
     // Apply filters on initial load and when user changes
     useEffect(() => {
         if (user?.role === 'Pharmacist' && user.assignedStore) {
-            const assignedStore = allStores.find(s => s.storeId === user.assignedStore);
-            if(assignedStore) {
-                filtersRef.current.store = assignedStore.id;
-            }
+            filtersRef.current.store = user.assignedStore;
         } else if (user?.role === 'Admin') {
             filtersRef.current.store = 'all';
         }
         handleApplyFilters();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user]);
+    }, [user, allSales]);
 
 
     const analytics = useMemo(() => {
@@ -157,9 +182,13 @@ export default function SalesReportPage() {
         const onlineSalesValue = filteredData.filter(s => s.paymentMethod === 'Online').reduce((acc, sale) => acc + sale.total, 0);
         
         const totalItemsSold = filteredData.reduce((acc, sale) => acc + sale.quantity, 0);
-        const cashInvoices = filteredData.filter(s => s.paymentMethod === 'Cash');
-        const onlineInvoices = filteredData.filter(s => s.paymentMethod === 'Online');
-
+        const cashInvoices = [...new Set(filteredData.filter(s => s.paymentMethod === 'Cash').map(s => s.invoiceId))]
+            .map(id => filteredData.find(s => s.invoiceId === id))
+            .filter(Boolean);
+        
+        const onlineInvoices = [...new Set(filteredData.filter(s => s.paymentMethod === 'Online').map(s => s.invoiceId))]
+            .map(id => filteredData.find(s => s.invoiceId === id))
+            .filter(Boolean);
 
         const highSellingMedicines = filteredData.reduce((acc: { name: string; quantity: number }[], sale: any) => {
             const existing = acc.find(item => item.name === sale.medicine);
@@ -172,11 +201,11 @@ export default function SalesReportPage() {
         }, []).sort((a, b) => b.quantity - a.quantity).slice(0, 5);
 
         const pharmacistSales = filteredData.reduce((acc: { name: string; salesValue: number }[], sale: any) => {
-            const existing = acc.find(item => item.name === sale.pharmacist);
+            const existing = acc.find(item => item.name === sale.soldBy);
             if (existing) {
                 existing.salesValue += sale.total;
             } else {
-                acc.push({ name: sale.pharmacist, salesValue: sale.total });
+                acc.push({ name: sale.soldBy, salesValue: sale.total });
             }
             return acc;
         }, []).sort((a, b) => b.salesValue - a.salesValue);
@@ -349,7 +378,7 @@ export default function SalesReportPage() {
                                         </SelectTrigger>
                                         <SelectContent>
                                             {availableStores.map(store => (
-                                                <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
+                                                <SelectItem key={store.id} value={store.storeId}>{store.name}</SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
@@ -447,7 +476,7 @@ export default function SalesReportPage() {
                                     <TableRow key={sale.invoiceId + sale.medicine}>
                                         <TableCell>{sale.invoiceId}</TableCell>
                                         <TableCell>{sale.patientName}</TableCell>
-                                        <TableCell>{sale.pharmacist}</TableCell>
+                                        <TableCell>{sale.soldBy}</TableCell>
                                         <TableCell>{sale.medicine}</TableCell>
                                         <TableCell className="text-right">{sale.quantity}</TableCell>
                                         <TableCell className="text-right">{sale.total.toFixed(2)}</TableCell>
@@ -484,7 +513,7 @@ export default function SalesReportPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {analytics.cashInvoices.map(inv => (
+                                {analytics.cashInvoices.map((inv: any) => (
                                     <TableRow key={inv.invoiceId}>
                                         <TableCell>{inv.invoiceId}</TableCell>
                                         <TableCell>{inv.patientName}</TableCell>
@@ -510,7 +539,7 @@ export default function SalesReportPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                 {analytics.onlineInvoices.map(inv => (
+                                 {analytics.onlineInvoices.map((inv: any) => (
                                     <TableRow key={inv.invoiceId}>
                                         <TableCell>{inv.invoiceId}</TableCell>
                                         <TableCell>{inv.patientName}</TableCell>
