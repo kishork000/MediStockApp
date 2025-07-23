@@ -49,6 +49,12 @@ const initialPackagingTypes = [
     { name: "Tube" },
 ];
 
+const initialUsers = [
+    { id: "1", loginId: "ADMIN", name: "ADMIN USER", email: "admin@medistock.com", mobile: "9876543210", role: "Admin", aadhar: "1234 5678 9012", pan: "ABCDE1234F" },
+    { id: "2", loginId: "PHARM1", name: "PHARMACIST ONE", email: "pharmacist1@medistock.com", mobile: "9876543211", role: "Pharmacist", assignedStore: "STR002" },
+    { id: "3", loginId: "SUPER1", name: "SUPERVISOR ONE", email: "supervisor1@medistock.com", mobile: "9876543212", role: "Supervisor" },
+];
+
 /**
  * Checks if a collection is empty.
  * @param collectionName The name of the collection to check.
@@ -70,6 +76,7 @@ export async function seedDatabase() {
             { name: 'manufacturers', data: initialManufacturers, useId: true },
             { name: 'units', data: initialUnitTypes, useId: false },
             { name: 'packaging', data: initialPackagingTypes, useId: false },
+            { name: 'users', data: initialUsers, useId: true },
         ];
 
         let needsSeeding = false;
@@ -85,7 +92,7 @@ export async function seedDatabase() {
         }
 
         if (!needsSeeding) {
-            console.log("Database already seeded. Skipping.");
+            // console.log("Database already seeded. Skipping.");
             return;
         }
 

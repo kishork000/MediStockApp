@@ -5,49 +5,13 @@ import React, { createContext, useState, useContext, useEffect, useCallback, Rea
 import { useRouter, usePathname } from 'next/navigation';
 import { UserRole, RolePermissions, allAppRoutes } from '@/lib/types';
 import { seedDatabase } from '@/services/seed-service';
-
-export interface User {
-    id: string;
-    loginId: string;
-    name: string;
-    email: string;
-    mobile: string;
-    role: UserRole;
-    assignedStore?: string;
-    altMobile?: string;
-    pan?: string;
-    aadhar?: string;
-}
+import { getUsers, addUser, updateUser as updateUserService, deleteUser as deleteUserService, User, NewUser, UpdateUser } from '@/services/user-service';
 
 const initialPermissions: RolePermissions = {
     Admin: allAppRoutes.map(r => r.path),
     Pharmacist: ['/', '/patients', '/sales', '/inventory/stores', '/inventory/reports', '/inventory/transfer', '/inventory/valuation', '/inventory/ledger', '/reports/profit-loss'],
     Supervisor: ['/', '/patients', '/sales', '/sales/reports', '/inventory', '/inventory/stores', '/inventory/master', '/inventory/manufacturer', '/inventory/add', '/inventory/returns', '/inventory/transfer', '/inventory/reports', '/inventory/valuation', '/inventory/ledger', '/inventory/adjustment', '/inventory/damaged', '/reports/profit-loss' ]
 };
-
-let mockUsers: User[] = [
-    { id: "1", loginId: "ADMIN", name: "ADMIN USER", email: "admin@medistock.com", mobile: "9876543210", role: "Admin", aadhar: "1234 5678 9012", pan: "ABCDE1234F" },
-    { id: "2", loginId: "PHARM1", name: "PHARMACIST ONE", email: "pharmacist1@medistock.com", mobile: "9876543211", role: "Pharmacist", assignedStore: "STR002" },
-    { id: "3", loginId: "SUPER1", name: "SUPERVISOR ONE", email: "supervisor1@medistock.com", mobile: "9876543212", role: "Supervisor" },
-];
-
-
-export interface NewUser {
-    name: string;
-    email: string;
-    mobile: string;
-    loginId: string;
-    role: UserRole;
-    assignedStore?: string;
-    password?: string;
-    altMobile?: string;
-    pan?: string;
-    aadhar?: string;
-}
-
-export interface UpdateUser extends Omit<NewUser, 'password' | 'loginId'> {
-    // loginId and password are not editable
-}
 
 interface AuthContextType {
     user: User | null;
@@ -70,29 +34,34 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
-    const [usersState, setUsersState] = useState<User[]>(mockUsers);
+    const [usersState, setUsersState] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [permissions, setPermissionsState] = useState<RolePermissions>(initialPermissions);
     const router = useRouter();
     const pathname = usePathname();
 
+    const fetchUsers = useCallback(async () => {
+        const dbUsers = await getUsers();
+        setUsersState(dbUsers);
+        return dbUsers;
+    }, []);
+
     useEffect(() => {
         const initializeApp = async () => {
+            setLoading(true);
             await seedDatabase();
+            const dbUsers = await fetchUsers();
+
              try {
                 const storedUser = localStorage.getItem('medi-stock-user');
                 if (storedUser) {
                     const parsedUser = JSON.parse(storedUser);
-                    setUser(parsedUser);
-                }
-
-                const storedUsers = localStorage.getItem('medi-stock-users');
-                if (storedUsers) {
-                    const parsedUsers = JSON.parse(storedUsers);
-                    setUsersState(parsedUsers);
-                    mockUsers = parsedUsers; // Keep mockUsers in sync
-                } else {
-                     localStorage.setItem('medi-stock-users', JSON.stringify(mockUsers));
+                    // Verify the user still exists in our primary user list
+                    if (dbUsers.some(u => u.id === parsedUser.id)) {
+                        setUser(parsedUser);
+                    } else {
+                        localStorage.removeItem('medi-stock-user');
+                    }
                 }
 
                 const storedPermissions = localStorage.getItem('medi-stock-permissions');
@@ -109,7 +78,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setLoading(false);
         }
         initializeApp();
-    }, []);
+    }, [fetchUsers]);
 
     const setPermissions = useCallback((newPermissions: RolePermissions) => {
         setPermissionsState(newPermissions);
@@ -186,34 +155,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (usersState.some(u => u.loginId === newUser.loginId)) {
             throw new Error("A user with this Login ID already exists.");
         }
-
-        const userToCreate: User = {
-            id: (usersState.length + 1).toString(),
-            ...newUser,
-        };
-
-        const updatedUsers = [...usersState, userToCreate];
-        setUsersState(updatedUsers);
-        localStorage.setItem('medi-stock-users', JSON.stringify(updatedUsers));
-    }, [usersState]);
+        
+        await addUser(newUser);
+        await fetchUsers(); // Re-fetch to get the latest list with the new user
+    }, [usersState, fetchUsers]);
 
     const updateUser = useCallback(async (userId: string, updatedData: UpdateUser) => {
         if (updatedData.email && usersState.some(u => u.email === updatedData.email && u.id !== userId)) {
             throw new Error("A user with this email already exists.");
         }
 
-        const updatedUsers = usersState.map(u => {
-            if (u.id === userId) {
-                return {
-                    ...u,
-                    ...updatedData
-                };
-            }
-            return u;
-        });
-
-        setUsersState(updatedUsers);
-        localStorage.setItem('medi-stock-users', JSON.stringify(updatedUsers));
+        await updateUserService(userId, updatedData);
+        const updatedUsers = await fetchUsers();
 
         if (user?.id === userId) {
              const updatedCurrentUser = updatedUsers.find(u => u.id === userId);
@@ -222,13 +175,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 localStorage.setItem('medi-stock-user', JSON.stringify(updatedCurrentUser));
              }
         }
-    }, [usersState, user?.id]);
+    }, [usersState, user?.id, fetchUsers]);
 
     const deleteUser = useCallback(async (userId: string) => {
-         const updatedUsers = usersState.filter(u => u.id !== userId);
-         setUsersState(updatedUsers);
-         localStorage.setItem('medi-stock-users', JSON.stringify(updatedUsers));
-    }, [usersState]);
+         await deleteUserService(userId);
+         await fetchUsers();
+    }, [fetchUsers]);
 
     const addRole = useCallback(async (roleName: string) => {
         if (permissions[roleName]) {
@@ -246,23 +198,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             throw new Error(`Role "${newRoleName}" already exists.`);
         }
 
+        // Create a new permissions object with the updated role name
         const newPermissions = { ...permissions };
         newPermissions[newRoleName] = newPermissions[oldRoleName];
         delete newPermissions[oldRoleName];
         setPermissions(newPermissions);
 
-        const updatedUsers = usersState.map(u => 
-            u.role === oldRoleName ? { ...u, role: newRoleName } : u
-        );
-        setUsersState(updatedUsers);
-        localStorage.setItem('medi-stock-users', JSON.stringify(updatedUsers));
-
-        if (user?.role === oldRoleName) {
-            const updatedCurrentUser = { ...user, role: newRoleName };
-            setUser(updatedCurrentUser);
-            localStorage.setItem('medi-stock-user', JSON.stringify(updatedCurrentUser));
+        // Update users with the old role to the new role
+        const usersToUpdate = usersState.filter(u => u.role === oldRoleName);
+        for (const userToUpdate of usersToUpdate) {
+            await updateUserService(userToUpdate.id, { role: newRoleName as UserRole });
         }
-    }, [permissions, setPermissions, usersState, user?.role]);
+        
+        // Re-fetch all users to reflect the change
+        const updatedUsers = await fetchUsers();
+
+        // Update the currently logged-in user if their role changed
+        if (user?.role === oldRoleName) {
+            const updatedCurrentUser = updatedUsers.find(u => u.id === user.id);
+            if (updatedCurrentUser) {
+                setUser(updatedCurrentUser);
+                localStorage.setItem('medi-stock-user', JSON.stringify(updatedCurrentUser));
+            }
+        }
+    }, [permissions, setPermissions, usersState, user, fetchUsers]);
+
 
     const deleteRole = useCallback(async (roleName: string) => {
         if (roleName === 'Admin') {
