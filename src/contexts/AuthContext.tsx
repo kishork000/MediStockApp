@@ -20,8 +20,8 @@ export interface User {
 
 const initialPermissions: RolePermissions = {
     Admin: allAppRoutes.map(r => r.path),
-    Pharmacist: ['/', '/patients', '/sales', '/inventory/stores', '/inventory/reports', '/inventory/transfer', '/inventory/valuation'],
-    Supervisor: ['/', '/patients', '/sales', '/sales/reports', '/inventory', '/inventory/warehouse', '/inventory/stores', '/inventory/master', '/inventory/manufacturer', '/inventory/add', '/inventory/returns', '/inventory/transfer', '/inventory/reports', '/inventory/valuation' ]
+    Pharmacist: ['/', '/patients', '/sales', '/inventory/stores', '/inventory/reports', '/inventory/transfer', '/inventory/valuation', '/inventory/ledger'],
+    Supervisor: ['/', '/patients', '/sales', '/sales/reports', '/inventory', '/inventory/stores', '/inventory/master', '/inventory/manufacturer', '/inventory/add', '/inventory/returns', '/inventory/transfer', '/inventory/reports', '/inventory/valuation', '/inventory/ledger' ]
 };
 
 let mockUsers: User[] = [

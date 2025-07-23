@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -157,7 +158,7 @@ export default function Home() {
             case 'Sales': return <ShoppingCart />;
             case 'Universal Report': return <BarChart2 />;
             case 'Sales Reports': return <BarChart />;
-            case 'Warehouse Stock': return <Warehouse />;
+            case 'Stock Ledger': return <BarChart2 />;
             case 'Store Stock': return <Package />;
             case 'Medicine Master': return <Pill />;
             case 'Manufacturer Master': return <Building />;
