@@ -462,7 +462,7 @@ export default function AdminPage() {
                 )}
                 {sidebarRoutes.filter(r => r.inSidebar && hasPermission(r.path) && !r.path.startsWith('/inventory/')).map((route) => {
                      const isParentRoute = sidebarRoutes.some(child => child.path.startsWith(route.path + '/') && child.path !== route.path);
-                     const isActive = isParentRoute ? pathname.startsWith(route.path) : pathname === route.path;
+                     const isActive = isParentRoute ? isParentRoute ? pathname.startsWith(route.path) : pathname === route.path;
                     return (
                     <SidebarMenuItem key={route.path}>
                         <SidebarMenuButton href={route.path} tooltip={route.name} isActive={isActive}>
@@ -991,7 +991,7 @@ export default function AdminPage() {
                 </DialogContent>
             </Dialog>
              <Dialog open={isEditUserModalOpen} onOpenChange={setIsEditUserModalOpen}>
-                <DialogContent className="sm:max-w-lg flex flex-col">
+                <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh]">
                     <DialogHeader>
                         <DialogTitle>Edit User: {selectedUser?.name}</DialogTitle>
                         <DialogDescription>Update the user's details below.</DialogDescription>
