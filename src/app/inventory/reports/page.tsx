@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useMemo, useEffect, useState, useCallback, useRef } from "react";
@@ -50,7 +51,7 @@ const storeIdToKeyMap: Record<string, 'warehouse' | 'downtown' | 'uptown'> = {
 
 
 export default function StockReportsPage() {
-    const { user, logout, loading, hasPermission } } from useAuth();
+    const { user, logout, loading, hasPermission } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
     const { toast } = useToast();
@@ -296,7 +297,7 @@ export default function StockReportsPage() {
                       <SidebarMenuButton onClick={logout} tooltip="Logout">
                           <LogOut />
                           <span>Logout</span>
-                      SidebarMenuButton>
+                      </SidebarMenuButton>
                   </SidebarMenuItem>
               </SidebarMenu>
           </SidebarFooter>
@@ -328,7 +329,7 @@ export default function StockReportsPage() {
                             <div className="flex flex-col sm:flex-row gap-4">
                                 <Select defaultValue={stockFiltersRef.current.store} onValueChange={(v) => (stockFiltersRef.current.store = v)} disabled={user?.role === 'Pharmacist' && availableStores.length === 1}>
                                     <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Select Store" /></SelectTrigger>
-                                    <SelectContent>{availableStores.map(store => (<SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>)}</SelectContent>
+                                    <SelectContent>{availableStores.map(store => (<SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>))}</SelectContent>
                                 </Select>
                                 <Select defaultValue={stockFiltersRef.current.manufacturer} onValueChange={(v) => (stockFiltersRef.current.manufacturer = v)}>
                                     <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Select Manufacturer" /></SelectTrigger>
@@ -382,7 +383,7 @@ export default function StockReportsPage() {
                                 </div>
                                 <Select defaultValue={transferFiltersRef.current.store} onValueChange={(v) => (transferFiltersRef.current.store = v)} disabled={user?.role === 'Pharmacist' && availableStores.length === 1}>
                                     <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Select Store" /></SelectTrigger>
-                                    <SelectContent>{availableStores.map(store => (<SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>)}</SelectContent>
+                                    <SelectContent>{availableStores.map(store => (<SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>))}</SelectContent>
                                 </Select>
                                 <DateRangePicker onUpdate={(values) => (transferFiltersRef.current.dateRange = values.range)} />
                                 <Button onClick={() => applyFilters('transfers')}>Apply Filters</Button>
