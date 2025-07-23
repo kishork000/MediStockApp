@@ -22,7 +22,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { allAppRoutes } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { DateRange } from "react-day-picker";
 import { isWithinInterval, parseISO, startOfDay, endOfDay, format } from "date-fns";
 import { SalesByPharmacistChart } from "@/components/sales/SalesByPharmacistChart";
@@ -100,7 +100,7 @@ export default function SalesReportPage() {
         try {
             const salesData = await getSales();
             setAllSales(salesData);
-            setFilteredData(salesData.flatMap(s => s.items.map(i => ({...i, ...s}))));
+            setFilteredData(salesData.flatMap(s => s.items.map(i => ({...s, ...i}))));
             
             const uniquePharmacists = [...new Set(salesData.map(s => s.soldBy))];
             setPharmacists([
@@ -144,14 +144,9 @@ export default function SalesReportPage() {
         
         const reportItems = salesToFilter.flatMap(sale => 
             sale.items.map(item => ({
+                ...sale,
                 ...item,
-                invoiceId: sale.invoiceId,
                 date: sale.createdAt,
-                patientName: sale.patientName,
-                patientMobile: sale.patientMobile,
-                storeName: sale.storeName,
-                soldBy: sale.soldBy,
-                paymentMethod: sale.paymentMethod,
                 total: item.quantity * item.price
             }))
         );
