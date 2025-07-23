@@ -11,6 +11,7 @@ export interface User {
     loginId: string;
     name: string;
     email: string;
+    mobile: string;
     role: UserRole;
     assignedStore?: string;
     altMobile?: string;
@@ -25,15 +26,16 @@ const initialPermissions: RolePermissions = {
 };
 
 let mockUsers: User[] = [
-    { id: "1", loginId: "admin", name: "Admin User", email: "admin@medistock.com", role: "Admin", aadhar: "1234 5678 9012", pan: "ABCDE1234F" },
-    { id: "2", loginId: "pharm1", name: "Pharmacist One", email: "pharmacist1@medistock.com", role: "Pharmacist", assignedStore: "STR002" },
-    { id: "3", loginId: "super1", name: "Supervisor One", email: "supervisor1@medistock.com", role: "Supervisor" },
+    { id: "1", loginId: "ADMIN", name: "ADMIN USER", email: "admin@medistock.com", mobile: "9876543210", role: "Admin", aadhar: "1234 5678 9012", pan: "ABCDE1234F" },
+    { id: "2", loginId: "PHARM1", name: "PHARMACIST ONE", email: "pharmacist1@medistock.com", mobile: "9876543211", role: "Pharmacist", assignedStore: "STR002" },
+    { id: "3", loginId: "SUPER1", name: "SUPERVISOR ONE", email: "supervisor1@medistock.com", mobile: "9876543212", role: "Supervisor" },
 ];
 
 
 export interface NewUser {
     name: string;
     email: string;
+    mobile: string;
     loginId: string;
     role: UserRole;
     assignedStore?: string;

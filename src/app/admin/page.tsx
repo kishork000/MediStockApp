@@ -43,6 +43,7 @@ interface User {
     loginId: string;
     name: string;
     email: string;
+    mobile: string;
     role: string;
     assignedStore?: string;
     password?: string;
@@ -252,14 +253,15 @@ export default function AdminPage() {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
         const newUser: NewUser = {
-            name: formData.get("name") as string,
+            name: (formData.get("name") as string).toUpperCase(),
             email: formData.get("email") as string,
-            loginId: formData.get("loginId") as string,
+            mobile: formData.get("mobile") as string,
+            loginId: (formData.get("loginId") as string).toUpperCase(),
             role: formData.get("role") as string,
             assignedStore: formData.get("assignedStore") as string || undefined,
             password: formData.get("password") as string,
             altMobile: formData.get("altMobile") as string || undefined,
-            pan: formData.get("pan") as string || undefined,
+            pan: (formData.get("pan") as string)?.toUpperCase(),
             aadhar: formData.get("aadhar") as string || undefined,
         };
         
@@ -281,12 +283,13 @@ export default function AdminPage() {
         if (!selectedUser) return;
         const formData = new FormData(e.currentTarget);
         const updatedData: UpdateUser = {
-            name: formData.get("name") as string,
+            name: (formData.get("name") as string).toUpperCase(),
             email: formData.get("email") as string,
+            mobile: formData.get("mobile") as string,
             role: formData.get("role") as string,
             assignedStore: formData.get("assignedStore") as string || undefined,
             altMobile: formData.get("altMobile") as string || undefined,
-            pan: formData.get("pan") as string || undefined,
+            pan: (formData.get("pan") as string)?.toUpperCase(),
             aadhar: formData.get("aadhar") as string || undefined,
         };
 
@@ -774,12 +777,12 @@ export default function AdminPage() {
                             <form ref={addUserFormRef} className="space-y-4" onSubmit={handleAddUser}>
                                 <div className="space-y-2">
                                     <Label htmlFor="name">Full Name</Label>
-                                    <Input id="name" name="name" placeholder="Full Name" required />
+                                    <Input id="name" name="name" placeholder="Full Name" required style={{ textTransform: 'uppercase' }} />
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="loginId">Login ID</Label>
-                                        <Input id="loginId" name="loginId" placeholder="e.g., user01" required />
+                                        <Input id="loginId" name="loginId" placeholder="e.g., USER01" required style={{ textTransform: 'uppercase' }} />
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="email">Email</Label>
@@ -787,26 +790,30 @@ export default function AdminPage() {
                                     </div>
                                 </div>
                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="mobile">Mobile Number</Label>
+                                        <Input id="mobile" name="mobile" type="tel" placeholder="e.g., 9876543210" required pattern="\d{10}" title="Mobile number must be 10 digits" />
+                                    </div>
+                                     <div className="space-y-2">
+                                        <Label htmlFor="altMobile">Alt. Mobile No.</Label>
+                                        <Input id="altMobile" name="altMobile" type="tel" pattern="\d{10}" title="Mobile number must be 10 digits"/>
+                                    </div>
+                                 </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                      <div className="space-y-2">
                                         <Label htmlFor="password">Password</Label>
                                         <Input id="password" name="password" type="password" required />
                                     </div>
                                      <div className="space-y-2">
-                                        <Label htmlFor="altMobile">Alt. Mobile No.</Label>
-                                        <Input id="altMobile" name="altMobile" type="tel" />
+                                        <Label htmlFor="pan">PAN Number</Label>
+                                        <Input id="pan" name="pan" style={{ textTransform: 'uppercase' }} />
                                     </div>
                                  </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                     <div className="space-y-2">
-                                        <Label htmlFor="pan">PAN Number</Label>
-                                        <Input id="pan" name="pan" />
-                                    </div>
                                      <div className="space-y-2">
                                         <Label htmlFor="aadhar">Aadhar Number</Label>
                                         <Input id="aadhar" name="aadhar" />
                                     </div>
-                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="role">Role</Label>
                                         <Select name="role" required>
@@ -820,19 +827,19 @@ export default function AdminPage() {
                                             </SelectContent>
                                         </Select>
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="assignedStore">Assign to Store</Label>
-                                        <Select name="assignedStore">
-                                            <SelectTrigger id="assignedStore">
-                                                <SelectValue placeholder="Select a store" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {stores.map(store => (
-                                                    <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
+                                 </div>
+                                 <div className="space-y-2">
+                                    <Label htmlFor="assignedStore">Assign to Store</Label>
+                                    <Select name="assignedStore">
+                                        <SelectTrigger id="assignedStore">
+                                            <SelectValue placeholder="Select a store" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {stores.map(store => (
+                                                <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                                 <Button type="submit">Create User</Button>
                             </form>
@@ -987,26 +994,32 @@ export default function AdminPage() {
                         <div className="grid gap-4 py-4">
                              <div className="space-y-2">
                                 <Label htmlFor="edit-name">Full Name</Label>
-                                <Input id="edit-name" name="name" defaultValue={selectedUser?.name} required />
+                                <Input id="edit-name" name="name" defaultValue={selectedUser?.name} required style={{ textTransform: 'uppercase' }}/>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="edit-loginId">Login ID</Label>
-                                    <Input id="edit-loginId" name="loginId" defaultValue={selectedUser?.loginId} disabled />
+                                    <Input id="edit-loginId" name="loginId" defaultValue={selectedUser?.loginId} disabled style={{ textTransform: 'uppercase' }} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="edit-email">Email</Label>
                                     <Input id="edit-email" name="email" type="email" defaultValue={selectedUser?.email} required />
                                 </div>
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="edit-altMobile">Alt. Mobile No.</Label>
-                                <Input id="edit-altMobile" name="altMobile" type="tel" defaultValue={selectedUser?.altMobile} />
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-mobile">Mobile Number</Label>
+                                    <Input id="edit-mobile" name="mobile" type="tel" defaultValue={selectedUser?.mobile} required pattern="\d{10}" title="Mobile number must be 10 digits" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-altMobile">Alt. Mobile No.</Label>
+                                    <Input id="edit-altMobile" name="altMobile" type="tel" defaultValue={selectedUser?.altMobile} pattern="\d{10}" title="Mobile number must be 10 digits"/>
+                                </div>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="edit-pan">PAN Number</Label>
-                                    <Input id="edit-pan" name="pan" defaultValue={selectedUser?.pan} />
+                                    <Input id="edit-pan" name="pan" defaultValue={selectedUser?.pan} style={{ textTransform: 'uppercase' }} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="edit-aadhar">Aadhar Number</Label>
@@ -1034,6 +1047,7 @@ export default function AdminPage() {
                                             <SelectValue placeholder="Select a store" />
                                         </SelectTrigger>
                                         <SelectContent>
+                                            <SelectItem value="">None</SelectItem>
                                             {stores.map(store => (
                                                 <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
                                             ))}
