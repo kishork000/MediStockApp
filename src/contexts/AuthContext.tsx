@@ -8,10 +8,11 @@ import { seedDatabase } from '@/services/seed-service';
 import { getUsers, addUser, updateUser as updateUserService, deleteUser as deleteUserService, User, NewUser, UpdateUser } from '@/services/user-service';
 
 const initialPermissions: RolePermissions = {
-    Admin: allAppRoutes.map(r => r.path),
-    Pharmacist: ['/', '/patients', '/sales', '/inventory/stores', '/inventory/reports', '/inventory/transfer', '/inventory/valuation', '/inventory/ledger', '/reports/profit-loss'],
-    Supervisor: ['/', '/patients', '/sales', '/sales/reports', '/inventory', '/inventory/stores', '/inventory/master', '/inventory/manufacturer', '/inventory/add', '/inventory/returns', '/inventory/transfer', '/inventory/reports', '/inventory/valuation', '/inventory/ledger', '/inventory/adjustment', '/inventory/damaged', '/reports/profit-loss' ]
+    Admin: allAppRoutes.flatMap(r => [r.path, ...(r.tabs ? r.tabs.map(t => `${r.path}#${t.id}`) : [])]),
+    Pharmacist: ['/', '/patients', '/sales', '/sales#new-sale', '/inventory/stores', '/inventory/reports', '/inventory/reports#levels', '/inventory/transfer', '/inventory/transfer#transfer', '/inventory/valuation', '/inventory/ledger', '/reports/profit-loss'],
+    Supervisor: ['/', '/patients', '/sales', '/sales#new-sale', '/sales/reports', '/inventory', '/inventory/stores', '/inventory/master', '/inventory/manufacturer', '/inventory/add', '/inventory/add#bulk-add', '/inventory/returns', '/inventory/transfer', '/inventory/transfer#transfer', '/inventory/transfer#return', '/inventory/reports', '/inventory/reports#levels', '/inventory/reports#transfers', '/inventory/valuation', '/inventory/ledger', '/inventory/adjustment', '/inventory/damaged', '/reports/profit-loss' ]
 };
+
 
 interface AuthContextType {
     user: User | null;
@@ -95,6 +96,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         const userPermissions = permissions[user.role] || [];
         
+        // Direct match
+        if (userPermissions.includes(path)) return true;
+
+        const mainPath = path.split('#')[0];
+        const routeConfig = allAppRoutes.find(r => r.path === mainPath);
+
+        // Check for tab permissions if path is a base page path
+        if (routeConfig && routeConfig.tabs) {
+            return routeConfig.tabs.some(tab => userPermissions.includes(`${mainPath}#${tab.id}`));
+        }
+
         // Grant access to parent if any child is accessible
         if(path === '/inventory') {
              return allAppRoutes.some(route => route.parent === '/inventory' && userPermissions.includes(route.path));
@@ -104,12 +116,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
 
         // Grant access to child if parent is accessible (for URL navigation)
-        const route = allAppRoutes.find(r => r.path === path);
+        const route = allAppRoutes.find(r => r.path === mainPath);
         if (route?.parent && userPermissions.includes(route.parent)) {
             return true;
         }
 
-        return userPermissions.includes(path);
+        return false;
 
     }, [user, permissions]);
 

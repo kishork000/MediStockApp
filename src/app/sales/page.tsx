@@ -423,9 +423,9 @@ export default function SalesPage() {
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList>
-                    <TabsTrigger value="new-sale">New Sale</TabsTrigger>
-                    <TabsTrigger value="return-invoice">Return by Invoice</TabsTrigger>
-                    <TabsTrigger value="return-blind">Blind Return</TabsTrigger>
+                    {hasPermission("/sales#new-sale") && <TabsTrigger value="new-sale">New Sale</TabsTrigger>}
+                    {hasPermission("/sales#return-invoice") && <TabsTrigger value="return-invoice">Return by Invoice</TabsTrigger>}
+                    {hasPermission("/sales#return-blind") && <TabsTrigger value="return-blind">Blind Return</TabsTrigger>}
                 </TabsList>
                 <TabsContent value="new-sale">
                     <form onSubmit={handleRecordSale}>

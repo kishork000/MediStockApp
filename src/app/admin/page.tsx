@@ -509,52 +509,59 @@ export default function AdminPage() {
     const stockManagementRoutes = sidebarRoutes.filter(r => r.path.startsWith('/inventory/') && r.inSidebar);
 
     const PermissionRow = ({ route, role, level = 0 }: { route: AppRoute, role: string, level?: number }) => (
-        <Collapsible asChild key={route.path}>
-            <>
-                <TableRow>
-                    <TableCell style={{ paddingLeft: `${level * 2}rem` }}>
-                        <div className="flex items-center gap-2">
-                            {route.children && route.children.length > 0 ? (
-                                <CollapsibleTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6">
-                                        <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-0 group-data-[state=closed]:-rotate-90" />
-                                    </Button>
-                                </CollapsibleTrigger>
-                            ) : (
-                                <span className="w-6" /> // Spacer
-                            )}
-                            {route.children && route.children.length > 0 ? <Folder className="h-5 w-5 text-amber-500"/> : <File className="h-5 w-5 text-sky-500" />}
-                            <span className="font-medium">{route.name}</span>
-                        </div>
-                    </TableCell>
-                    {Object.keys(permissions).map(roleKey => (
-                        <TableCell key={`${roleKey}-${route.path}`} className="text-center">
-                            <Checkbox 
-                                checked={roleKey === 'Admin' || (route.children && route.children.length > 0 ? getParentCheckedState(roleKey, route) : (permissions[roleKey] || []).includes(route.path))}
-                                onCheckedChange={(checked) => route.children && route.children.length > 0 ? handleParentPermissionChange(roleKey, route, checked) : handlePermissionChange(roleKey, route.path, checked)}
-                                disabled={roleKey === 'Admin'}
-                            />
+       <tbody className="group/row" key={route.path}>
+            <Collapsible asChild>
+                <>
+                    <TableRow>
+                        <TableCell style={{ paddingLeft: `${level * 2}rem` }}>
+                            <div className="flex items-center gap-2">
+                                {route.children && route.children.length > 0 ? (
+                                    <CollapsibleTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6">
+                                            <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-0 group-data-[state=closed]:-rotate-90" />
+                                        </Button>
+                                    </CollapsibleTrigger>
+                                ) : (
+                                    <span className="w-6" /> // Spacer
+                                )}
+                                {route.children && route.children.length > 0 ? (
+                                    <Folder className="h-5 w-5 text-amber-500"/>
+                                ) : route.path.includes('#') ? (
+                                    <CircleDot className="h-5 w-5 text-slate-500" />
+                                ) : (
+                                    <File className="h-5 w-5 text-sky-500" />
+                                )}
+                                <span className="font-medium">{route.name}</span>
+                            </div>
                         </TableCell>
-                    ))}
-                </TableRow>
-                {route.children && route.children.length > 0 && (
-                    <CollapsibleContent asChild>
-                       <TableRow>
-                           <TableCell colSpan={Object.keys(permissions).length + 1} className="p-0">
-                                <Table>
-                                    <TableBody>
-                                        {route.children.map(childRoute => (
-                                            <PermissionRow key={childRoute.path} route={childRoute} role={role} level={level + 1} />
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                           </TableCell>
-                        </TableRow>
-                    </CollapsibleContent>
-                )}
-            </>
-        </Collapsible>
+                        {Object.keys(permissions).map(roleKey => (
+                            <TableCell key={`${roleKey}-${route.path}`} className="text-center">
+                                <Checkbox 
+                                    checked={roleKey === 'Admin' || (route.children && route.children.length > 0 ? getParentCheckedState(roleKey, route) : (permissions[roleKey] || []).includes(route.path))}
+                                    onCheckedChange={(checked) => route.children && route.children.length > 0 ? handleParentPermissionChange(roleKey, route, checked) : handlePermissionChange(roleKey, route.path, checked)}
+                                    disabled={roleKey === 'Admin'}
+                                />
+                            </TableCell>
+                        ))}
+                    </TableRow>
+                     {route.children && route.children.length > 0 && (
+                        <CollapsibleContent asChild>
+                           <tr className="bg-muted/50">
+                               <td colSpan={Object.keys(permissions).length + 1} className="p-0">
+                                   <Table>
+                                       {route.children.map(childRoute => (
+                                           <PermissionRow key={childRoute.path} route={childRoute} role={role} level={level + 1} />
+                                       ))}
+                                   </Table>
+                               </td>
+                           </tr>
+                        </CollapsibleContent>
+                    )}
+                </>
+            </Collapsible>
+        </tbody>
     );
+    
 
     return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -630,30 +637,14 @@ export default function AdminPage() {
             <Tabs defaultValue="users">
                 <div className="flex items-center">
                     <TabsList className="flex-wrap h-auto">
-                        <Tooltip><TooltipTrigger asChild>
-                            <TabsTrigger value="users"><Users className="md:hidden" /><span className="hidden md:inline">User Management</span></TabsTrigger>
-                        </TooltipTrigger><TooltipContent>User Management</TooltipContent></Tooltip>
-                        <Tooltip><TooltipTrigger asChild>
-                           <TabsTrigger value="roles"><KeyRound className="md:hidden" /><span className="hidden md:inline">Role Management</span></TabsTrigger>
-                        </TooltipTrigger><TooltipContent>Role Management</TooltipContent></Tooltip>
-                        <Tooltip><TooltipTrigger asChild>
-                           <TabsTrigger value="permissions"><ShieldCheck className="md:hidden" /><span className="hidden md:inline">Permissions</span></TabsTrigger>
-                        </TooltipTrigger><TooltipContent>Permissions</TooltipContent></Tooltip>
-                         <Tooltip><TooltipTrigger asChild>
-                            <TabsTrigger value="stores"><Store className="md:hidden" /><span className="hidden md:inline">Store Management</span></TabsTrigger>
-                        </TooltipTrigger><TooltipContent>Store Management</TooltipContent></Tooltip>
-                         <Tooltip><TooltipTrigger asChild>
-                             <TabsTrigger value="units"><Layers className="md:hidden" /><span className="hidden md:inline">Unit Types</span></TabsTrigger>
-                        </TooltipTrigger><TooltipContent>Unit Types</TooltipContent></Tooltip>
-                         <Tooltip><TooltipTrigger asChild>
-                            <TabsTrigger value="packaging"><Box className="md:hidden" /><span className="hidden md:inline">Packaging Types</span></TabsTrigger>
-                        </TooltipTrigger><TooltipContent>Packaging Types</TooltipContent></Tooltip>
-                        <Tooltip><TooltipTrigger asChild>
-                            <TabsTrigger value="add-user"><UserPlus className="md:hidden" /><span className="hidden md:inline">Add User</span></TabsTrigger>
-                        </TooltipTrigger><TooltipContent>Add User</TooltipContent></Tooltip>
-                        <Tooltip><TooltipTrigger asChild>
-                           <TabsTrigger value="settings"><Building className="md:hidden" /><span className="hidden md:inline">Company Settings</span></TabsTrigger>
-                        </TooltipTrigger><TooltipContent>Company Settings</TooltipContent></Tooltip>
+                        {hasPermission("/admin#users") && <Tooltip><TooltipTrigger asChild><TabsTrigger value="users"><Users className="md:hidden" /><span className="hidden md:inline">User Management</span></TabsTrigger></TooltipTrigger><TooltipContent>User Management</TooltipContent></Tooltip>}
+                        {hasPermission("/admin#roles") && <Tooltip><TooltipTrigger asChild><TabsTrigger value="roles"><KeyRound className="md:hidden" /><span className="hidden md:inline">Role Management</span></TabsTrigger></TooltipTrigger><TooltipContent>Role Management</TooltipContent></Tooltip>}
+                        {hasPermission("/admin#permissions") && <Tooltip><TooltipTrigger asChild><TabsTrigger value="permissions"><ShieldCheck className="md:hidden" /><span className="hidden md:inline">Permissions</span></TabsTrigger></TooltipTrigger><TooltipContent>Permissions</TooltipContent></Tooltip>}
+                        {hasPermission("/admin#stores") && <Tooltip><TooltipTrigger asChild><TabsTrigger value="stores"><Store className="md:hidden" /><span className="hidden md:inline">Store Management</span></TabsTrigger></TooltipTrigger><TooltipContent>Store Management</TooltipContent></Tooltip>}
+                        {hasPermission("/admin#units") && <Tooltip><TooltipTrigger asChild><TabsTrigger value="units"><Layers className="md:hidden" /><span className="hidden md:inline">Unit Types</span></TabsTrigger></TooltipTrigger><TooltipContent>Unit Types</TooltipContent></Tooltip>}
+                        {hasPermission("/admin#packaging") && <Tooltip><TooltipTrigger asChild><TabsTrigger value="packaging"><Box className="md:hidden" /><span className="hidden md:inline">Packaging Types</span></TabsTrigger></TooltipTrigger><TooltipContent>Packaging Types</TooltipContent></Tooltip>}
+                        {hasPermission("/admin#add-user") && <Tooltip><TooltipTrigger asChild><TabsTrigger value="add-user"><UserPlus className="md:hidden" /><span className="hidden md:inline">Add User</span></TabsTrigger></TooltipTrigger><TooltipContent>Add User</TooltipContent></Tooltip>}
+                        {hasPermission("/admin#settings") && <Tooltip><TooltipTrigger asChild><TabsTrigger value="settings"><Building className="md:hidden" /><span className="hidden md:inline">Company Settings</span></TabsTrigger></TooltipTrigger><TooltipContent>Company Settings</TooltipContent></Tooltip>}
                     </TabsList>
                 </div>
                 <TabsContent value="users">
@@ -763,11 +754,9 @@ export default function AdminPage() {
                                             ))}
                                         </TableRow>
                                     </TableHeader>
-                                    <TableBody>
-                                        {permissionRoutesTree.map(route => (
-                                            <PermissionRow key={route.path} route={route} role="" />
-                                        ))}
-                                    </TableBody>
+                                    {permissionRoutesTree.map(route => (
+                                        <PermissionRow key={route.path} route={route} role="" />
+                                    ))}
                                 </Table>
                             </div>
                         </CardContent>

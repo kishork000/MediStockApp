@@ -322,8 +322,8 @@ export default function AddStockPage() {
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
             <Tabs defaultValue="bulk-add">
                 <TabsList>
-                    <TabsTrigger value="bulk-add">Add Stock</TabsTrigger>
-                    <TabsTrigger value="csv-import">Import from CSV</TabsTrigger>
+                    {hasPermission("/inventory/add#bulk-add") && <TabsTrigger value="bulk-add">Add Stock</TabsTrigger>}
+                    {hasPermission("/inventory/add#csv-import") && <TabsTrigger value="csv-import">Import from CSV</TabsTrigger>}
                 </TabsList>
                 <TabsContent value="bulk-add">
                     <form onSubmit={handleFormSubmit}>

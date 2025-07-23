@@ -75,7 +75,7 @@ export default function StockTransferPage() {
             const stock = await getAvailableStockForLocation(storeId);
             setStoreStock(stock);
         } catch (error) {
-            toast({ variant: 'destructive', title: 'Error', description: `Failed to load stock for ${storeId}.` });
+            toast({ variant: 'destructive', title: `Failed to load stock for ${storeId}.` });
         }
     }, [toast]);
 
@@ -318,8 +318,8 @@ export default function StockTransferPage() {
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList>
-                    <TabsTrigger value="transfer">Transfer to Store</TabsTrigger>
-                    <TabsTrigger value="return">Return to Warehouse</TabsTrigger>
+                    {hasPermission("/inventory/transfer#transfer") && <TabsTrigger value="transfer">Transfer to Store</TabsTrigger>}
+                    {hasPermission("/inventory/transfer#return") && <TabsTrigger value="return">Return to Warehouse</TabsTrigger>}
                 </TabsList>
 
                 <TabsContent value="transfer">

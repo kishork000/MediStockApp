@@ -392,9 +392,9 @@ export default function StockReportsPage() {
             <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <div className="flex justify-between items-center flex-wrap gap-4">
                     <TabsList>
-                        <TabsTrigger value="levels">Overall Stock Levels</TabsTrigger>
-                        <TabsTrigger value="transfers">Inter-Store Transfers</TabsTrigger>
-                        <TabsTrigger value="purchase">Purchase History</TabsTrigger>
+                        {hasPermission("/inventory/reports#levels") && <TabsTrigger value="levels">Overall Stock Levels</TabsTrigger>}
+                        {hasPermission("/inventory/reports#transfers") && <TabsTrigger value="transfers">Inter-Store Transfers</TabsTrigger>}
+                        {hasPermission("/inventory/reports#purchase") && <TabsTrigger value="purchase">Purchase History</TabsTrigger>}
                     </TabsList>
                     <Button variant="outline" size="sm" onClick={() => downloadReport(activeTab)} disabled={!reportGenerated}>
                        <Download className="mr-2 h-4 w-4"/> Download Report
