@@ -282,12 +282,18 @@ export default function AdminPage() {
         e.preventDefault();
         if (!selectedUser) return;
         const formData = new FormData(e.currentTarget);
+        
+        let assignedStoreValue = formData.get("assignedStore") as string;
+        if (assignedStoreValue === 'NONE') {
+            assignedStoreValue = "";
+        }
+
         const updatedData: UpdateUser = {
             name: (formData.get("name") as string).toUpperCase(),
             email: formData.get("email") as string,
             mobile: formData.get("mobile") as string,
             role: formData.get("role") as string,
-            assignedStore: formData.get("assignedStore") as string || undefined,
+            assignedStore: assignedStoreValue || undefined,
             altMobile: formData.get("altMobile") as string || undefined,
             pan: (formData.get("pan") as string)?.toUpperCase(),
             aadhar: formData.get("aadhar") as string || undefined,
@@ -791,11 +797,11 @@ export default function AdminPage() {
                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="mobile">Mobile Number</Label>
-                                        <Input id="mobile" name="mobile" type="tel" placeholder="e.g., 9876543210" required pattern="\d{10}" title="Mobile number must be 10 digits" />
+                                        <Input id="mobile" name="mobile" type="tel" placeholder="e.g., 9876543210" required pattern="\\d{10}" title="Mobile number must be 10 digits" />
                                     </div>
                                      <div className="space-y-2">
                                         <Label htmlFor="altMobile">Alt. Mobile No.</Label>
-                                        <Input id="altMobile" name="altMobile" type="tel" pattern="\d{10}" title="Mobile number must be 10 digits"/>
+                                        <Input id="altMobile" name="altMobile" type="tel" pattern="\\d{10}" title="Mobile number must be 10 digits"/>
                                     </div>
                                  </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1008,11 +1014,11 @@ export default function AdminPage() {
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="edit-mobile">Mobile Number</Label>
-                                    <Input id="edit-mobile" name="mobile" type="tel" defaultValue={selectedUser?.mobile} required pattern="\d{10}" title="Mobile number must be 10 digits" />
+                                    <Input id="edit-mobile" name="mobile" type="tel" defaultValue={selectedUser?.mobile} required pattern="\\d{10}" title="Mobile number must be 10 digits" />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="edit-altMobile">Alt. Mobile No.</Label>
-                                    <Input id="edit-altMobile" name="altMobile" type="tel" defaultValue={selectedUser?.altMobile} pattern="\d{10}" title="Mobile number must be 10 digits"/>
+                                    <Input id="edit-altMobile" name="altMobile" type="tel" defaultValue={selectedUser?.altMobile} pattern="\\d{10}" title="Mobile number must be 10 digits"/>
                                 </div>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1046,7 +1052,7 @@ export default function AdminPage() {
                                             <SelectValue placeholder="Select a store" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="">None</SelectItem>
+                                            <SelectItem value="NONE">None</SelectItem>
                                             {stores.map(store => (
                                                 <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
                                             ))}
