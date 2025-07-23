@@ -52,7 +52,7 @@ export default function AddStockPage() {
     const [manufacturerMaster, setManufacturerMaster] = useState<Manufacturer[]>([]);
 
     const sidebarRoutes = useMemo(() => allAppRoutes.filter(route => route.path !== '/'), []);
-    const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && r.inSidebar), [hasPermission]);
+    const stockManagementRoutes = useMemo(() => allAppRoutes.filter(route => route.path.startsWith('/inventory/') && route.inSidebar), [hasPermission]);
 
      useEffect(() => {
         const fetchMasters = async () => {

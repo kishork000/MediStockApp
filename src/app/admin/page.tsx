@@ -29,7 +29,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { allAppRoutes, AppRoute } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -524,69 +524,71 @@ export default function AdminPage() {
         const hasChildren = children.length > 0 || (route.tabs && route.tabs.length > 0);
     
         return (
-            <Collapsible asChild key={route.path}>
-                <React.Fragment>
-                     <TableRow>
-                        <TableCell style={{ paddingLeft: `${level * 2}rem` }}>
-                            <div className="flex items-center gap-2">
-                                 {hasChildren ? (
-                                    <CollapsibleTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-6 w-6">
-                                            <ChevronDown className="h-4 w-4 transition-transform duration-200" />
-                                        </Button>
-                                    </CollapsibleTrigger>
-                                ) : (
-                                    <span className="w-6" /> // Spacer
-                                )}
-                                {children.length > 0 ? (
-                                    <Folder className="h-5 w-5 text-amber-500"/>
-                                ) : (
-                                    <File className="h-5 w-5 text-sky-500" />
-                                )}
-                                <span className="font-medium">{route.name}</span>
-                            </div>
-                        </TableCell>
-                        {Object.keys(permissions).map(roleKey => (
-                            <TableCell key={`${roleKey}-${route.path}`} className="text-center">
-                                <Checkbox 
-                                    checked={roleKey === 'Admin' || getParentCheckedState(roleKey, route)}
-                                    onCheckedChange={(checked) => handleParentPermissionChange(roleKey, route, checked)}
-                                    disabled={roleKey === 'Admin'}
-                                />
+            <tbody className="group/row" key={route.path}>
+                 <Collapsible asChild>
+                    <>
+                        <TableRow>
+                            <TableCell style={{ paddingLeft: `${level * 2}rem` }}>
+                                <div className="flex items-center gap-2">
+                                     {hasChildren ? (
+                                        <CollapsibleTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6">
+                                                <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:-rotate-180" />
+                                            </Button>
+                                        </CollapsibleTrigger>
+                                    ) : (
+                                        <span className="w-6" /> // Spacer
+                                    )}
+                                    {children.length > 0 ? (
+                                        <Folder className="h-5 w-5 text-amber-500"/>
+                                    ) : (
+                                        <File className="h-5 w-5 text-sky-500" />
+                                    )}
+                                    <span className="font-medium">{route.name}</span>
+                                </div>
                             </TableCell>
-                        ))}
-                    </TableRow>
-    
-                    {hasChildren && (
-                        <CollapsibleContent asChild>
-                           <React.Fragment>
-                                {children.map(childRoute => (
-                                    <PermissionRow key={childRoute.path} route={childRoute} role={role} level={level + 1} />
-                                ))}
-                                {route.tabs && route.tabs.map(tab => (
-                                    <TableRow key={`${route.path}#${tab.id}`}>
-                                        <TableCell style={{ paddingLeft: `${(level + 1) * 2}rem` }}>
-                                             <div className="flex items-center gap-2 ml-6">
-                                                <CircleDot className="h-5 w-5 text-slate-500" />
-                                                <span className="font-medium">{tab.name}</span>
-                                             </div>
-                                        </TableCell>
-                                        {Object.keys(permissions).map(roleKey => (
-                                            <TableCell key={`${roleKey}-${route.path}#${tab.id}`} className="text-center">
-                                                <Checkbox 
-                                                    checked={roleKey === 'Admin' || (permissions[roleKey] || []).includes(`${route.path}#${tab.id}`)}
-                                                    onCheckedChange={(checked) => handlePermissionChange(roleKey, `${route.path}#${tab.id}`, checked)}
-                                                    disabled={roleKey === 'Admin'}
-                                                />
+                            {Object.keys(permissions).map(roleKey => (
+                                <TableCell key={`${roleKey}-${route.path}`} className="text-center">
+                                    <Checkbox 
+                                        checked={roleKey === 'Admin' || getParentCheckedState(roleKey, route)}
+                                        onCheckedChange={(checked) => handleParentPermissionChange(roleKey, route, checked)}
+                                        disabled={roleKey === 'Admin'}
+                                    />
+                                </TableCell>
+                            ))}
+                        </TableRow>
+        
+                        {hasChildren && (
+                            <CollapsibleContent asChild>
+                               <React.Fragment>
+                                    {children.map(childRoute => (
+                                        <PermissionRow key={childRoute.path} route={childRoute} role={role} level={level + 1} />
+                                    ))}
+                                    {route.tabs && route.tabs.map(tab => (
+                                        <TableRow key={`${route.path}#${tab.id}`}>
+                                            <TableCell style={{ paddingLeft: `${(level + 1) * 2}rem` }}>
+                                                 <div className="flex items-center gap-2 ml-6">
+                                                    <CircleDot className="h-5 w-5 text-slate-500" />
+                                                    <span className="font-medium">{tab.name}</span>
+                                                 </div>
                                             </TableCell>
-                                        ))}
-                                    </TableRow>
-                                ))}
-                            </React.Fragment>
-                        </CollapsibleContent>
-                    )}
-                </React.Fragment>
-            </Collapsible>
+                                            {Object.keys(permissions).map(roleKey => (
+                                                <TableCell key={`${roleKey}-${route.path}#${tab.id}`} className="text-center">
+                                                    <Checkbox 
+                                                        checked={roleKey === 'Admin' || (permissions[roleKey] || []).includes(`${route.path}#${tab.id}`)}
+                                                        onCheckedChange={(checked) => handlePermissionChange(roleKey, `${route.path}#${tab.id}`, checked)}
+                                                        disabled={roleKey === 'Admin'}
+                                                    />
+                                                </TableCell>
+                                            ))}
+                                        </TableRow>
+                                    ))}
+                                </React.Fragment>
+                            </CollapsibleContent>
+                        )}
+                    </>
+                </Collapsible>
+            </tbody>
         );
     };
 
@@ -805,11 +807,9 @@ export default function AdminPage() {
                                             ))}
                                         </TableRow>
                                     </TableHeader>
-                                    <TableBody>
-                                        {allAppRoutes.filter(r => !r.parent).map(route => (
-                                            <PermissionRow key={route.path} route={route} role="" />
-                                        ))}
-                                    </TableBody>
+                                    {allAppRoutes.filter(r => !r.parent).map(route => (
+                                        <PermissionRow key={route.path} route={route} role="" />
+                                    ))}
                                 </Table>
                             </div>
                         </CardContent>
