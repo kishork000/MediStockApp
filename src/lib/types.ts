@@ -58,6 +58,12 @@ export function buildRoutesTree(routes: AppRoute[]): AppRoute[] {
     const routeMap = new Map<string, AppRoute>();
     const tree: AppRoute[] = [];
 
+    // Create a virtual Sales parent if it doesn't exist.
+    if (!routeMap.has("Sales")) {
+        const salesParent: AppRoute = { path: "Sales", name: "Sales", inSidebar: false, children: [] };
+        routeMap.set("Sales", salesParent);
+    }
+
     // First pass: create a map of all routes and prepare children arrays
     routes.forEach(route => {
         routeMap.set(route.path, { ...route, children: [] });
@@ -67,34 +73,17 @@ export function buildRoutesTree(routes: AppRoute[]): AppRoute[] {
     routeMap.forEach(route => {
         if (route.parent && routeMap.has(route.parent)) {
             const parent = routeMap.get(route.parent)!;
-            parent.children?.push(route);
-        } else if (route.parent === "Sales" && !routeMap.has("Sales")) {
-            // Create a virtual parent for Sales
-             if (!routeMap.has("Sales")) {
-                const salesParent: AppRoute = { path: "Sales", name: "Sales", inSidebar: false, children: [] };
-                routeMap.set("Sales", salesParent);
-                tree.push(salesParent);
+            // The check for `parent.children` is important because the base object in the map might not have it initialized
+            if (parent.children) {
+                 parent.children.push(route);
+            } else {
+                 parent.children = [route];
             }
-            routeMap.get("Sales")!.children!.push(route);
-        }
-        else if (!route.parent) {
+        } else if (!route.parent) {
             tree.push(route);
         }
     });
-    
-    // Ensure the virtual "Sales" parent is in the tree if it was created
-    const salesParent = routeMap.get("Sales");
-    if (salesParent && !tree.some(r => r.path === 'Sales')) {
-        tree.push(salesParent);
-    }
-    
-    // Move inventory into its own group
-    const inventoryParent = routeMap.get('/inventory');
-    if (inventoryParent) {
-        inventoryParent.name = "Stock Management"; // Rename for UI
-        tree.push(inventoryParent);
-    }
-    
-    // Filter out children that have been moved under a parent
-    return tree.filter(route => !route.parent);
+
+    // Return only the top-level routes (those without a parent in the original list, or our virtual ones)
+    return tree.filter(route => !route.parent || (route.parent && !routes.find(r => r.path === route.parent)));
 }
