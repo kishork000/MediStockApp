@@ -572,7 +572,7 @@ export default function AdminPage() {
                                 <TableBody>
                                     {users.map((u) => (
                                         <TableRow key={u.id}>
-                                            <TableCell className="font-medium">
+                                            <TableCell>
                                                 <Button variant="link" className="p-0 h-auto" onClick={() => openEditUserModal(u)}>{u.name}</Button>
                                             </TableCell>
                                             <TableCell className="hidden sm:table-cell">{u.loginId}</TableCell>
@@ -992,13 +992,13 @@ export default function AdminPage() {
             </Dialog>
              <Dialog open={isEditUserModalOpen} onOpenChange={setIsEditUserModalOpen}>
                 <DialogContent className="sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>Edit User: {selectedUser?.name}</DialogTitle>
+                        <DialogDescription>Update the user's details below.</DialogDescription>
+                    </DialogHeader>
                     <form onSubmit={handleUserUpdateSubmit}>
-                        <DialogHeader>
-                            <DialogTitle>Edit User: {selectedUser?.name}</DialogTitle>
-                            <DialogDescription>Update the user's details below.</DialogDescription>
-                        </DialogHeader>
-                        <ScrollArea className="max-h-[70vh] p-4">
-                            <div className="grid gap-4 py-4 pr-6">
+                        <ScrollArea className="max-h-[70vh]">
+                            <div className="grid gap-4 py-4 px-6">
                                 <div className="space-y-2">
                                     <Label htmlFor="edit-name">Full Name</Label>
                                     <Input id="edit-name" name="name" defaultValue={selectedUser?.name} required style={{ textTransform: 'uppercase' }}/>
@@ -1064,7 +1064,7 @@ export default function AdminPage() {
                                 </div>
                             </div>
                         </ScrollArea>
-                        <DialogFooter>
+                        <DialogFooter className="pt-6">
                             <DialogClose asChild>
                                 <Button type="button" variant="secondary" onClick={() => setIsEditUserModalOpen(false)}>Cancel</Button>
                             </DialogClose>
