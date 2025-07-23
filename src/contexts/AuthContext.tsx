@@ -96,29 +96,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         const userPermissions = permissions[user.role] || [];
         
-        // Direct match
+        // Direct match for path or tab
         if (userPermissions.includes(path)) return true;
 
         const mainPath = path.split('#')[0];
         const routeConfig = allAppRoutes.find(r => r.path === mainPath);
 
-        // Check for tab permissions if path is a base page path
-        if (routeConfig && routeConfig.tabs) {
+        // For a base page path, check if any of its tabs are permitted
+        if (routeConfig && routeConfig.tabs && path === mainPath) {
             return routeConfig.tabs.some(tab => userPermissions.includes(`${mainPath}#${tab.id}`));
         }
 
-        // Grant access to parent if any child is accessible
-        if(path === '/inventory') {
-             return allAppRoutes.some(route => route.parent === '/inventory' && userPermissions.includes(route.path));
-        }
-        if(path === 'Sales') { // Virtual parent
-             return allAppRoutes.some(route => route.parent === 'Sales' && userPermissions.includes(route.path));
-        }
-
-        // Grant access to child if parent is accessible (for URL navigation)
-        const route = allAppRoutes.find(r => r.path === mainPath);
-        if (route?.parent && userPermissions.includes(route.parent)) {
-            return true;
+        // For a parent route (like '/inventory'), check if any child is permitted
+        const isParentRoute = allAppRoutes.some(r => r.parent === path);
+        if (isParentRoute) {
+            return allAppRoutes.some(r => r.parent === path && userPermissions.includes(r.path));
         }
 
         return false;

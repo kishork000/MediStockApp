@@ -347,16 +347,7 @@ export default function SalesPage() {
           <SidebarHeader> <SidebarMenuButton className="pointer-events-none"> <LayoutGrid className="size-6" /> <span className="text-lg font-semibold">MediStock</span> </SidebarMenuButton> </SidebarHeader>
           <SidebarContent>
             <SidebarMenu>
-                {hasPermission('/') && (
-                    <SidebarMenuItem>
-                        <SidebarMenuButton href="/" tooltip="Dashboard" isActive={pathname === '/'}>
-                            <HomeIcon />
-                            <span>Dashboard</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                )}
-                
-                {sidebarRoutes.filter(r => !r.path.startsWith('/inventory/') && r.inSidebar && hasPermission(r.path)).map((route) => ( 
+                {sidebarRoutes.filter(r => r.inSidebar && hasPermission(r.path) && !r.parent).map((route) => ( 
                     <SidebarMenuItem key={route.path}> 
                         <SidebarMenuButton href={route.path} tooltip={route.name} isActive={pathname.startsWith(route.path)}> 
                             {getIcon(route.name)} 
@@ -364,6 +355,32 @@ export default function SalesPage() {
                         </SidebarMenuButton> 
                     </SidebarMenuItem> 
                 ))}
+                
+                 {hasPermission('Sales') && (
+                    <Collapsible className="w-full" defaultOpen={pathname.startsWith('/sales') || pathname.startsWith('/reports')}>
+                        <CollapsibleTrigger asChild>
+                            <SidebarMenuButton className="justify-between">
+                                <div className="flex items-center gap-3">
+                                    <ShoppingCart />
+                                    <span>Sales Management</span>
+                                </div>
+                                <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                            </SidebarMenuButton>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                            <SidebarMenu className="ml-7 mt-2 border-l pl-3">
+                                {sidebarRoutes.filter(r => r.parent === 'Sales' && hasPermission(r.path)).map((route) => (
+                                    <SidebarMenuItem key={route.path}>
+                                        <SidebarMenuButton href={route.path} tooltip={route.name} size="sm" isActive={pathname === route.path}>
+                                            {getIcon(route.name)}
+                                            <span>{route.name}</span>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                ))}
+                            </SidebarMenu>
+                        </CollapsibleContent>
+                    </Collapsible>
+                )}
                 
                 {hasPermission('/inventory') && (
                     <Collapsible className="w-full" defaultOpen={pathname.startsWith('/inventory')}>

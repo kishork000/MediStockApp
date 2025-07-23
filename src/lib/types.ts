@@ -27,6 +27,7 @@ export const allAppRoutes: AppRoute[] = [
     { path: "/patients", name: "Patients", inSidebar: true },
     
     // Sales
+    { path: "Sales", name: "Sales", inSidebar: false }, // Virtual Parent
     { path: "/sales", name: "Sales", inSidebar: true, parent: "Sales", tabs: [
         { id: "new-sale", name: "New Sale" },
         { id: "return-invoice", name: "Return by Invoice" },
@@ -74,50 +75,3 @@ export const allAppRoutes: AppRoute[] = [
         { id: "settings", name: "Company Settings" },
     ]},
 ];
-
-/**
- * Builds a tree structure from the flat list of routes.
- */
-export function buildRoutesTree(routes: AppRoute[]): AppRoute[] {
-    const routeMap = new Map<string, AppRoute>();
-    const tree: AppRoute[] = [];
-
-    // Create a virtual Sales parent if it doesn't exist.
-    if (!routeMap.has("Sales")) {
-        const salesParent: AppRoute = { path: "Sales", name: "Sales", inSidebar: false, children: [] };
-        routeMap.set("Sales", salesParent);
-    }
-
-    // First pass: create a map of all routes and prepare children arrays
-    routes.forEach(route => {
-        const routeWithChildren: AppRoute = { ...route, children: [] };
-        if (route.tabs) {
-            routeWithChildren.children = route.tabs.map(tab => ({
-                path: `${route.path}#${tab.id}`,
-                name: tab.name,
-                inSidebar: false,
-                parent: route.path,
-            }));
-        }
-        routeMap.set(route.path, routeWithChildren);
-    });
-
-    // Second pass: build the tree
-    routeMap.forEach(route => {
-        if (route.parent && routeMap.has(route.parent)) {
-            const parent = routeMap.get(route.parent)!;
-            // The check for `parent.children` is important
-            if(parent.children) {
-                 // Avoid duplicating children that might have been added by the tabs logic
-                if(!parent.children.some(child => child.path === route.path)) {
-                    parent.children.push(route);
-                }
-            } else {
-                 parent.children = [route];
-            }
-        }
-    });
-
-    // Return only the top-level routes (those without a parent in the original list, or our virtual ones)
-    return routes.filter(route => !route.parent || (routeMap.has(route.parent!) && !routeMap.get(route.parent!)!.parent));
-}
